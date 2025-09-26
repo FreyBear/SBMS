@@ -1,0 +1,78 @@
+{% extends "base.html" %}
+
+{% block title %}Update Keg {{ keg.keg_number }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="update-keg">
+    <div class="page-header">
+        <h1>Update Keg #{{ keg.keg_number }}</h1>
+        <div class="actions">
+            <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </div>
+
+    <form method="POST" class="form">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="update_date">{{ _('Update Date') }}:</label>
+                <input type="date" id="update_date" name="update_date" value="{{ today }}" required>
+                <small>{{ _('Date when this update occurred') }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="contents">{{ _('Contents') }}:</label>
+                <input type="text" id="contents" name="contents" value="{{ keg.contents or '' }}" placeholder="e.g., IPA, Empty">
+            </div>
+
+            <div class="form-group">
+                <label for="status">{{ _('Status') }}:</label>
+                <select id="status" name="status" required>
+                    <option value="Full" {% if keg.status == 'Full' %}selected{% endif %}>{{ _('Full') }}</option>
+                    <option value="Started" {% if keg.status == 'Started' %}selected{% endif %}>{{ _('Started') }}</option>
+                    <option value="Available/Cleaned" {% if keg.status == 'Available/Cleaned' %}selected{% endif %}>{{ _('Available/Cleaned') }}</option>
+                    <option value="Empty" {% if keg.status == 'Empty' %}selected{% endif %}>{{ _('Empty') }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="amount_left_liters">{{ _('Amount Left') }} ({{ _('Liters') }}):</label>
+                <input type="number" id="amount_left_liters" name="amount_left_liters" 
+                       value="{{ keg.amount_left_liters or 0 }}" step="0.1" min="0" 
+                       max="{{ keg.volume_liters }}">
+            </div>
+
+            <div class="form-group">
+                <label for="location">{{ _('Location') }}:</label>
+                <select id="location" name="location">
+                    <option value="">{{ _('Select location...') }}</option>
+                    <option value="Brewery" {% if keg.location == 'Brewery' %}selected{% endif %}>{{ _('Brewery') }}</option>
+                    <option value="Cellar" {% if keg.location == 'Cellar' %}selected{% endif %}>{{ _('Cellar') }}</option>
+                    <option value="Storage" {% if keg.location == 'Storage' %}selected{% endif %}>{{ _('Storage') }}</option>
+                    <option value="Bar" {% if keg.location == 'Bar' %}selected{% endif %}>{{ _('Bar') }}</option>
+                    <option value="Cleaning" {% if keg.location == 'Cleaning' %}selected{% endif %}>{{ _('Cleaning') }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="arrangement">{{ _('Arrangement') }}:</label>
+                <select id="arrangement" name="arrangement">
+                    <option value="Normal operation" {% if keg.arrangement == 'Normal operation' %}selected{% endif %}>{{ _('Normal operation') }}</option>
+                    <option value="Maintenance" {% if keg.arrangement == 'Maintenance' %}selected{% endif %}>{{ _('Maintenance') }}</option>
+                    <option value="Cleaning" {% if keg.arrangement == 'Cleaning' %}selected{% endif %}>{{ _('Cleaning') }}</option>
+                    <option value="Storage" {% if keg.arrangement == 'Storage' %}selected{% endif %}>{{ _('Storage') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">{{ _('Notes') }}:</label>
+            <textarea id="notes" name="notes" rows="4" placeholder="{{ _('Any additional notes about this update...') }}">{{ keg.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ _('Update Keg') }}</button>
+            <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+{% endblock %}

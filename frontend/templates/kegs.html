@@ -1,0 +1,429 @@
+{% extends "base.html" %}
+
+{% block title %}Kegs - SBMS{% endblock %}
+
+{% block content %}
+<div class="kegs-page">
+    <div class="page-header">
+        <h1>{{ _('Keg Management') }}</h1>
+    </div>
+
+    {% if kegs %}
+    <!-- Status Filter Controls -->
+    <div class="filter-controls" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
+        <h3 style="margin: 0 0 10px 0;">{{ _('Filter by Status') }}:</h3>
+        <div class="status-filters">
+            <label class="filter-checkbox">
+                <input type="checkbox" id="filter-full" checked> 
+                <span class="status-full">{{ _('Full') }}</span>
+            </label>
+            <label class="filter-checkbox">
+                <input type="checkbox" id="filter-started" checked> 
+                <span class="status-started">{{ _('Started') }}</span>
+            </label>
+            <label class="filter-checkbox">
+                <input type="checkbox" id="filter-available-cleaned" checked> 
+                <span class="status-available-cleaned">{{ _('Available/Cleaned') }}</span>
+            </label>
+            <label class="filter-checkbox">
+                <input type="checkbox" id="filter-empty" checked> 
+                <span class="status-empty">{{ _('Empty') }}</span>
+            </label>
+            <button id="toggle-all" class="btn btn-small btn-secondary" style="margin-left: 15px;">{{ _('Toggle All') }}</button>
+            <button id="show-only-available" class="btn btn-small btn-primary" style="margin-left: 5px;">{{ _('Show Only Available + Empty') }}</button>
+        </div>
+    </div>
+    <table class="data-table sortable-table" id="kegsTable">
+        <thead>
+            <tr>
+                <th class="sortable" data-column="0" data-type="number">
+                    {{ _('Keg #') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="1" data-type="number">
+                    {{ _('Volume') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="2" data-type="text">
+                    {{ _('Contents') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="3" data-type="text">
+                    {{ _('Status') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="4" data-type="number">
+                    {{ _('Amount Left') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="5" data-type="text">
+                    {{ _('Location') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="6" data-type="text">
+                    {{ _('Brew') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="7" data-type="date">
+                    {{ _('Last Measured') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for keg in kegs %}
+            <tr>
+                <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
+                <td>{{ keg.volume_liters }}L</td>
+                <td>{{ keg.contents or 'Empty' }}</td>
+                <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status }}</span></td>
+                <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
+                <td>{{ keg.location or 'Unknown' }}</td>
+                <td>{{ keg.brew_name or 'None' }}</td>
+                <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
+                <td>
+                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-small">View</a>
+                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-small btn-secondary">Edit</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No kegs found in the system.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Sortable table styles */
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    position: relative;
+    padding-right: 20px;
+}
+
+.sortable:hover {
+    background-color: #f8f9fa;
+}
+
+.sort-arrow {
+    position: absolute;
+    right: 8px;
+    font-size: 12px;
+    color: #999;
+    transition: color 0.2s;
+}
+
+.sortable.sort-asc .sort-arrow::before {
+    content: "↑";
+    color: #3498db;
+}
+
+.sortable.sort-desc .sort-arrow::before {
+    content: "↓";
+    color: #3498db;
+}
+
+.sortable:not(.sort-asc):not(.sort-desc) .sort-arrow::before {
+    content: "↕";
+}
+
+.sort-info {
+    margin-bottom: 15px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    font-size: 14px;
+    color: #666;
+}
+
+.sort-info strong {
+    color: #2c3e50;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('kegsTable');
+    if (!table) return;
+    
+    const tbody = table.querySelector('tbody');
+    const headers = table.querySelectorAll('th.sortable');
+    let currentSort = { column: -1, direction: 'asc' };
+    
+    // Add sort info display
+    const sortInfo = document.createElement('div');
+    sortInfo.className = 'sort-info';
+    sortInfo.innerHTML = 'Click column headers to sort. Currently showing {{ kegs|length }} kegs.';
+    table.parentNode.insertBefore(sortInfo, table);
+    
+    headers.forEach((header, index) => {
+        header.addEventListener('click', function() {
+            const column = parseInt(this.dataset.column);
+            const type = this.dataset.type;
+            
+            // Determine sort direction
+            let direction = 'asc';
+            if (currentSort.column === column && currentSort.direction === 'asc') {
+                direction = 'desc';
+            }
+            
+            // Clear all sort indicators
+            headers.forEach(h => h.classList.remove('sort-asc', 'sort-desc'));
+            
+            // Set current sort indicator
+            this.classList.add(direction === 'asc' ? 'sort-asc' : 'sort-desc');
+            
+            // Sort the table
+            sortTable(column, direction, type);
+            
+            // Update current sort
+            currentSort = { column, direction };
+            
+            // Update sort info
+            const columnName = this.textContent.replace('↕', '').replace('↑', '').replace('↓', '').trim();
+            sortInfo.innerHTML = `Sorted by <strong>${columnName}</strong> (${direction === 'asc' ? 'ascending' : 'descending'}). Showing {{ kegs|length }} kegs.`;
+        });
+    });
+    
+    function sortTable(columnIndex, direction, type) {
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        
+        rows.sort((a, b) => {
+            let aValue = a.cells[columnIndex].textContent.trim();
+            let bValue = b.cells[columnIndex].textContent.trim();
+            
+            // Handle different data types
+            switch(type) {
+                case 'number':
+                    // Extract numbers from text (e.g., "19L" -> 19, "Keg 5" -> 5)
+                    aValue = parseFloat(aValue.replace(/[^\d.-]/g, '')) || 0;
+                    bValue = parseFloat(bValue.replace(/[^\d.-]/g, '')) || 0;
+                    break;
+                    
+                case 'date':
+                    // Handle dates and "Never"/"Unknown"
+                    if (aValue.toLowerCase() === 'never' || aValue.toLowerCase() === 'unknown') aValue = '1900-01-01';
+                    if (bValue.toLowerCase() === 'never' || bValue.toLowerCase() === 'unknown') bValue = '1900-01-01';
+                    aValue = new Date(aValue);
+                    bValue = new Date(bValue);
+                    break;
+                    
+                case 'text':
+                default:
+                    // Handle text, including empty values
+                    if (aValue.toLowerCase() === 'empty' || aValue.toLowerCase() === 'none' || aValue === '') aValue = 'zzz_empty';
+                    if (bValue.toLowerCase() === 'empty' || bValue.toLowerCase() === 'none' || bValue === '') bValue = 'zzz_empty';
+                    aValue = aValue.toLowerCase();
+                    bValue = bValue.toLowerCase();
+                    break;
+            }
+            
+            let result = 0;
+            if (aValue < bValue) result = -1;
+            else if (aValue > bValue) result = 1;
+            
+            return direction === 'desc' ? -result : result;
+        });
+        
+        // Rebuild tbody with sorted rows
+        rows.forEach(row => tbody.appendChild(row));
+    }
+    
+    // Add keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case '1': headers[0]?.click(); e.preventDefault(); break;
+                case '2': headers[1]?.click(); e.preventDefault(); break;
+                case '3': headers[2]?.click(); e.preventDefault(); break;
+                case '4': headers[3]?.click(); e.preventDefault(); break;
+            }
+        }
+    });
+
+    // Status filtering functionality
+    function updateKegFilters() {
+        const showFull = document.getElementById('filter-full').checked;
+        const showStarted = document.getElementById('filter-started').checked;
+        const showAvailable = document.getElementById('filter-available-cleaned').checked;
+        const showEmpty = document.getElementById('filter-empty').checked;
+        
+        const rows = document.querySelectorAll('#kegsTable tbody tr');
+        let visibleCount = 0;
+        
+        rows.forEach(row => {
+            const statusCell = row.querySelector('td:nth-child(4)');
+            if (statusCell) {
+                const statusText = statusCell.textContent.trim();
+                let showRow = false;
+                
+                if (statusText.includes('Full') && showFull) showRow = true;
+                if (statusText.includes('Started') && showStarted) showRow = true;
+                if (statusText.includes('Available/Cleaned') && showAvailable) showRow = true;
+                if (statusText.includes('Empty') && showEmpty) showRow = true;
+                
+                row.style.display = showRow ? '' : 'none';
+                if (showRow) visibleCount++;
+            }
+        });
+        
+        // Update the total count display (if you want to show it)
+        console.log(`Showing ${visibleCount} kegs`);
+    }
+    
+    // Add event listeners to checkboxes
+    document.getElementById('filter-full').addEventListener('change', updateKegFilters);
+    document.getElementById('filter-started').addEventListener('change', updateKegFilters);
+    document.getElementById('filter-available-cleaned').addEventListener('change', updateKegFilters);
+    document.getElementById('filter-empty').addEventListener('change', updateKegFilters);
+    
+    // Toggle all button
+    document.getElementById('toggle-all').addEventListener('click', function() {
+        const checkboxes = document.querySelectorAll('.filter-controls input[type="checkbox"]');
+        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        
+        checkboxes.forEach(cb => cb.checked = !allChecked);
+        updateKegFilters();
+    });
+    
+    // Show only available + empty button
+    document.getElementById('show-only-available').addEventListener('click', function() {
+        document.getElementById('filter-full').checked = false;
+        document.getElementById('filter-started').checked = false;
+        document.getElementById('filter-available-cleaned').checked = true;
+        document.getElementById('filter-empty').checked = true;
+        updateKegFilters();
+    });
+});
+</script>
+
+<style>
+.filter-controls {
+    border: 2px solid #333;
+    margin-bottom: 15px;
+    background: #ffffff;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-controls h3 {
+    color: #333;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.status-filters {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 15px;
+    align-items: center;
+}
+
+.filter-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 5px;
+    background: #f8f9fa;
+    border: 2px solid #333;
+    font-weight: bold;
+}
+
+.filter-checkbox:hover {
+    background: #e9ecef;
+    border-color: #495057;
+}
+
+.filter-checkbox input[type="checkbox"] {
+    margin: 0;
+    transform: scale(1.2);
+}
+
+.filter-checkbox .status-full { 
+    color: #ffffff; 
+    background-color: #1b5e20; 
+    padding: 2px 8px; 
+    border-radius: 3px;
+    font-weight: bold;
+}
+.filter-checkbox .status-started { 
+    color: #ffffff; 
+    background-color: #e65100; 
+    padding: 2px 8px; 
+    border-radius: 3px;
+    font-weight: bold;
+}
+.filter-checkbox .status-available-cleaned { 
+    color: #ffffff; 
+    background-color: #0d47a1; 
+    padding: 2px 8px; 
+    border-radius: 3px;
+    font-weight: bold;
+}
+.filter-checkbox .status-empty { 
+    color: #ffffff; 
+    background-color: #424242; 
+    padding: 2px 8px; 
+    border-radius: 3px;
+    font-weight: bold;
+}
+
+/* Improve button visibility in the table */
+.data-table .btn {
+    background-color: #007bff !important;
+    color: white !important;
+    border: 2px solid #0056b3 !important;
+    padding: 6px 12px !important;
+    font-weight: bold !important;
+    text-decoration: none !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+    margin: 0 2px !important;
+}
+
+.data-table .btn:hover {
+    background-color: #0056b3 !important;
+    border-color: #004085 !important;
+    text-decoration: none !important;
+}
+
+.data-table .btn-secondary {
+    background-color: #6c757d !important;
+    border-color: #545b62 !important;
+}
+
+.data-table .btn-secondary:hover {
+    background-color: #545b62 !important;
+    border-color: #3d4142 !important;
+}
+
+.data-table .btn-small {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+}
+
+/* Improve status badges in the table */
+.data-table td span[class*="status-"] {
+    color: white !important;
+    font-weight: bold !important;
+    padding: 4px 8px !important;
+    border-radius: 4px !important;
+    font-size: 12px !important;
+}
+
+.data-table .status-full {
+    background-color: #1b5e20 !important;
+}
+
+.data-table .status-started {
+    background-color: #e65100 !important;
+}
+
+.data-table .status-available-cleaned {
+    background-color: #0d47a1 !important;
+}
+
+.data-table .status-empty {
+    background-color: #424242 !important;
+}
+</style>
+
+{% endblock %}

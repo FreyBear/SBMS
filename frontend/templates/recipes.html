@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Recipes - SBMS{% endblock %}
+
+{% block content %}
+<div class="recipes-page">
+    <div class="page-header">
+        <h1>{{ _('Recipe Management') }}</h1>
+    </div>
+
+    {% if recipes %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ _('Recipe Name') }}</th>
+                <th>{{ _('Style') }}</th>
+                <th>{{ _('Brews') }}</th>
+                <th>{{ _('Notes') }}</th>
+                <th>{{ _('Created') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for recipe in recipes %}
+            <tr>
+                <td>{{ recipe.name }}</td>
+                <td>{{ recipe.style or 'Unknown' }}</td>
+                <td>{{ recipe.brew_count }} brews</td>
+                <td>{{ recipe.notes or 'No notes' }}</td>
+                <td>{{ recipe.created_date.strftime('%d-%m-%Y') if recipe.created_date else 'Unknown' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No recipes found in the system.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

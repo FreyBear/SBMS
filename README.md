@@ -12,11 +12,15 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 ## Technology Stack
 
-**Backend**: Python Flask or Node.js Express (widely supported, easy to extend)  
+**Backend**: Python Flask (stable, simple, well-documented)  
 **Database**: PostgreSQL (robust, scalable, and supports future extensions)  
-**Frontend**: React, Vue, or plain HTML/CSS (modular and maintainable)  
+**Frontend**: HTML templates with CSS (simple, maintainable, no JavaScript complexity)  
 **Containerization**: Docker Compose (isolated, reproducible environments)  
-**Backup System**: Automated database and file backups (e.g., scheduled with cron, stored offsite or in cloud)  
+**Dependencies**: Minimal Python packages for maximum stability
+  - Flask 2.3.3 (web framework)
+  - psycopg2-binary 2.9.7 (PostgreSQL adapter)
+  - python-dotenv 1.0.0 (environment variables)
+
 **Security**:  
   - HTTPS (SSL/TLS) for web access  
   - Strong authentication and authorization  
@@ -25,22 +29,66 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 ## Getting Started
 
+### Quick Start (Ubuntu/Debian)
+
 1. **Clone the repository**
    ```bash
    git clone https://github.com/FreyBear/SBMS.git
    cd SBMS
    ```
 
-2. **Configure environment variables**
-   - Edit `.env` files as needed for database and web settings.
+2. **Run the setup script**
+   ```bash
+   ./start-sbms.sh
+   ```
+   
+   This script will:
+   - Install Docker if not present
+   - Create your `.env` file from the template
+   - Start the SBMS system with Docker Compose
 
-3. **Start the system with Docker Compose**
+3. **Access the web interface**
+   - Open your browser and go to `http://localhost:8080`
+
+### Manual Setup
+
+If you prefer manual setup or are not on Ubuntu/Debian:
+
+1. **Install Docker and Docker Compose**
+   - Follow the official Docker installation guide for your OS
+
+2. **Configure environment variables**
+   ```bash
+   cp .env.example .env
+   # Edit .env with your preferred settings
+   ```
+
+3. **Start the system**
    ```bash
    docker compose up -d
    ```
 
 4. **Access the web interface**
-   - Open your browser and go to `http://localhost:YOUR_PORT`
+   - Open your browser and go to `http://localhost:8080`
+
+### Management Commands
+
+```bash
+# View logs
+docker compose logs -f
+
+# Stop the system
+docker compose down
+
+# Rebuild and restart
+docker compose up -d --build
+
+# Access database directly
+docker exec -it sbms_db psql -U sbms_user -d sbms
+
+# Import keg data from CSV
+python3 import_kegs.py keg_import_template.csv
+```
 
 ## Configuration & Environment Variables
 
@@ -84,9 +132,42 @@ The `.env` file contains sensitive configuration for your SBMS system. Here’s 
 
 If you have questions about any setting, check the comments in `.env.example` or ask for help!
 
+## Project Structure
+
+```
+SBMS/
+├── docker-compose.yml          # Container orchestration
+├── .env                       # Your configuration (not in git)
+├── .env.example              # Configuration template
+├── database/
+│   └── init.sql              # Database schema and initial data
+├── backend/
+│   ├── app.py               # Main Flask application
+│   ├── requirements.txt     # Python dependencies
+│   └── Dockerfile          # Backend container config
+├── frontend/
+│   ├── templates/           # HTML templates
+│   │   ├── base.html
+│   │   ├── index.html      # Dashboard
+│   │   ├── kegs.html       # Keg management
+│   │   └── ...
+│   └── static/
+│       └── css/
+│           └── style.css    # Application styles
+└── keg_import_template.csv  # Sample keg data
+```
+
+## Current Features
+
+- **Dashboard**: Overview of keg status and recent activity
+- **Keg Management**: View, update, and track all kegs
+- **Keg Details**: Individual keg information and history
+- **Brew Tracking**: View brew batches and their associated kegs
+- **Recipe Management**: Basic recipe storage and organization
+
 ## Data Migration
 
-Future updates will integrate legacy keg data into the new system.
+The system includes sample data based on `keg_import_template.csv`. The database will be initialized with basic recipes, brews, and keg structure when first started.
 
 ## Extensibility
 

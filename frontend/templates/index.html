@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="dashboard">
+    <h1>{{ _('Brewery Dashboard') }}</h1>
+    
+    <div class="stats-grid">
+        <div class="stat-card">
+            <h3>{{ _('Keg Status Summary') }}</h3>
+            <div class="keg-stats">
+                {% for stat in keg_stats %}
+                <div class="stat-item">
+                    <span class="status-{{ stat.status|lower|replace(' ', '-')|replace('/', '-') }}">
+                        {{ stat.status }}
+                    </span>
+                    <span class="count">{{ stat.count }} {{ _('kegs') }}</span>
+                    {% if stat.total_liters %}
+                    <span class="liters">{{ "%.1f"|format(stat.total_liters) }}L</span>
+                    {% endif %}
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <h3>{{ _('Quick Actions') }}</h3>
+            <div class="actions">
+                <a href="{{ url_for('kegs') }}" class="btn btn-primary">{{ _('View All Kegs') }}</a>
+                <a href="{{ url_for('brews') }}" class="btn btn-secondary">{{ _('View Brews') }}</a>
+                <a href="{{ url_for('recipes') }}" class="btn btn-secondary">{{ _('View Recipes') }}</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="recent-kegs">
+        <h2>Recent Keg Activity</h2>
+        {% if recent_kegs %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Keg #</th>
+                    <th>Contents</th>
+                    <th>Status</th>
+                    <th>Amount Left</th>
+                    <th>Location</th>
+                    <th>Last Measured</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for keg in recent_kegs %}
+                <tr>
+                    <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
+                    <td>{{ keg.contents or 'Empty' }}</td>
+                    <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status }}</span></td>
+                    <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
+                    <td>{{ keg.location or 'Unknown' }}</td>
+                    <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+        {% else %}
+        <p>No keg data available.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

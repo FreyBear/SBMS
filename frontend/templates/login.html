@@ -1,0 +1,157 @@
+{% extends "base.html" %}
+
+{% block title %}Login - SBMS{% endblock %}
+
+{% block content %}
+<div class="login-page">
+    <div class="login-form-container">
+        <div class="login-header">
+            <h1>SBMS Login</h1>
+            <p>Small Brewery Management System</p>
+        </div>
+        
+        <form method="POST" class="login-form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.username.label(class="form-label") }}
+                {{ form.username(class="form-control") }}
+                {% if form.username.errors %}
+                    <div class="field-errors">
+                        {% for error in form.username.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group">
+                {{ form.password.label(class="form-label") }}
+                {{ form.password(class="form-control") }}
+                {% if form.password.errors %}
+                    <div class="field-errors">
+                        {% for error in form.password.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+            
+            <div class="form-group checkbox-group">
+                {{ form.remember_me(class="form-checkbox") }}
+                {{ form.remember_me.label(class="checkbox-label") }}
+            </div>
+            
+            <div class="form-group">
+                {{ form.submit(class="btn btn-primary btn-full") }}
+            </div>
+        </form>
+        
+        <div class="login-footer">
+            <p><small>Secure access to your brewery management system</small></p>
+        </div>
+    </div>
+</div>
+
+<style>
+.login-page {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: calc(100vh - 160px);
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+}
+
+.login-form-container {
+    background: white;
+    padding: 40px;
+    border-radius: 10px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    width: 100%;
+    max-width: 400px;
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.login-header h1 {
+    color: #2c3e50;
+    margin-bottom: 10px;
+}
+
+.login-header p {
+    color: #7f8c8d;
+    font-size: 14px;
+}
+
+.login-form .form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 14px;
+    transition: border-color 0.3s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 3px rgba(52, 152, 219, 0.1);
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.form-checkbox {
+    width: auto;
+}
+
+.checkbox-label {
+    margin: 0;
+    font-weight: normal;
+}
+
+.btn-full {
+    width: 100%;
+    padding: 12px;
+    font-size: 16px;
+}
+
+.field-errors {
+    margin-top: 5px;
+}
+
+.field-errors .error {
+    color: #e74c3c;
+    font-size: 12px;
+    display: block;
+}
+
+.login-footer {
+    text-align: center;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e9ecef;
+}
+
+.login-footer small {
+    color: #7f8c8d;
+}
+</style>
+{% endblock %}

@@ -1,0 +1,83 @@
+{% extends "base.html" %}
+
+{% block title %}Edit History Entry - Keg {{ keg.keg_number }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="edit-history">
+    <div class="page-header">
+        <h1>{{ _('Edit History Entry') }} - {{ _('Keg') }} #{{ keg.keg_number }}</h1>
+        <div class="actions">
+            <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </div>
+
+    <form method="POST" class="form">
+        <div class="form-grid">
+            <div class="form-group">
+                <label for="recorded_date">{{ _('Date') }}:</label>
+                <input type="date" id="recorded_date" name="recorded_date" 
+                       value="{{ history_entry.recorded_date.strftime('%Y-%m-%d') if history_entry.recorded_date else '' }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="contents">{{ _('Contents') }}:</label>
+                <input type="text" id="contents" name="contents" 
+                       value="{{ history_entry.contents or '' }}" placeholder="e.g., IPA, Empty">
+            </div>
+
+            <div class="form-group">
+                <label for="status">{{ _('Status') }}:</label>
+                <select id="status" name="status" required>
+                    <option value="Full" {% if history_entry.status == 'Full' %}selected{% endif %}>{{ _('Full') }}</option>
+                    <option value="Started" {% if history_entry.status == 'Started' %}selected{% endif %}>{{ _('Started') }}</option>
+                    <option value="Available/Cleaned" {% if history_entry.status == 'Available/Cleaned' %}selected{% endif %}>{{ _('Available/Cleaned') }}</option>
+                    <option value="Empty" {% if history_entry.status == 'Empty' %}selected{% endif %}>{{ _('Empty') }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="amount_left_liters">{{ _('Amount Left') }} ({{ _('Liters') }}):</label>
+                <input type="number" id="amount_left_liters" name="amount_left_liters" 
+                       value="{{ history_entry.amount_left_liters or 0 }}" step="0.1" min="0" 
+                       max="{{ keg.volume_liters }}">
+            </div>
+
+            <div class="form-group">
+                <label for="location">{{ _('Location') }}:</label>
+                <select id="location" name="location">
+                    <option value="">{{ _('Select location...') }}</option>
+                    <option value="Brewery" {% if history_entry.location == 'Brewery' %}selected{% endif %}>{{ _('Brewery') }}</option>
+                    <option value="Cellar" {% if history_entry.location == 'Cellar' %}selected{% endif %}>{{ _('Cellar') }}</option>
+                    <option value="Storage" {% if history_entry.location == 'Storage' %}selected{% endif %}>{{ _('Storage') }}</option>
+                    <option value="Bar" {% if history_entry.location == 'Bar' %}selected{% endif %}>{{ _('Bar') }}</option>
+                    <option value="Cleaning" {% if history_entry.location == 'Cleaning' %}selected{% endif %}>{{ _('Cleaning') }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="arrangement">{{ _('Event/Occasion') }}:</label>
+                <select id="arrangement" name="arrangement">
+                    <option value="Normal operation" {% if history_entry.arrangement == 'Normal operation' %}selected{% endif %}>{{ _('Normal operation') }}</option>
+                    <option value="Maintenance" {% if history_entry.arrangement == 'Maintenance' %}selected{% endif %}>{{ _('Maintenance') }}</option>
+                    <option value="Cleaning" {% if history_entry.arrangement == 'Cleaning' %}selected{% endif %}>{{ _('Cleaning') }}</option>
+                    <option value="Storage" {% if history_entry.arrangement == 'Storage' %}selected{% endif %}>{{ _('Storage') }}</option>
+                    <option value="Filling" {% if history_entry.arrangement == 'Filling' %}selected{% endif %}>{{ _('Filling') }}</option>
+                    <option value="Event" {% if history_entry.arrangement == 'Event' %}selected{% endif %}>{{ _('Event') }}</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="notes">{{ _('Notes') }}:</label>
+            <textarea id="notes" name="notes" rows="4" placeholder="{{ _('Any additional notes about this entry...') }}">{{ history_entry.notes or '' }}</textarea>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ _('Update Entry') }}</button>
+            <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            <button type="submit" name="delete" value="true" class="btn btn-danger" 
+                    onclick="return confirm('Are you sure you want to delete this history entry?')">{{ _('Delete Entry') }}</button>
+        </div>
+    </form>
+</div>
+{% endblock %}

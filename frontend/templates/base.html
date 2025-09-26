@@ -1,0 +1,57 @@
+<!DOCTYPE html>
+<html lang="{{ get_locale() }}">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}SBMS - Small Brewery Management System{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <a href="{{ url_for('index') }}" class="nav-brand">SBMS</a>
+            {% if current_user.is_authenticated %}
+            <ul class="nav-menu">
+                <li><a href="{{ url_for('index') }}">{{ _('Dashboard') }}</a></li>
+                {% if current_user.can_access('kegs', 'view') %}
+                <li><a href="{{ url_for('kegs') }}">{{ _('Kegs') }}</a></li>
+                {% endif %}
+                {% if current_user.can_access('brews', 'view') %}
+                <li><a href="{{ url_for('brews') }}">{{ _('Brews') }}</a></li>
+                {% endif %}
+                {% if current_user.can_access('recipes', 'view') %}
+                <li><a href="{{ url_for('recipes') }}">{{ _('Recipes') }}</a></li>
+                {% endif %}
+                {% if current_user.can_access('users', 'view') %}
+                <li><a href="{{ url_for('users') }}">{{ _('Users') }}</a></li>
+                {% endif %}
+            </ul>
+            <div class="nav-user">
+                <span class="user-info">{{ current_user.full_name }} ({{ current_user.role_name }})</span>
+                <a href="{{ url_for('change_password') }}" class="nav-link">{{ _('Change Password') }}</a>
+                <a href="{{ url_for('logout') }}" class="nav-link">{{ _('Logout') }}</a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
+
+    <main class="main-content">
+        {% with messages = get_flashed_messages(with_categories=true) %}
+            {% if messages %}
+                <div class="alerts">
+                    {% for category, message in messages %}
+                        <div class="alert alert-{{ category }}">{{ message }}</div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+        {% endwith %}
+
+        {% block content %}{% endblock %}
+    </main>
+
+    <footer class="footer">
+        <p>&copy; 2025 {{ _('Small Brewery Management System') }}</p>
+    </footer>
+
+</body>
+</html>

@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Brews - SBMS{% endblock %}
+
+{% block content %}
+<div class="brews-page">
+    <div class="page-header">
+        <h1>{{ _('Brew Management') }}</h1>
+    </div>
+
+    {% if brews %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ _('Brew Name') }}</th>
+                <th>{{ _('Date Brewed') }}</th>
+                <th>{{ _('Recipe') }}</th>
+                <th>{{ _('Style') }}</th>
+                <th>{{ _('Kegs') }}</th>
+                <th>{{ _('Notes') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for brew in brews %}
+            <tr>
+                <td>{{ brew.name }}</td>
+                <td>{{ brew.date_brewed.strftime('%d-%m-%Y') if brew.date_brewed else 'Unknown' }}</td>
+                <td>{{ brew.recipe_name or 'Unknown' }}</td>
+                <td>{{ brew.style or 'Unknown' }}</td>
+                <td>{{ brew.keg_count }} kegs</td>
+                <td>{{ brew.notes or 'No notes' }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No brews found in the system.</p>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}

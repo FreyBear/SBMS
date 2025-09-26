@@ -1,0 +1,143 @@
+{% extends "base.html" %}
+
+{% block title %}Create User - SBMS{% endblock %}
+
+{% block content %}
+<div class="create-user">
+    <div class="page-header">
+        <h1>Create New User</h1>
+        <div class="actions">
+            <a href="{{ url_for('users') }}" class="btn btn-secondary">Back to Users</a>
+        </div>
+    </div>
+
+    <form method="POST" class="form">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-grid">
+            <div class="form-group">
+                {{ form.username.label }}
+                {{ form.username(class="form-control") }}
+                {% if form.username.errors %}
+                    <div class="field-errors">
+                        {% for error in form.username.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.email.label }}
+                {{ form.email(class="form-control") }}
+                {% if form.email.errors %}
+                    <div class="field-errors">
+                        {% for error in form.email.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.full_name.label }}
+                {{ form.full_name(class="form-control") }}
+                {% if form.full_name.errors %}
+                    <div class="field-errors">
+                        {% for error in form.full_name.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.role_id.label }}
+                {{ form.role_id(class="form-control") }}
+                {% if form.role_id.errors %}
+                    <div class="field-errors">
+                        {% for error in form.role_id.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.language.label }}
+                {{ form.language(class="form-control") }}
+                {% if form.language.errors %}
+                    <div class="field-errors">
+                        {% for error in form.language.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.password.label }}
+                {{ form.password(class="form-control") }}
+                {% if form.password.errors %}
+                    <div class="field-errors">
+                        {% for error in form.password.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.confirm_password.label }}
+                {{ form.confirm_password(class="form-control") }}
+                {% if form.confirm_password.errors %}
+                    <div class="field-errors">
+                        {% for error in form.confirm_password.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label class="checkbox-label">
+                {{ form.is_active() }} {{ form.is_active.label.text }}
+            </label>
+        </div>
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('users') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.field-errors {
+    margin-top: 5px;
+}
+
+.field-errors .error {
+    color: #e74c3c;
+    font-size: 12px;
+    display: block;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    width: 100%;
+}
+</style>
+{% endblock %}

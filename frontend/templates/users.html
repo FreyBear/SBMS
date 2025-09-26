@@ -1,0 +1,108 @@
+{% extends "base.html" %}
+
+{% block title %}Users - SBMS{% endblock %}
+
+{% block content %}
+<div class="users-page">
+    <div class="page-header">
+        <h1>{{ _('User Management') }}</h1>
+        <div class="actions">
+            {% if current_user.can_access('users', 'full') %}
+            <a href="{{ url_for('create_user') }}" class="btn btn-primary">{{ _('Create User') }}</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if users %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ _('Username') }}</th>
+                <th>{{ _('Full Name') }}</th>
+                <th>{{ _('Email') }}</th>
+                <th>{{ _('Role') }}</th>
+                <th>{{ _('Language') }}</th>
+                <th>{{ _('Status') }}</th>
+                <th>{{ _('Created') }}</th>
+                <th>{{ _('Last Login') }}</th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for user in users %}
+            <tr>
+                <td>{{ user.username }}</td>
+                <td>{{ user.full_name }}</td>
+                <td>{{ user.email }}</td>
+                <td><span class="role-badge role-{{ user.role_name }}">{{ user.role_name }}</span></td>
+                <td>
+                    {% if user.language == 'no' %}
+                    🇳🇴 Norsk
+                    {% else %}
+                    🇺🇸 English
+                    {% endif %}
+                </td>
+                <td>
+                    {% if user.is_active %}
+                    <span class="status-active">Active</span>
+                    {% else %}
+                    <span class="status-inactive">Inactive</span>
+                    {% endif %}
+                </td>
+                <td>{{ user.created_date.strftime('%d-%m-%Y') if user.created_date else 'Unknown' }}</td>
+                <td>{{ user.last_login.strftime('%d-%m-%Y %H:%M') if user.last_login else 'Never' }}</td>
+                <td>
+                    {% if current_user.can_access('users', 'full') %}
+                    <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-edit">Edit</a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>No users found in the system.</p>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.role-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 600;
+}
+
+.role-admin {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.role-brewer {
+    background-color: #3498db;
+    color: white;
+}
+
+.role-operator {
+    background-color: #f39c12;
+    color: white;
+}
+
+.role-viewer {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.status-active {
+    color: #27ae60;
+    font-weight: 600;
+}
+
+.status-inactive {
+    color: #e74c3c;
+    font-weight: 600;
+}
+</style>
+{% endblock %}
