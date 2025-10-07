@@ -1,20 +1,48 @@
 {% extends "base.html" %}
 
-{% block title %}Edit User - SBMS{% endblock %}
+{% block title %}
+{% if is_self_edit %}{{ _('My Profile') }}{% else %}{{ _('Edit User') }}{% endif %} - SBMS
+{% endblock %}
 
 {% block content %}
 <div class="edit-user">
     <div class="page-header">
-        <h1>Edit User: {{ user_data.username }}</h1>
+        <h1>
+        {% if is_self_edit %}
+            {{ _('My Profile') }}
+        {% else %}
+            {{ _('Edit User') }}: {{ user_data.username }}
+        {% endif %}
+        </h1>
         <div class="actions">
-            <a href="{{ url_for('users') }}" class="btn btn-secondary">Back to Users</a>
+            {% if current_user.can_access('users', 'view') %}
+            <a href="{{ url_for('users') }}" class="btn btn-secondary">{{ _('Back to Users') }}</a>
+            {% else %}
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">{{ _('Back to Dashboard') }}</a>
+            {% endif %}
         </div>
     </div>
 
     <form method="POST" class="form">
         {{ form.hidden_tag() }}
         
+        {% if is_self_edit %}
+        <!-- Hidden fields for self-editing to satisfy form validation -->
+        <input type="hidden" name="username" value="{{ user_data.username }}">
+        <input type="hidden" name="role_id" value="{{ user_data.role_id }}">
+        <input type="hidden" name="is_active" value="{{ user_data.is_active }}">
+        {% endif %}
+        
         <div class="form-grid">
+            {% if is_self_edit %}
+            <!-- Self-editing: Show username as read-only -->
+            <div class="form-group">
+                <label for="username">{{ _('Username') }}</label>
+                <input type="text" id="username" class="form-control" value="{{ user_data.username }}" disabled>
+                <small class="help-text">{{ _('Username cannot be changed') }}</small>
+            </div>
+            {% else %}
+            <!-- Admin editing: Allow username changes -->
             <div class="form-group">
                 {{ form.username.label }}
                 {{ form.username(class="form-control") }}
@@ -26,6 +54,7 @@
                     </div>
                 {% endif %}
             </div>
+            {% endif %}
 
             <div class="form-group">
                 {{ form.email.label }}
@@ -51,6 +80,8 @@
                 {% endif %}
             </div>
 
+            {% if not is_self_edit %}
+            <!-- Admin-only fields -->
             <div class="form-group">
                 {{ form.role_id.label }}
                 {{ form.role_id(class="form-control") }}
@@ -62,6 +93,14 @@
                     </div>
                 {% endif %}
             </div>
+            {% else %}
+            <!-- Self-editing: Show role as read-only -->
+            <div class="form-group">
+                <label for="role">{{ _('Role') }}</label>
+                <input type="text" id="role" class="form-control" value="{{ current_user.role_name }}" disabled>
+                <small class="help-text">{{ _('Role cannot be changed') }}</small>
+            </div>
+            {% endif %}
 
             <div class="form-group">
                 {{ form.language.label }}
@@ -75,6 +114,8 @@
                 {% endif %}
             </div>
 
+            {% if not is_self_edit %}
+            <!-- Admin-only field -->
             <div class="form-group checkbox-group">
                 {{ form.is_active() }}
                 {{ form.is_active.label }}
@@ -86,11 +127,16 @@
                     </div>
                 {% endif %}
             </div>
+            {% endif %}
         </div>
 
         <div class="form-actions">
-            {{ form.submit(class="btn btn-primary") }}
-            <a href="{{ url_for('users') }}" class="btn btn-secondary">Cancel</a>
+            <input type="submit" class="btn btn-primary" value="{% if is_self_edit %}{{ _('Update Profile') }}{% else %}{{ _('Update User') }}{% endif %}">
+            {% if current_user.can_access('users', 'view') %}
+            <a href="{{ url_for('users') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            {% else %}
+            <a href="{{ url_for('index') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            {% endif %}
         </div>
     </form>
 </div>
@@ -130,6 +176,17 @@
     border: 1px solid #ddd;
     border-radius: 4px;
     font-size: 14px;
+}
+
+.form-control:disabled {
+    background-color: #f8f9fa;
+    color: #6c757d;
+}
+
+.help-text {
+    font-size: 12px;
+    color: #6c757d;
+    margin-top: 5px;
 }
 
 .form-control:focus {

@@ -675,9 +675,17 @@ def change_password():
     return render_template('change_password.html', form=form)
 
 @app.route('/edit_user/<int:user_id>', methods=['GET', 'POST'])
-@require_permission('users', 'full') 
+@require_auth
 def edit_user(user_id):
-    """Edit user (admin only)"""
+    """Edit user (admin only) or allow users to edit themselves"""
+    # Allow users to edit themselves OR require admin permission for editing others
+    if user_id != current_user.id and not current_user.can_access('users', 'full'):
+        flash(_('You can only edit your own profile'), 'error')
+        return redirect(url_for('users') if current_user.can_access('users', 'view') else url_for('index'))
+    
+    # Determine if this is self-editing
+    is_self_edit = (user_id == current_user.id)
+    
     form = EditUserForm()
     
     conn = get_db_connection()
@@ -713,39 +721,53 @@ def edit_user(user_id):
                 form.is_active.data = user_data['is_active']
             
             if form.validate_on_submit():
-                # Update user
-                cur.execute("""
-                    UPDATE users 
-                    SET username = %s, email = %s, full_name = %s, role_id = %s, language = %s, is_active = %s
-                    WHERE id = %s
-                """, (
-                    form.username.data,
-                    form.email.data,
-                    form.full_name.data,
-                    form.role_id.data,
-                    form.language.data,
-                    form.is_active.data,
-                    user_id
-                ))
+                # For self-editing, restrict what can be changed
+                if is_self_edit:
+                    # Users can only update their own basic info and language
+                    cur.execute("""
+                        UPDATE users 
+                        SET email = %s, full_name = %s, language = %s
+                        WHERE id = %s
+                    """, (
+                        form.email.data,
+                        form.full_name.data,
+                        form.language.data,
+                        user_id
+                    ))
+                else:
+                    # Admin can update everything
+                    cur.execute("""
+                        UPDATE users 
+                        SET username = %s, email = %s, full_name = %s, role_id = %s, language = %s, is_active = %s
+                        WHERE id = %s
+                    """, (
+                        form.username.data,
+                        form.email.data,
+                        form.full_name.data,
+                        form.role_id.data,
+                        form.language.data,
+                        form.is_active.data,
+                        user_id
+                    ))
                 conn.commit()
                 
                 # If updating current user's language, force logout to refresh user object
                 if user_id == current_user.id:
                     from flask_login import logout_user
                     logout_user()
-                    flash(f'User {form.username.data} updated successfully! Please log in again to see language change.', 'success')
+                    flash(_('Profile updated successfully! Please log in again to see language change.'), 'success')
                     return redirect(url_for('login'))
                 else:
-                    flash(f'User {form.username.data} updated successfully!', 'success')
+                    flash(_('User {} updated successfully!').format(form.username.data), 'success')
                     
-                return redirect(url_for('users'))
+                return redirect(url_for('users') if current_user.can_access('users', 'view') else url_for('index'))
                 
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
     finally:
         conn.close()
     
-    return render_template('edit_user.html', form=form, user_data=user_data)
+    return render_template('edit_user.html', form=form, user_data=user_data, is_self_edit=is_self_edit)
 
 @app.errorhandler(404)
 def not_found(error):

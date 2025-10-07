@@ -53,7 +53,9 @@
                 <td>{{ user.last_login.strftime('%d-%m-%Y %H:%M') if user.last_login else 'Never' }}</td>
                 <td>
                     {% if current_user.can_access('users', 'full') %}
-                    <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-edit">Edit</a>
+                    <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-edit">{{ _('Edit') }}</a>
+                    {% elif user.id == current_user.id %}
+                    <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-edit">{{ _('My Profile') }}</a>
                     {% endif %}
                 </td>
             </tr>

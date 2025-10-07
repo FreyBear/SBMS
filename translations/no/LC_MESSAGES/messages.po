@@ -385,5 +385,57 @@ msgstr "Språk"
 
 #: frontend/templates/users.html:27
 msgid "Last Login"
-msgstr ""
+msgstr "Siste Innlogging"
+
+#: backend/app.py:XXX
+msgid "My Profile"
+msgstr "Min Profil"
+
+#: backend/app.py:XXX
+msgid "You can only edit your own profile"
+msgstr "Du kan bare redigere din egen profil"
+
+#: backend/app.py:XXX
+msgid "Profile updated successfully! Please log in again to see language change."
+msgstr "Profil oppdatert! Vennligst logg inn igjen for å se språkendringen."
+
+#: backend/app.py:XXX
+msgid "User {} updated successfully!"
+msgstr "Bruker {} oppdatert!"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Edit User"
+msgstr "Rediger Bruker"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Back to Users"
+msgstr "Tilbake til Brukere"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Back to Dashboard"
+msgstr "Tilbake til Dashbord"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Username cannot be changed"
+msgstr "Brukernavn kan ikke endres"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Role cannot be changed"
+msgstr "Rolle kan ikke endres"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Update Profile"
+msgstr "Oppdater Profil"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Update User"
+msgstr "Oppdater Bruker"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Cancel"
+msgstr "Avbryt"
+
+#: frontend/templates/users.html:XXX
+msgid "Edit"
+msgstr "Rediger"
 
