@@ -7,19 +7,108 @@
     <div class="stats-grid">
         <div class="stat-card">
             <h3>{{ _('Keg Status Summary') }}</h3>
-            <div class="keg-stats">
+            <div class="chart-container">
+                {% set max_count = keg_stats|map(attribute='count')|max %}
+                {% if max_count and max_count > 0 %}
                 {% for stat in keg_stats %}
-                <div class="stat-item">
-                    <span class="status-{{ stat.status|lower|replace(' ', '-')|replace('/', '-') }}">
+                {% set width_percent = ((stat.count|float / max_count|float) * 100)|round(1) %}
+                <div class="bar-chart-row">
+                    <div class="bar-label">
+                        {% if stat.status == 'Available/Cleaned' %}
+                        Available<br>Cleaned
+                        {% else %}
                         {{ stat.status }}
-                    </span>
-                    <span class="count">{{ stat.count }} {{ _('kegs') }}</span>
-                    {% if stat.total_liters %}
-                    <span class="liters">{{ "%.1f"|format(stat.total_liters) }}L</span>
-                    {% endif %}
+                        {% endif %}
+                    </div>
+                    <div class="bar-wrapper">
+                        <div class="bar bar-{{ stat.status|lower|replace(' ', '-')|replace('/', '-') }}" 
+                             style="width: {{ width_percent }}%; height: 25px; display: block;">
+                        </div>
+                    </div>
+                    <div class="bar-value">
+                        {{ stat.count }}
+                        {% if stat.total_liters %}
+                        <small>({{ "%.0f"|format(stat.total_liters) }}L)</small>
+                        {% endif %}
+                    </div>
                 </div>
                 {% endfor %}
+                {% else %}
+                <p style="color: red;">No keg data available</p>
+                {% endif %}
             </div>
+            
+            <!-- Add inline styles to ensure they work -->
+            <style>
+                .chart-container .bar-chart-row {
+                    display: flex !important;
+                    align-items: center !important;
+                    margin-bottom: 15px !important;
+                    gap: 15px !important;
+                    min-height: 35px !important; /* Increased to accommodate two-line labels */
+                }
+                
+                .chart-container .bar-label {
+                    width: 100px !important; /* Reduced width since we're using two lines */
+                    font-size: 13px !important;
+                    font-weight: 600 !important;
+                    color: #333 !important;
+                    text-align: right !important;
+                    flex-shrink: 0 !important;
+                    line-height: 1.2 !important;
+                    vertical-align: middle !important;
+                }
+                
+                .chart-container .bar-wrapper {
+                    flex: 1 !important;
+                    height: 25px !important;
+                    background-color: #f0f0f0 !important;
+                    border-radius: 3px !important;
+                    overflow: hidden !important;
+                    position: relative !important;
+                    border: 1px solid #ddd !important;
+                    min-width: 200px !important;
+                }
+                
+                .chart-container .bar {
+                    height: 100% !important;
+                    border-radius: 2px !important;
+                    display: block !important;
+                    min-width: 3px !important;
+                }
+                
+                .chart-container .bar-available-cleaned {
+                    background-color: #007bff !important;
+                }
+                
+                .chart-container .bar-full {
+                    background-color: #28a745 !important;
+                }
+                
+                .chart-container .bar-started {
+                    background-color: #fd7e14 !important;
+                }
+                
+                .chart-container .bar-empty {
+                    background-color: #6c757d !important;
+                }
+                
+                .chart-container .bar-value {
+                    width: 80px !important;
+                    text-align: center !important;
+                    font-weight: bold !important;
+                    font-size: 16px !important;
+                    color: #333 !important;
+                    flex-shrink: 0 !important;
+                }
+                
+                .chart-container .bar-value small {
+                    display: block !important;
+                    font-size: 11px !important;
+                    color: #666 !important;
+                    font-weight: normal !important;
+                }
+            </style>
         </div>
         
         <div class="stat-card">
@@ -63,5 +152,35 @@
         <p>No keg data available.</p>
         {% endif %}
     </div>
+    
+    {% if current_user.can_access('expenses', 'full') and pending_expenses %}
+    <div class="stat-card">
+        <h3>{{ _('Pending Expense Requests') }}</h3>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>{{ _('Submitted') }}</th>
+                    <th>{{ _('User') }}</th>
+                    <th>{{ _('Amount') }}</th>
+                    <th>{{ _('Description') }}</th>
+                    <th>{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in pending_expenses %}
+                <tr>
+                    <td>{{ expense.submitted_date.strftime('%d-%m-%Y') }}</td>
+                    <td>{{ expense.full_name or expense.username }}</td>
+                    <td>{{ "%.2f"|format(expense.amount) }} NOK</td>
+                    <td>{{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}</td>
+                    <td>
+                        <a href="{{ url_for('expenses') }}" class="btn btn-sm btn-primary">{{ _('View All') }}</a>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
 </div>
 {% endblock %}

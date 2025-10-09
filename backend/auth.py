@@ -7,7 +7,7 @@ from flask import session, redirect, url_for, flash, request
 from flask_login import UserMixin, current_user
 
 class User(UserMixin):
-    def __init__(self, id, username, email, full_name, role_name, permissions, is_active=True, language='en'):
+    def __init__(self, id, username, email, full_name, role_name, permissions, is_active=True, language='en', bank_account=None):
         self.id = id
         self.username = username
         self.email = email
@@ -16,6 +16,7 @@ class User(UserMixin):
         self.permissions = json.loads(permissions) if isinstance(permissions, str) else permissions
         self._is_active = is_active
         self.language = language
+        self.bank_account = bank_account
     
     @property
     def is_active(self):

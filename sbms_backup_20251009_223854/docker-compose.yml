@@ -1,0 +1,41 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:15
+    container_name: sbms_db
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ./database/init.sql:/docker-entrypoint-initdb.d/init.sql
+    ports:
+      - "${POSTGRES_PORT}:5432"
+    restart: unless-stopped
+
+  web:
+    build: ./backend
+    container_name: sbms_web
+    environment:
+      - POSTGRES_DB=${POSTGRES_DB}
+      - POSTGRES_USER=${POSTGRES_USER}
+      - POSTGRES_PASSWORD=${POSTGRES_PASSWORD}
+      - POSTGRES_HOST=db
+      - POSTGRES_PORT=5432
+      - SECRET_KEY=${SECRET_KEY}
+      - DEBUG=${DEBUG}
+    ports:
+      - "${WEB_PORT}:5000"
+    depends_on:
+      - db
+    volumes:
+      - ./backend:/app
+      - ./frontend/templates:/app/frontend/templates
+      - ./frontend/static:/app/frontend/static
+      - ./translations:/app/translations
+    restart: unless-stopped
+
+volumes:
+  postgres_data:

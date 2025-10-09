@@ -439,3 +439,383 @@ msgstr "Avbryt"
 msgid "Edit"
 msgstr "Rediger"
 
+#: backend/app.py:XXX
+msgid "Reset Password"
+msgstr "Tilbakestill Passord"
+
+#: backend/app.py:XXX
+msgid "Reset Password for"
+msgstr "Tilbakestill passord for"
+
+#: backend/app.py:XXX
+msgid "Delete"
+msgstr "Slett"
+
+#: backend/app.py:XXX
+msgid "Are you sure you want to delete user"
+msgstr "Er du sikker på at du vil slette brukeren"
+
+#: backend/app.py:XXX
+msgid "This action cannot be undone."
+msgstr "Denne handlingen kan ikke angres."
+
+#: backend/app.py:XXX
+msgid "You cannot delete your own account"
+msgstr "Du kan ikke slette din egen konto"
+
+#: backend/app.py:XXX
+msgid "User {} ({}) deleted successfully"
+msgstr "Bruker {} ({}) slettet vellykket"
+
+#: backend/app.py:XXX
+msgid "User not found"
+msgstr "Bruker ikke funnet"
+
+#: backend/app.py:XXX
+msgid "New password is required"
+msgstr "Nytt passord er påkrevd"
+
+#: backend/app.py:XXX
+msgid "Passwords do not match"
+msgstr "Passordene stemmer ikke overens"
+
+#: backend/app.py:XXX
+msgid "Password reset successfully for user {}"
+msgstr "Passord tilbakestilt vellykket for bruker {}"
+
+#: frontend/templates/reset_password.html:XXX
+msgid "Not set"
+msgstr "Ikke angitt"
+
+#: frontend/templates/reset_password.html:XXX
+msgid "Warning"
+msgstr "Advarsel"
+
+#: frontend/templates/reset_password.html:XXX
+msgid "This will immediately change the user's password. They will need to use the new password to log in."
+msgstr "Dette vil umiddelbart endre brukerens passord. De må bruke det nye passordet for å logge inn."
+
+#: frontend/templates/reset_password.html:XXX
+msgid "Password must be at least 6 characters long"
+msgstr "Passord må være minst 6 tegn langt"
+
+#: frontend/templates/reset_password.html:XXX
+msgid "New Password"
+msgstr "Nytt Passord"
+
+#: frontend/templates/reset_password.html:XXX
+msgid "Confirm New Password"
+msgstr "Bekreft Nytt Passord"
+
+#: backend/forms.py:XXX frontend/templates/edit_user.html:XXX frontend/templates/users.html:XXX
+msgid "Bank Account"
+msgstr "Bankkonto"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "11-digit Norwegian bank account number. Dots and spaces will be removed automatically."
+msgstr "11-sifret norsk bankkontonummer. Punktum og mellomrom fjernes automatisk."
+
+#: backend/forms.py:XXX backend/app.py:XXX
+msgid "Bank account must be exactly 11 digits"
+msgstr "Bankkonto må være nøyaktig 11 siffer"
+
+#: frontend/templates/base.html:XXX frontend/templates/expenses.html:XXX
+msgid "Expenses"
+msgstr "Utgifter"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Expense Management"
+msgstr "Utgiftshåndtering"
+
+#: frontend/templates/expenses.html:XXX frontend/templates/create_expense.html:XXX
+msgid "Submit New Expense"
+msgstr "Send Inn Ny Utgift"
+
+#: frontend/templates/expenses.html:XXX
+msgid "User"
+msgstr "Bruker"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Amount"
+msgstr "Beløp"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Description"
+msgstr "Beskrivelse"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Purchase Date"
+msgstr "Kjøpsdato"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Status"
+msgstr "Status"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Receipts"
+msgstr "Kvitteringer"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Actions"
+msgstr "Handlinger"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Pending"
+msgstr "Venter"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Paid"
+msgstr "Betalt"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Rejected"
+msgstr "Avvist"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Mark Paid"
+msgstr "Marker som Betalt"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Completed"
+msgstr "Fullført"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Amount in Norwegian Kroner (NOK)"
+msgstr "Beløp i Norske Kroner (NOK)"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "When did you make this purchase?"
+msgstr "Når gjorde du dette kjøpet?"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Provide a detailed description of the purchase (10-500 characters)"
+msgstr "Gi en detaljert beskrivelse av kjøpet (10-500 tegn)"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Upload receipt images (JPG, PNG, PDF - max 5MB each). You can select multiple files."
+msgstr "Last opp kvitteringsbilder (JPG, PNG, PDF - maks 5MB hver). Du kan velge flere filer."
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Upload receipt images (JPG, PNG, PDF - max 5MB each). You can select multiple files by holding Ctrl/Cmd while clicking."
+msgstr "Last opp kvitteringsbilder (JPG, PNG, PDF - maks 5MB hver). Du kan velge flere filer ved å holde Ctrl/Cmd mens du klikker."
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Reimbursement Information"
+msgstr "Refusjonsinformasjon"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Your Name"
+msgstr "Ditt Navn"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Add bank account"
+msgstr "Legg til bankkonto"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "You have not set your bank account number. Please add it in your profile for faster reimbursement."
+msgstr "Du har ikke angitt bankkontonummer. Vennligst legg det til i profilen din for raskere refusjon."
+
+#: frontend/templates/expenses.html:XXX
+msgid "receipt(s)"
+msgstr "kvittering(er)"
+
+#: frontend/templates/expenses.html:XXX
+msgid "No receipts"
+msgstr "Ingen kvitteringer"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "Expense Receipts"
+msgstr "Utgiftskvitteringer"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "Back to Expenses"
+msgstr "Tilbake til Utgifter"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "Click to view full size"
+msgstr "Klikk for å se full størrelse"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "PDF Document"
+msgstr "PDF-dokument"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "Download"
+msgstr "Last ned"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "View"
+msgstr "Vis"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "No receipts found"
+msgstr "Ingen kvitteringer funnet"
+
+#: frontend/templates/expense_receipts.html:XXX
+msgid "No receipt images have been uploaded for this expense."
+msgstr "Ingen kvitteringsbilder er lastet opp for denne utgiften."
+
+#: frontend/templates/expenses.html:XXX
+msgid "Reject"
+msgstr "Avvis"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Delete"
+msgstr "Slett"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Edit & Resubmit"
+msgstr "Rediger og Send Inn På Nytt"
+
+#: frontend/templates/expenses.html:XXX
+msgid "No actions available"
+msgstr "Ingen handlinger tilgjengelig"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Are you sure you want to delete this expense? This action cannot be undone."
+msgstr "Er du sikker på at du vil slette denne utgiften? Denne handlingen kan ikke angres."
+
+#: frontend/templates/expenses.html:XXX
+msgid "Reason"
+msgstr "Årsak"
+
+#: frontend/templates/reject_expense.html:XXX
+msgid "Reject Expense"
+msgstr "Avvis Utgift"
+
+#: frontend/templates/reject_expense.html:XXX
+msgid "Expense Details"
+msgstr "Utgiftsdetaljer"
+
+#: frontend/templates/reject_expense.html:XXX
+msgid "Rejection Reason"
+msgstr "Avvisningsårsak"
+
+#: frontend/templates/reject_expense.html:XXX
+msgid "Explain why this expense is being rejected so the user can understand and potentially resubmit."
+msgstr "Forklar hvorfor denne utgiften blir avvist slik at brukeren kan forstå og eventuelt sende inn på nytt."
+
+#: frontend/templates/reject_expense.html:XXX
+msgid "The user will be able to edit and resubmit this expense after rejection."
+msgstr "Brukeren vil kunne redigere og sende inn denne utgiften på nytt etter avvisning."
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Edit Rejected Expense"
+msgstr "Rediger Avvist Utgift"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Important Information"
+msgstr "Viktig Informasjon"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Will change from"
+msgstr "Vil endre seg fra"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "to"
+msgstr "til"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Will be updated to current time"
+msgstr "Vil bli oppdatert til nåværende tidspunkt"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Upload additional receipt images (JPG, PNG, PDF - max 5MB each). Existing receipts will be kept."
+msgstr "Last opp ekstra kvitteringsbilder (JPG, PNG, PDF - maks 5MB hver). Eksisterende kvitteringer vil bli beholdt."
+
+#: backend/app.py:XXX
+msgid "Only pending expenses can be rejected"
+msgstr "Bare ventende utgifter kan avvises"
+
+#: backend/app.py:XXX
+msgid "Expense rejected successfully"
+msgstr "Utgift avvist vellykket"
+
+#: backend/app.py:XXX
+msgid "Expense deleted successfully"
+msgstr "Utgift slettet vellykket"
+
+#: backend/app.py:XXX
+msgid "You can only edit your own expenses"
+msgstr "Du kan bare redigere dine egne utgifter"
+
+#: backend/app.py:XXX
+msgid "Only rejected expenses can be edited"
+msgstr "Bare avviste utgifter kan redigeres"
+
+#: backend/app.py:XXX
+msgid "Expense updated and resubmitted successfully"
+msgstr "Utgift oppdatert og sendt inn på nytt vellykket"
+
+#: backend/app.py:XXX
+msgid "Expense updated and resubmitted successfully with {} new receipt(s): {}"
+msgstr "Utgift oppdatert og sendt inn på nytt vellykket med {} ny(e) kvittering(er): {}"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Current Attachments"
+msgstr "Nåværende Vedlegg"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "View"
+msgstr "Vis"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Remove"
+msgstr "Fjern"
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Click \"Remove\" to delete unwanted attachments. This action will be permanent when you submit the form."
+msgstr "Klikk \"Fjern\" for å slette uønskede vedlegg. Denne handlingen vil være permanent når du sender inn skjemaet."
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Are you sure you want to remove this attachment? This action cannot be undone."
+msgstr "Er du sikker på at du vil fjerne dette vedlegget? Denne handlingen kan ikke angres."
+
+#: frontend/templates/edit_expense.html:XXX
+msgid "Removing..."
+msgstr "Fjerner..."
+
+#: backend/app.py:XXX
+msgid "Added {} new receipt(s): {}"
+msgstr "Lagt til {} ny(e) kvittering(er): {}"
+
+#: backend/app.py:XXX
+msgid "Removed {} receipt(s): {}"
+msgstr "Fjernet {} kvittering(er): {}"
+
+#: backend/app.py:XXX
+msgid "Expense updated and resubmitted successfully. {}"
+msgstr "Utgift oppdatert og sendt inn på nytt vellykket. {}"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Optional"
+msgstr "Valgfritt"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Leave password fields empty if you do not want to change your password."
+msgstr "La passordfelter stå tomme hvis du ikke vil endre passordet ditt."
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Enter your current password"
+msgstr "Skriv inn ditt nåværende passord"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Enter your new password"
+msgstr "Skriv inn ditt nye passord"
+
+#: frontend/templates/edit_user.html:XXX
+msgid "Confirm your new password"
+msgstr "Bekreft ditt nye passord"
+
+#: backend/app.py:XXX
+msgid "Current password is required to change password"
+msgstr "Nåværende passord er påkrevd for å endre passord"
+
+#: backend/app.py:XXX
+msgid "Current password is incorrect"
+msgstr "Nåværende passord er feil"
+
+#: backend/app.py:XXX
+msgid "Password changed successfully!"
+msgstr "Passord endret vellykket!"
+

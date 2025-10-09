@@ -1,0 +1,485 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Submit New Expense') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="create-expense-page">
+    <div class="page-header">
+        <h1>{{ _('Submit New Expense') }}</h1>
+        <div class="actions">
+            <a href="{{ url_for('expenses') }}" class="btn btn-secondary">{{ _('Back to Expenses') }}</a>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" enctype="multipart/form-data" class="expense-form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-grid">
+                <div class="form-group">
+                    {{ form.amount.label(class="form-label") }}
+                    {{ form.amount(class="form-control", step="0.01", placeholder="0.00") }}
+                    <small class="help-text">{{ _('Amount in Norwegian Kroner (NOK)') }}</small>
+                    {% if form.amount.errors %}
+                        <div class="field-errors">
+                            {% for error in form.amount.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.purchase_date.label(class="form-label") }}
+                    {{ form.purchase_date(class="form-control") }}
+                    <small class="help-text">{{ _('When did you make this purchase?') }}</small>
+                    {% if form.purchase_date.errors %}
+                        <div class="field-errors">
+                            {% for error in form.purchase_date.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label(class="form-label") }}
+                {{ form.description(class="form-control", rows="4", placeholder="Describe what was purchased and why it was necessary for the brewery...") }}
+                <small class="help-text">{{ _('Provide a detailed description of the purchase (10-500 characters)') }}</small>
+                {% if form.description.errors %}
+                    <div class="field-errors">
+                        {% for error in form.description.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.receipts.label(class="form-label") }}
+                {{ form.receipts(class="form-control", multiple=True, accept=".jpg,.jpeg,.png,.pdf", id="receipt-files") }}
+                <small class="help-text">{{ _('Upload receipt images (JPG, PNG, PDF - max 5MB each). You can select multiple files by holding Ctrl/Cmd while clicking.') }}</small>
+                <div id="file-list" class="file-list"></div>
+                {% if form.receipts.errors %}
+                    <div class="field-errors">
+                        {% for error in form.receipts.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="info-section">
+                <h3>{{ _('Reimbursement Information') }}</h3>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <label>{{ _('Your Name') }}:</label>
+                        <span>{{ current_user.full_name or current_user.username }}</span>
+                    </div>
+                    <div class="info-item">
+                        <label>{{ _('Bank Account') }}:</label>
+                        {% if current_user.bank_account %}
+                        <span>{{ current_user.bank_account[:4] }}.{{ current_user.bank_account[4:6] }}.{{ current_user.bank_account[6:] }}</span>
+                        {% else %}
+                        <span class="text-warning">
+                            {{ _('Not set') }} - 
+                            <a href="{{ url_for('edit_user', user_id=current_user.id) }}">{{ _('Add bank account') }}</a>
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+                {% if not current_user.bank_account %}
+                <div class="warning-message">
+                    <strong>{{ _('Warning') }}:</strong> {{ _('You have not set your bank account number. Please add it in your profile for faster reimbursement.') }}
+                </div>
+                {% endif %}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary btn-large") }}
+                <a href="{{ url_for('expenses') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.create-expense-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.expense-form {
+    max-width: 100%;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3498db;
+    box-shadow: 0 0 0 2px rgba(52, 152, 219, 0.2);
+}
+
+.help-text {
+    display: block;
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-top: 5px;
+}
+
+.field-errors {
+    margin-top: 5px;
+}
+
+.field-errors .error {
+    display: block;
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.info-section {
+    margin: 30px 0;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border-radius: 6px;
+    border-left: 4px solid #3498db;
+}
+
+.info-section h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+    font-size: 16px;
+}
+
+.info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.info-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.info-item label {
+    font-weight: 600;
+    color: #7f8c8d;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.info-item span {
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.text-warning {
+    color: #f39c12;
+}
+
+.text-warning a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.text-warning a:hover {
+    text-decoration: underline;
+}
+
+.warning-message {
+    margin-top: 15px;
+    padding: 10px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    color: #856404;
+    font-size: 14px;
+}
+
+.file-list {
+    margin-top: 10px;
+    padding: 10px;
+    background-color: #f8f9fa;
+    border-radius: 4px;
+    min-height: 20px;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 5px 0;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.file-item:last-child {
+    border-bottom: none;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.file-size {
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.file-remove {
+    color: #e74c3c;
+    cursor: pointer;
+    font-size: 12px;
+    padding: 2px 8px;
+    border-radius: 3px;
+    background-color: transparent;
+    border: 1px solid #e74c3c;
+}
+
+.file-remove:hover {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-start;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    text-align: center;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+.btn-large {
+    padding: 14px 28px;
+    font-size: 16px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .info-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+// Auto-set today's date as default if not set
+document.addEventListener('DOMContentLoaded', function() {
+    const dateInput = document.querySelector('input[type="date"]');
+    if (dateInput && !dateInput.value) {
+        const today = new Date();
+        const formattedDate = today.toISOString().split('T')[0];
+        dateInput.value = formattedDate;
+    }
+    
+    // Enhanced file selection feedback
+    const fileInput = document.getElementById('receipt-files');
+    const fileList = document.getElementById('file-list');
+    
+    if (fileInput && fileList) {
+        fileInput.addEventListener('change', function(e) {
+            const files = Array.from(e.target.files);
+            updateFileList(files);
+        });
+    }
+});
+
+function updateFileList(files) {
+    const fileList = document.getElementById('file-list');
+    const helpText = document.querySelector('#receipt-files').parentNode.querySelector('.help-text');
+    
+    if (files.length === 0) {
+        fileList.innerHTML = '<span style="color: #7f8c8d; font-style: italic;">No files selected</span>';
+        if (helpText) {
+            helpText.textContent = 'Upload receipt images (JPG, PNG, PDF - max 5MB each). You can select multiple files by holding Ctrl/Cmd while clicking.';
+            helpText.style.color = '#7f8c8d';
+        }
+        return;
+    }
+    
+    let totalSize = 0;
+    let html = '';
+    
+    files.forEach((file, index) => {
+        const sizeKB = (file.size / 1024).toFixed(1);
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        const sizeDisplay = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+        
+        totalSize += file.size;
+        
+        const isLarge = file.size > 5 * 1024 * 1024; // 5MB limit
+        const sizeClass = isLarge ? 'style="color: #e74c3c; font-weight: bold;"' : '';
+        
+        html += `
+            <div class="file-item">
+                <div>
+                    <div class="file-name">${file.name}</div>
+                </div>
+                <div class="file-size" ${sizeClass}>${sizeDisplay}</div>
+            </div>
+        `;
+    });
+    
+    fileList.innerHTML = html;
+    
+    // Update help text
+    if (helpText) {
+        const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
+        helpText.innerHTML = `${files.length} file(s) selected (${totalSizeMB} MB total)`;
+        helpText.style.color = '#27ae60';
+        
+        // Warn about large files
+        const hasLargeFiles = files.some(file => file.size > 5 * 1024 * 1024);
+        if (hasLargeFiles) {
+            helpText.innerHTML += ' <span style="color: #e74c3c;">⚠️ Some files exceed 5MB limit</span>';
+        }
+    }
+}
+
+// Add drag and drop functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const fileInput = document.getElementById('receipt-files');
+    const formGroup = fileInput?.parentNode;
+    
+    if (!formGroup) return;
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        formGroup.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        formGroup.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        formGroup.addEventListener(eventName, unhighlight, false);
+    });
+    
+    formGroup.addEventListener('drop', handleDrop, false);
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    function highlight(e) {
+        formGroup.style.backgroundColor = '#f0f8ff';
+        formGroup.style.border = '2px dashed #3498db';
+    }
+    
+    function unhighlight(e) {
+        formGroup.style.backgroundColor = '';
+        formGroup.style.border = '';
+    }
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        fileInput.files = files;
+        updateFileList(Array.from(files));
+    }
+});
+</script>
+{% endblock %}

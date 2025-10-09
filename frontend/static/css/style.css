@@ -143,7 +143,58 @@ body {
     background-color: #7f8c8d;
 }
 
-.btn-small {
+.btn-primary {
+    background-color: #3498db;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    color: white !important;
+    text-decoration: none !important;
+}
+
+.btn-primary:visited {
+    color: white !important;
+}
+
+.btn-primary:link {
+    color: white !important;
+}
+
+.btn-primary:active {
+    color: white !important;
+}
+
+.btn-success {
+    background-color: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #229954;
+}
+
+.btn-warning {
+    background-color: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #e67e22;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.btn-small, .btn-sm {
     padding: 6px 12px;
     font-size: 12px;
 }
@@ -202,6 +253,79 @@ body {
     gap: 10px;
 }
 
+/* Simple Horizontal Bar Chart */
+.chart-container {
+    padding: 20px;
+}
+
+.bar-chart-row {
+    display: flex;
+    align-items: center;
+    margin-bottom: 15px;
+    gap: 15px;
+}
+
+.bar-label {
+    width: 120px;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.bar-wrapper {
+    flex: 1;
+    height: 25px;
+    background-color: #f0f0f0;
+    border-radius: 3px;
+    overflow: hidden;
+    position: relative;
+    border: 1px solid #ddd;
+    min-width: 200px; /* Ensure wrapper has minimum width */
+}
+
+.bar {
+    height: 100%;
+    border-radius: 2px;
+    transition: width 0.5s ease-out;
+    min-width: 3px; /* Ensure bars are visible even with small values */
+    display: block;
+}
+
+.bar-value {
+    width: 80px;
+    text-align: center;
+    font-weight: bold;
+    font-size: 16px;
+    color: #333;
+    flex-shrink: 0;
+}
+
+.bar-value small {
+    display: block;
+    font-size: 11px;
+    color: #666;
+    font-weight: normal;
+}
+
+/* Bar Colors */
+.bar-full {
+    background-color: #28a745;
+}
+
+.bar-started {
+    background-color: #fd7e14;
+}
+
+.bar-available-cleaned {
+    background-color: #007bff;
+}
+
+.bar-empty {
+    background-color: #6c757d;
+}
+
 .stat-item {
     display: grid;
     grid-template-columns: 1fr auto auto;
@@ -241,6 +365,54 @@ body {
 .data-table a {
     color: #3498db;
     text-decoration: none;
+}
+
+.data-table a.btn-primary {
+    color: white !important;
+}
+
+.data-table a.btn-primary:hover {
+    color: white !important;
+}
+
+.data-table a.btn-primary:visited {
+    color: white !important;
+}
+
+.data-table a.btn-primary:link {
+    color: white !important;
+}
+
+/* Force white text on all primary buttons regardless of context */
+a.btn.btn-primary,
+a.btn-primary,
+.btn.btn-primary {
+    color: white !important;
+    text-decoration: none !important;
+}
+
+a.btn.btn-primary:hover,
+a.btn-primary:hover,
+.btn.btn-primary:hover {
+    color: white !important;
+}
+
+a.btn.btn-primary:visited,
+a.btn-primary:visited,
+.btn.btn-primary:visited {
+    color: white !important;
+}
+
+a.btn.btn-primary:link,
+a.btn-primary:link,
+.btn.btn-primary:link {
+    color: white !important;
+}
+
+a.btn.btn-primary:active,
+a.btn-primary:active,
+.btn.btn-primary:active {
+    color: white !important;
 }
 
 .data-table a:hover {

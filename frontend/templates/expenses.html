@@ -1,0 +1,416 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Expenses') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="expenses-page">
+    <div class="page-header">
+        <h1>{{ _('Expense Management') }}</h1>
+        <div class="actions">
+            {% if current_user.can_access('expenses', 'edit') %}
+            <a href="{{ url_for('create_expense') }}" class="btn btn-primary">{{ _('Submit New Expense') }}</a>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if expenses %}
+    <div class="table-container">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>{{ _('Submitted') }}</th>
+                    {% if current_user.can_access('expenses', 'full') %}
+                    <th>{{ _('User') }}</th>
+                    <th>{{ _('Bank Account') }}</th>
+                    {% endif %}
+                    <th>{{ _('Amount') }}</th>
+                    <th>{{ _('Description') }}</th>
+                    <th>{{ _('Purchase Date') }}</th>
+                    <th>{{ _('Status') }}</th>
+                    <th>{{ _('Receipts') }}</th>
+                    {% if current_user.can_access('expenses', 'full') or current_user.can_access('expenses', 'edit') %}
+                    <th>{{ _('Actions') }}</th>
+                    {% endif %}
+                </tr>
+            </thead>
+            <tbody>
+                {% for expense in expenses %}
+                <tr>
+                    <td>{{ expense.submitted_date.strftime('%d-%m-%Y %H:%M') }}</td>
+                    {% if current_user.can_access('expenses', 'full') %}
+                    <td>{{ expense.full_name or expense.username }}</td>
+                    <td>
+                        {% if expense.bank_account %}
+                            {{ expense.bank_account[:4] }}.{{ expense.bank_account[4:6] }}.{{ expense.bank_account[6:] }}
+                        {% else %}
+                            <span class="text-muted">{{ _('Not set') }}</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                    <td class="amount">{{ "%.2f"|format(expense.amount) }} NOK</td>
+                    <td class="description">
+                        <div class="description-text">{{ expense.description }}</div>
+                    </td>
+                    <td>{{ expense.purchase_date.strftime('%d-%m-%Y') }}</td>
+                    <td>
+                        <span class="status-badge status-{{ expense.status.lower() }}">
+                            {{ _(expense.status) }}
+                        </span>
+                        {% if expense.status == 'Paid' and expense.paid_date %}
+                        <div class="paid-info">
+                            <small>{{ _('Paid') }}: {{ expense.paid_date.strftime('%d-%m-%Y') }}</small>
+                            {% if expense.paid_by_name %}
+                            <small>{{ _('by') }} {{ expense.paid_by_name }}</small>
+                            {% endif %}
+                        </div>
+                        {% elif expense.status == 'Rejected' and expense.rejected_date %}
+                        <div class="rejected-info">
+                            <small>{{ _('Rejected') }}: {{ expense.rejected_date.strftime('%d-%m-%Y') }}</small>
+                            {% if expense.rejected_by_name %}
+                            <small>{{ _('by') }} {{ expense.rejected_by_name }}</small>
+                            {% endif %}
+                            {% if expense.rejection_reason %}
+                            <div class="rejection-reason">
+                                <strong>{{ _('Reason') }}:</strong> {{ expense.rejection_reason[:50] }}{% if expense.rejection_reason|length > 50 %}...{% endif %}
+                            </div>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    <td>
+                        <div class="receipt-links">
+                            {% if expense.receipt_count > 0 %}
+                            <a href="{{ url_for('expense_receipts', expense_id=expense.id) }}" class="receipt-link">
+                                📎 {{ expense.receipt_count }} {{ _('receipt(s)') }}
+                            </a>
+                            {% else %}
+                            <span class="no-receipts">{{ _('No receipts') }}</span>
+                            {% endif %}
+                        </div>
+                    </td>
+                    {% if current_user.can_access('expenses', 'full') %}
+                    <td class="actions">
+                        {% if expense.status == 'Pending' %}
+                        <div class="action-buttons">
+                            <form method="POST" action="{{ url_for('mark_expense_paid', expense_id=expense.id) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('{{ _('Mark this expense as paid?') }}')">
+                                <button type="submit" class="btn btn-sm btn-success">{{ _('Mark Paid') }}</button>
+                            </form>
+                            <a href="{{ url_for('reject_expense', expense_id=expense.id) }}" 
+                               class="btn btn-sm btn-warning">{{ _('Reject') }}</a>
+                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                            </form>
+                        </div>
+                        {% else %}
+                        <div class="action-buttons">
+                            {% if expense.status == 'Rejected' %}
+                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
+                               class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
+                            {% endif %}
+                            {% if expense.status != 'Paid' %}
+                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    </td>
+                    {% elif current_user.can_access('expenses', 'edit') %}
+                    <td class="actions">
+                        {% if expense.status == 'Rejected' and expense.user_id == current_user.id %}
+                        <div class="action-buttons">
+                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
+                               class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
+                            {% if expense.status != 'Paid' %}
+                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% elif expense.status == 'Pending' and expense.user_id == current_user.id %}
+                        <div class="action-buttons">
+                            {% if expense.status != 'Paid' %}
+                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="text-muted">{{ _('No actions available') }}</span>
+                        {% endif %}
+                    </td>
+                    {% else %}
+                    <td class="actions">
+                        {% if expense.status == 'Rejected' and expense.user_id == current_user.id %}
+                        <div class="action-buttons">
+                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
+                               class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
+                            {% if expense.status != 'Paid' %}
+                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
+                                  style="display: inline-block;"
+                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
+                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                        {% else %}
+                        <span class="text-muted">{{ _('No actions available') }}</span>
+                        {% endif %}
+                    </td>
+                    {% endif %}
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h3>{{ _('No expenses found') }}</h3>
+        <p>{{ _('No expense requests have been submitted yet.') }}</p>
+        {% if current_user.can_access('expenses', 'edit') %}
+        <a href="{{ url_for('create_expense') }}" class="btn btn-primary">{{ _('Submit Your First Expense') }}</a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.expenses-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.table-container {
+    overflow-x: auto;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.data-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin: 0;
+}
+
+.data-table th,
+.data-table td {
+    padding: 12px 15px;
+    text-align: left;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.data-table th {
+    background-color: #f8f9fa;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.data-table tr:hover {
+    background-color: #f8f9fa;
+}
+
+.amount {
+    font-weight: 600;
+    color: #27ae60;
+}
+
+.description-text {
+    max-width: 200px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.status-badge {
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.status-pending {
+    background-color: #f39c12;
+    color: white;
+}
+
+.status-paid {
+    background-color: #27ae60;
+    color: white;
+}
+
+.status-rejected {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.paid-info {
+    margin-top: 5px;
+}
+
+.paid-info small {
+    display: block;
+    color: #7f8c8d;
+    font-size: 11px;
+}
+
+.rejected-info {
+    margin-top: 5px;
+}
+
+.rejected-info small {
+    display: block;
+    color: #7f8c8d;
+    font-size: 11px;
+}
+
+.rejection-reason {
+    margin-top: 5px;
+    padding: 5px;
+    background-color: #ffe6e6;
+    border-radius: 3px;
+    font-size: 11px;
+    color: #d32f2f;
+}
+
+.action-buttons {
+    display: flex;
+    gap: 5px;
+    flex-wrap: wrap;
+}
+
+.action-buttons form {
+    margin: 0;
+}
+
+.btn-warning {
+    background-color: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #e67e22;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+}
+
+.receipt-count {
+    font-size: 12px;
+    color: #3498db;
+    cursor: pointer;
+}
+
+.receipt-link {
+    color: #3498db;
+    text-decoration: none;
+    font-size: 12px;
+    font-weight: 500;
+}
+
+.receipt-link:hover {
+    text-decoration: underline;
+    color: #2980b9;
+}
+
+.no-receipts {
+    color: #95a5a6;
+    font-size: 12px;
+    font-style: italic;
+}
+
+.text-muted {
+    color: #7f8c8d;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-state h3 {
+    margin-bottom: 10px;
+    color: #7f8c8d;
+}
+
+.empty-state p {
+    margin-bottom: 30px;
+    color: #95a5a6;
+}
+
+.actions form {
+    margin: 0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    color: white;
+}
+
+.btn-success {
+    background-color: #27ae60;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #219a52;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+</style>
+{% endblock %}

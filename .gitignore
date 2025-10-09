@@ -1,2 +1,52 @@
+# Environment files with secrets
 .env
+.env.local
+.env.production
+.env.backup
+
+# Backup files (contain real data)
+backups/
+*.tar.gz
+*.sql
+backup.log
+restore.log
+
+# Uploaded files (receipts and sensitive documents)
+backend/uploads/
+uploads/
+
+# rclone configuration (Google Drive credentials)
+rclone.conf
+.rclone.conf
+.config/rclone/
+~/.config/rclone/
+
+# Database dumps and exports
+*.dump
+*.backup
+database_*.sql
+expenses_*.csv
+
+# Temporary files
+*.tmp
+*.temp
+temp/
+tmp/
+
+# System files
+.DS_Store
+Thumbs.db
+
+# Old system
 Old_system/
+
+# IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo

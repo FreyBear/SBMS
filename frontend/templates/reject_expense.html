@@ -1,0 +1,258 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Reject Expense') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="reject-expense-page">
+    <div class="page-header">
+        <h1>{{ _('Reject Expense') }}</h1>
+        <div class="actions">
+            <a href="{{ url_for('expenses') }}" class="btn btn-secondary">{{ _('Back to Expenses') }}</a>
+        </div>
+    </div>
+
+    <div class="expense-details">
+        <h3>{{ _('Expense Details') }}</h3>
+        <div class="detail-grid">
+            <div class="detail-item">
+                <label>{{ _('User') }}:</label>
+                <span>{{ expense.full_name or expense.username }}</span>
+            </div>
+            <div class="detail-item">
+                <label>{{ _('Amount') }}:</label>
+                <span>{{ "%.2f"|format(expense.amount) }} NOK</span>
+            </div>
+            <div class="detail-item">
+                <label>{{ _('Purchase Date') }}:</label>
+                <span>{{ expense.purchase_date.strftime('%d-%m-%Y') }}</span>
+            </div>
+            <div class="detail-item detail-description">
+                <label>{{ _('Description') }}:</label>
+                <span>{{ expense.description }}</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" class="reject-form">
+            {{ form.hidden_tag() }}
+            
+            <div class="form-group">
+                {{ form.rejection_reason.label(class="form-label") }}
+                {{ form.rejection_reason(class="form-control", rows="4", placeholder="Provide a clear reason for rejecting this expense...") }}
+                <small class="help-text">{{ _('Explain why this expense is being rejected so the user can understand and potentially resubmit.') }}</small>
+                {% if form.rejection_reason.errors %}
+                    <div class="field-errors">
+                        {% for error in form.rejection_reason.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="warning-message">
+                <strong>{{ _('Warning') }}:</strong> {{ _('The user will be able to edit and resubmit this expense after rejection.') }}
+            </div>
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-danger btn-large") }}
+                <a href="{{ url_for('expenses') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.reject-expense-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #e74c3c;
+}
+
+.expense-details {
+    background: white;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+    border-left: 4px solid #e74c3c;
+}
+
+.expense-details h3 {
+    margin: 0 0 15px 0;
+    color: #2c3e50;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.detail-description {
+    grid-column: 1 / -1;
+}
+
+.detail-item {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.detail-item label {
+    font-weight: 600;
+    color: #7f8c8d;
+    font-size: 12px;
+    text-transform: uppercase;
+}
+
+.detail-item span {
+    font-size: 14px;
+    color: #2c3e50;
+}
+
+.form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.reject-form {
+    max-width: 100%;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 12px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #e74c3c;
+    box-shadow: 0 0 0 2px rgba(231, 76, 60, 0.2);
+}
+
+.help-text {
+    display: block;
+    font-size: 12px;
+    color: #7f8c8d;
+    margin-top: 5px;
+}
+
+.field-errors {
+    margin-top: 5px;
+}
+
+.field-errors .error {
+    display: block;
+    color: #e74c3c;
+    font-size: 12px;
+    margin-top: 2px;
+}
+
+.warning-message {
+    margin: 20px 0;
+    padding: 15px;
+    background-color: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    color: #856404;
+    font-size: 14px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 15px;
+    justify-content: flex-start;
+    margin-top: 30px;
+    padding-top: 20px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 12px 24px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    text-align: center;
+}
+
+.btn-danger {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c0392b;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+.btn-large {
+    padding: 14px 28px;
+    font-size: 16px;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}

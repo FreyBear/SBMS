@@ -80,6 +80,19 @@
                 {% endif %}
             </div>
 
+            <div class="form-group">
+                {{ form.bank_account.label }}
+                {{ form.bank_account(class="form-control", placeholder="xxxx.xx.xxxxx (dots will be removed automatically)") }}
+                <small class="help-text">{{ _('11-digit Norwegian bank account number. Dots and spaces will be removed automatically.') }}</small>
+                {% if form.bank_account.errors %}
+                    <div class="field-errors">
+                        {% for error in form.bank_account.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
             {% if not is_self_edit %}
             <!-- Admin-only fields -->
             <div class="form-group">
@@ -113,6 +126,50 @@
                     </div>
                 {% endif %}
             </div>
+
+            {% if is_self_edit %}
+            <!-- Password change section for self-editing -->
+            <div class="password-change-section">
+                <h3>{{ _('Change Password') }} <small>({{ _('Optional') }})</small></h3>
+                <p class="help-text">{{ _('Leave password fields empty if you do not want to change your password.') }}</p>
+                
+                <div class="form-group">
+                    {{ form.current_password.label }}
+                    {{ form.current_password(class="form-control", placeholder=_("Enter your current password")) }}
+                    {% if form.current_password.errors %}
+                        <div class="field-errors">
+                            {% for error in form.current_password.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.new_password.label }}
+                    {{ form.new_password(class="form-control", placeholder=_("Enter your new password")) }}
+                    {% if form.new_password.errors %}
+                        <div class="field-errors">
+                            {% for error in form.new_password.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.confirm_password.label }}
+                    {{ form.confirm_password(class="form-control", placeholder=_("Confirm your new password")) }}
+                    {% if form.confirm_password.errors %}
+                        <div class="field-errors">
+                            {% for error in form.confirm_password.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
 
             {% if not is_self_edit %}
             <!-- Admin-only field -->
@@ -200,6 +257,32 @@
     font-size: 12px;
     margin-top: 5px;
     display: block;
+}
+
+.password-change-section {
+    margin-top: 30px;
+    padding: 20px;
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+}
+
+.password-change-section h3 {
+    margin-bottom: 15px;
+    color: #2c3e50;
+    font-size: 18px;
+}
+
+.password-change-section h3 small {
+    color: #6c757d;
+    font-weight: normal;
+    font-size: 14px;
+}
+
+.password-change-section .help-text {
+    margin-bottom: 20px;
+    color: #6c757d;
+    font-style: italic;
 }
 
 .form-actions {

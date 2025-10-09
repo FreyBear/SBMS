@@ -6,26 +6,72 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 ## Features
 
-- **Recipe Management**: Store and organize your brewing recipes.
-- **Brew Logs**: Record and review logs from each brewing session.
-- **Keg Tracking**: Monitor the status and location of your kegs.
+### 🍺 **Brewery Operations**
+- **Recipe Management**: Store and organize your brewing recipes with styles and detailed notes
+- **Brew Tracking**: Record and review logs from each brewing session with batch tracking
+- **Keg Management**: Comprehensive keg tracking system including:
+  - Keg status monitoring (Full, Started, Available/Cleaned, Empty)
+  - Location tracking for easy inventory management
+  - Condition monitoring (Good, Defective)
+  - Volume and content tracking
+  - Cleaning schedules and maintenance logs
+  - Keg history with detailed tracking of usage patterns
+
+### 💰 **Expense Management**
+- **Expense Submission**: Easy expense reporting with receipt upload (JPG, PNG, PDF)
+- **Multi-file Receipts**: Attach multiple receipt images per expense
+- **Approval Workflow**: Three-stage approval process (Pending → Approved/Rejected)
+- **Role-based Access**: Different capabilities based on user roles
+- **Reimbursement Integration**: Bank account management for easy reimbursements
+- **Audit Trail**: Complete tracking of who approved/rejected expenses and when
+- **Edit & Resubmit**: Rejected expenses can be edited and resubmitted
+
+### 👥 **User Management**
+- **Role-based Security**: Five user roles with different permission levels:
+  - **Admin**: Full system access and management
+  - **Economy**: Financial management and expense approval
+  - **Brewer**: Brewery operations and expense submission
+  - **Operator**: Keg operations and limited access
+  - **Viewer**: Read-only access to all systems
+- **User Profiles**: Customizable user profiles with bank account information
+- **Password Management**: Secure password changes and user account management
+
+### 🌐 **Internationalization**
+- **Multi-language Support**: English and Norwegian (Norsk) language options
+- **Localized Interface**: All text elements translated for international use
+- **User Language Preferences**: Individual language settings per user
+
+### 📊 **Dashboard & Reporting**
+- **System Overview**: Real-time dashboard with key metrics
+- **Keg Status Summary**: Quick overview of all keg statuses and locations
+- **Pending Expense Alerts**: Economy users see pending expense requests
+- **Recent Activity**: Track recent keg updates and brewing activity
 
 ## Technology Stack
 
-**Backend**: Python Flask (stable, simple, well-documented)  
-**Database**: PostgreSQL (robust, scalable, and supports future extensions)  
-**Frontend**: HTML templates with CSS (simple, maintainable, no JavaScript complexity)  
-**Containerization**: Docker Compose (isolated, reproducible environments)  
-**Dependencies**: Minimal Python packages for maximum stability
-  - Flask 2.3.3 (web framework)
-  - psycopg2-binary 2.9.7 (PostgreSQL adapter)
-  - python-dotenv 1.0.0 (environment variables)
+**Backend**: Python Flask with comprehensive authentication and authorization  
+**Database**: PostgreSQL with full ACID compliance and advanced data types  
+**Frontend**: Server-side rendered HTML templates with Jinja2 and modern CSS  
+**File Management**: Secure file upload and storage for expense receipts  
+**Internationalization**: Flask-Babel for multi-language support  
+**Authentication**: Flask-Login with role-based access control  
+**Containerization**: Docker Compose for isolated, reproducible environments  
 
-**Security**:  
-  - HTTPS (SSL/TLS) for web access  
-  - Strong authentication and authorization  
-  - Regular updates and vulnerability scanning  
-**Dynamic DNS**: DuckDNS integration for automatic IP updates  
+**Core Dependencies**:
+  - Flask 2.3.3 (web framework)
+  - Flask-Login (authentication)
+  - Flask-Babel (internationalization)
+  - psycopg2-binary 2.9.7 (PostgreSQL adapter)
+  - python-dotenv 1.0.0 (environment management)
+  - bcrypt (password hashing)
+  - WTForms (form handling and validation)
+
+**Security Features**:  
+  - Secure password hashing with bcrypt
+  - Role-based permission system
+  - CSRF protection on all forms
+  - Secure file upload validation
+  - SQL injection prevention through parameterized queries  
 
 ## Getting Started
 
@@ -49,6 +95,27 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 3. **Access the web interface**
    - Open your browser and go to `http://localhost:8080`
+   - **Default login**: username `admin`, password `admin123`
+   - **⚠️ Important**: Change the default password immediately after first login!
+
+4. **Create additional users**
+   - Log in as admin and go to User Management
+   - Create users with appropriate roles for your brewery team
+
+## What's Included
+
+When you clone and start SBMS, you get a **complete brewery management system** with:
+
+✅ **Ready-to-use Database**: Complete schema with sample recipes and brew data  
+✅ **Default Admin Account**: Immediate access with `admin`/`admin123`  
+✅ **All User Roles**: Pre-configured permission system for 5 user types  
+✅ **Expense Management**: Full workflow from submission to reimbursement  
+✅ **Multi-language Support**: English and Norwegian interfaces  
+✅ **File Upload System**: Secure receipt storage for expense management  
+✅ **Sample Data**: Example recipes, brews, and keg configurations  
+✅ **Production Ready**: Containerized with PostgreSQL and Flask  
+
+**No additional setup required** - just clone, run, and start managing your brewery!
 
 ### Manual Setup
 
@@ -152,18 +219,117 @@ SBMS/
 │   │   ├── kegs.html       # Keg management
 │   │   └── ...
 │   └── static/
+```
+SBMS/
+├── docker-compose.yml          # Container orchestration
+├── .env                       # Your configuration (not in git)
+├── .env.example              # Configuration template
+├── start-sbms.sh             # Quick setup script
+├── database/
+│   ├── init.sql              # Complete database schema with expense management
+│   ├── add_expenses_permissions.sql  # Legacy migration (now included in init.sql)
+│   └── migrate_language.sql  # Language preference migration
+├── backend/
+│   ├── app.py               # Main Flask application with all routes
+│   ├── auth.py              # Authentication and authorization
+│   ├── forms.py             # WTForms for all user inputs
+│   ├── i18n.py              # Internationalization setup
+│   ├── requirements.txt     # Python dependencies
+│   ├── Dockerfile          # Backend container config
+│   └── uploads/             # File storage for expense receipts
+├── frontend/
+│   ├── templates/           # Jinja2 HTML templates
+│   │   ├── base.html        # Base template with navigation
+│   │   ├── index.html       # Dashboard with expense alerts
+│   │   ├── expenses.html    # Expense management interface
+│   │   ├── create_expense.html  # Expense submission form
+│   │   ├── edit_expense.html    # Expense editing form
+│   │   ├── kegs.html        # Keg management
+│   │   ├── users.html       # User management
+│   │   ├── login.html       # Authentication
+│   │   └── ...              # Additional templates
+│   └── static/
 │       └── css/
-│           └── style.css    # Application styles
-└── keg_import_template.csv  # Sample keg data
+│           └── style.css    # Application styles with expense UI
+├── translations/            # Multi-language support
+│   ├── en/LC_MESSAGES/      # English translations
+│   └── no/LC_MESSAGES/      # Norwegian translations
+├── keg_import_template.csv  # Sample keg data
+└── *.py                    # Import and utility scripts
 ```
 
-## Current Features
+## System Capabilities
 
-- **Dashboard**: Overview of keg status and recent activity
-- **Keg Management**: View, update, and track all kegs
-- **Keg Details**: Individual keg information and history
-- **Brew Tracking**: View brew batches and their associated kegs
-- **Recipe Management**: Basic recipe storage and organization
+### **Complete Brewery Management**
+- **Dashboard**: Real-time overview with keg status, pending expenses, and recent activity
+- **Keg Operations**: Full lifecycle management from filling to cleaning
+- **Keg History**: Detailed tracking of all keg usage and movements
+- **Brew Management**: Batch tracking with recipe integration
+- **Recipe Organization**: Centralized recipe storage with style categorization
+
+### **Professional Expense Management**
+- **Expense Workflow**: Complete submission-to-payment process
+- **Receipt Management**: Multi-file upload with secure storage
+- **Approval System**: Role-based approval with rejection/resubmission capability
+- **Financial Integration**: Bank account management for reimbursements
+- **Audit Compliance**: Complete expense tracking with timestamps and approvers
+
+### **Enterprise User Management**
+- **Role-based Security**: Five distinct user roles with granular permissions
+- **Multi-language Support**: English and Norwegian interface options
+- **User Profiles**: Comprehensive user management with banking information
+- **Authentication**: Secure login with password management
+
+## User Roles & Permissions
+
+SBMS includes a sophisticated role-based access control system with five user types:
+
+### 👨‍💼 **Admin**
+- **Full system access** including all features and settings
+- **User management**: Create, edit, and deactivate users
+- **Complete expense control**: Approve, reject, and delete any expense
+- **System configuration**: Access to all administrative functions
+- **Use case**: Brewery owner, IT administrator
+
+### 💰 **Economy**
+- **Financial management focus** with expense approval authority
+- **Expense oversight**: View, approve, reject all expense requests
+- **User viewing**: Can see all users and their bank account information
+- **Limited brewery operations**: View-only access to kegs, brews, recipes
+- **Use case**: Accountant, financial manager, brewery CFO
+
+### 🍺 **Brewer**
+- **Full brewery operations** including recipe and brew management
+- **Keg management**: Update keg status, location, and content
+- **Recipe control**: Create, edit, and organize brewing recipes
+- **Expense submission**: Submit expenses with receipts, edit rejected expenses
+- **User viewing**: Can see basic user information
+- **Use case**: Head brewer, brewing staff, production manager
+
+### 🔧 **Operator**
+- **Keg operations specialist** with limited system access
+- **Keg updates**: Change status, location, and basic keg information
+- **View-only access**: Can view brews, recipes, and expenses
+- **No user management**: Cannot see or modify user accounts
+- **Use case**: Warehouse staff, keg handling personnel, part-time staff
+
+### 👀 **Viewer**
+- **Read-only access** to all information systems
+- **No modifications**: Cannot change any data in the system
+- **Full visibility**: Can view kegs, brews, recipes, and expenses
+- **No user access**: Cannot see user management sections
+- **Use case**: Investors, consultants, quality control, reporting staff
+
+### Permission Matrix
+
+| Feature | Admin | Economy | Brewer | Operator | Viewer |
+|---------|--------|---------|--------|----------|---------|
+| **Kegs** | Full | View | Edit | Edit | View |
+| **Brews** | Full | View | Full | View | View |
+| **Recipes** | Full | View | Full | View | View |
+| **Expenses** | Full | Full | Edit Own | View | View |
+| **Users** | Full | View | View | None | None |
+| **System** | Full | None | None | None | None |
 
 ## Data Migration
 
@@ -201,44 +367,71 @@ Setup instructions for DuckDNS will be provided.
 
 MIT License
 
-## Example PostgreSQL Schema for Keg Management
+## Complete Database Schema
 
-Below is an example SQL schema for tracking kegs, brews, and recipes. This structure is designed for extensibility and traceability.
+The SBMS system uses a comprehensive PostgreSQL schema that supports all brewery operations and expense management:
 
-```sql
--- Table for brew batches
-CREATE TABLE brew (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    date_brewed DATE NOT NULL,
-    recipe_id INTEGER REFERENCES recipe(id),
-    notes TEXT
-);
+### Core Tables
+- **`users`**: User accounts with roles, language preferences, and bank account information
+- **`user_role`**: Role definitions with JSON-based permission system
+- **`recipe`**: Brewing recipes with styles and detailed notes
+- **`brew`**: Batch tracking with recipe links and brewing dates
+- **`keg`**: Complete keg lifecycle management with status and location tracking
+- **`keg_history`**: Historical tracking of all keg changes and movements
 
--- Table for kegs
-CREATE TABLE keg (
-    id SERIAL PRIMARY KEY,
-    keg_number TEXT NOT NULL,
-    volume_liters NUMERIC,
-    condition TEXT, -- e.g., 'God', 'Defekt'
-    location TEXT,
-    status TEXT, -- e.g., 'Full', 'Tom', 'Rengjort'
-    last_cleaned DATE,
-    notes TEXT,
-    brew_id INTEGER REFERENCES brew(id),
-    contents TEXT, -- e.g., 'IPA', 'Vann'
-    date_filled DATE
-);
+### Expense Management Tables
+- **`expenses`**: Complete expense tracking with approval workflow
+- **`expense_images`**: Receipt file management with secure storage
 
--- Table for recipes (optional, for future extensibility)
-CREATE TABLE recipe (
-    id SERIAL PRIMARY KEY,
-    name TEXT NOT NULL,
-    style TEXT,
-    notes TEXT
-);
+### Key Features
+- **Referential Integrity**: Full foreign key constraints ensure data consistency
+- **Audit Trail**: Timestamp tracking on all critical operations
+- **File Management**: Secure receipt storage with CASCADE delete protection
+- **Internationalization**: Multi-language support built into user preferences
+- **Permission System**: JSON-based role permissions for flexible access control
+
+The complete schema is available in `database/init.sql` and includes sample data for immediate testing and development.
+
+---
+
+## Summary
+
+SBMS provides a **complete, production-ready brewery management solution** that combines traditional brewery operations (kegs, brews, recipes) with modern business features (expense management, user roles, internationalization). 
+
+**Perfect for:**
+- Small to medium breweries seeking operational efficiency
+- Businesses needing expense tracking and approval workflows  
+- Multi-user environments requiring role-based access control
+- Organizations wanting a simple, maintainable system without vendor lock-in
+
+**Built with stability and simplicity in mind** - using proven technologies and straightforward architecture for long-term reliability and easy maintenance.
+
+## 💾 Backup & Recovery
+
+SBMS includes comprehensive backup solutions to protect your brewery data:
+
+### **Quick Backup**
+```bash
+# Create complete backup (database + files)
+./backup_sbms.sh
+
+# Output: ./backups/sbms_backup_YYYYMMDD_HHMMSS.tar.gz
 ```
 
-- Each keg references a brew via `brew_id`.
-- Each brew can reference a recipe via `recipe_id`.
-- This schema allows you to track the contents, condition, and status of all kegs, and trace each keg back to its brew and recipe.
+### **Backup Features**
+- ✅ **Complete System Backup**: Database, receipts, configuration
+- ✅ **Google Drive Integration**: Automatic cloud storage with `rclone`
+- ✅ **Automated Scheduling**: Cron-based daily/weekly backups
+- ✅ **One-Click Restore**: Simple restore from any backup file
+- ✅ **Security**: Encrypted, compressed archives
+
+### **Setup Automated Backups**
+```bash
+# Configure automated daily backups
+./setup_auto_backup.sh
+
+# Options: Daily, weekly, or custom schedule
+# Includes Google Drive sync and log monitoring
+```
+
+📖 **Complete documentation**: See [BACKUP_GUIDE.md](BACKUP_GUIDE.md) for detailed backup strategies, troubleshooting, and recovery procedures.

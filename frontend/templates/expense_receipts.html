@@ -1,0 +1,395 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Expense Receipts') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="receipts-page">
+    <div class="page-header">
+        <h1>{{ _('Expense Receipts') }}</h1>
+        <div class="expense-info">
+            <span class="expense-user">{{ expense.full_name or expense.username }}</span>
+            <span class="expense-description">{{ expense.description[:50] }}{% if expense.description|length > 50 %}...{% endif %}</span>
+        </div>
+        <div class="actions">
+            <a href="{{ url_for('expenses') }}" class="btn btn-secondary">{{ _('Back to Expenses') }}</a>
+        </div>
+    </div>
+
+    {% if receipts %}
+    <div class="receipts-grid">
+        {% for receipt in receipts %}
+        <div class="receipt-card">
+            <div class="receipt-header">
+                <h3>{{ receipt.original_filename }}</h3>
+                <div class="receipt-meta">
+                    <span class="file-size">{{ "%.1f"|format(receipt.file_size / 1024) }} KB</span>
+                    <span class="upload-date">{{ receipt.uploaded_date.strftime('%d-%m-%Y %H:%M') }}</span>
+                </div>
+            </div>
+            
+            <div class="receipt-preview">
+                {% if receipt.mime_type.startswith('image/') %}
+                <div class="image-preview">
+                    <img src="{{ url_for('expense_image', expense_id=expense.id, filename=receipt.filename) }}" 
+                         alt="{{ receipt.original_filename }}" 
+                         class="receipt-thumbnail"
+                         onclick="openImageModal('{{ url_for('expense_image', expense_id=expense.id, filename=receipt.filename) }}', '{{ receipt.original_filename }}')">
+                    <div class="image-overlay">
+                        <span>{{ _('Click to view full size') }}</span>
+                    </div>
+                </div>
+                {% elif receipt.mime_type == 'application/pdf' %}
+                <div class="pdf-preview">
+                    <div class="pdf-icon">📄</div>
+                    <p>{{ _('PDF Document') }}</p>
+                </div>
+                {% else %}
+                <div class="file-preview">
+                    <div class="file-icon">📎</div>
+                    <p>{{ receipt.mime_type }}</p>
+                </div>
+                {% endif %}
+            </div>
+            
+            <div class="receipt-actions">
+                <a href="{{ url_for('expense_image', expense_id=expense.id, filename=receipt.filename) }}" 
+                   class="btn btn-primary btn-sm" 
+                   download="{{ receipt.original_filename }}">
+                    {{ _('Download') }}
+                </a>
+                {% if receipt.mime_type.startswith('image/') %}
+                <button class="btn btn-secondary btn-sm" 
+                        onclick="openImageModal('{{ url_for('expense_image', expense_id=expense.id, filename=receipt.filename) }}', '{{ receipt.original_filename }}')">
+                    {{ _('View') }}
+                </button>
+                {% endif %}
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h3>{{ _('No receipts found') }}</h3>
+        <p>{{ _('No receipt images have been uploaded for this expense.') }}</p>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Image Modal -->
+<div id="imageModal" class="modal" onclick="closeImageModal()">
+    <div class="modal-content">
+        <span class="close" onclick="closeImageModal()">&times;</span>
+        <img id="modalImage" src="" alt="" class="modal-image">
+        <div class="modal-caption">
+            <span id="modalCaption"></span>
+        </div>
+    </div>
+</div>
+
+<style>
+.receipts-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.expense-info {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 5px;
+}
+
+.expense-user {
+    font-weight: 600;
+    color: #3498db;
+}
+
+.expense-description {
+    font-size: 14px;
+    color: #7f8c8d;
+    font-style: italic;
+}
+
+.receipts-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    gap: 20px;
+}
+
+.receipt-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.receipt-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.receipt-header {
+    padding: 15px;
+    border-bottom: 1px solid #e0e0e0;
+}
+
+.receipt-header h3 {
+    margin: 0 0 10px 0;
+    font-size: 16px;
+    color: #2c3e50;
+    word-break: break-word;
+}
+
+.receipt-meta {
+    display: flex;
+    justify-content: space-between;
+    gap: 10px;
+    font-size: 12px;
+    color: #7f8c8d;
+}
+
+.receipt-preview {
+    position: relative;
+    height: 200px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background-color: #f8f9fa;
+}
+
+.image-preview {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    cursor: pointer;
+}
+
+.receipt-thumbnail {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    transition: opacity 0.2s;
+}
+
+.image-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.7);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+    color: white;
+    font-size: 14px;
+    font-weight: 500;
+}
+
+.image-preview:hover .image-overlay {
+    opacity: 1;
+}
+
+.pdf-preview, .file-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    color: #7f8c8d;
+}
+
+.pdf-icon, .file-icon {
+    font-size: 48px;
+}
+
+.receipt-actions {
+    padding: 15px;
+    display: flex;
+    gap: 10px;
+    justify-content: center;
+    border-top: 1px solid #e0e0e0;
+}
+
+.btn {
+    display: inline-block;
+    padding: 8px 16px;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 14px;
+    font-weight: 500;
+    transition: background-color 0.2s;
+    text-align: center;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+.btn-sm {
+    padding: 6px 12px;
+    font-size: 12px;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 60px 20px;
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.empty-state h3 {
+    margin-bottom: 10px;
+    color: #7f8c8d;
+}
+
+.empty-state p {
+    color: #95a5a6;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.9);
+    animation: fadeIn 0.2s;
+}
+
+.modal-content {
+    position: relative;
+    margin: auto;
+    padding: 20px;
+    width: 90%;
+    max-width: 1000px;
+    text-align: center;
+    top: 50%;
+    transform: translateY(-50%);
+}
+
+.modal-image {
+    max-width: 100%;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: 8px;
+}
+
+.close {
+    position: absolute;
+    top: 10px;
+    right: 25px;
+    color: white;
+    font-size: 35px;
+    font-weight: bold;
+    cursor: pointer;
+    z-index: 1001;
+}
+
+.close:hover {
+    color: #ccc;
+}
+
+.modal-caption {
+    margin-top: 15px;
+    color: white;
+    font-size: 16px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .receipts-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 15px;
+    }
+    
+    .receipt-actions {
+        flex-direction: column;
+    }
+    
+    .modal-content {
+        width: 95%;
+        padding: 10px;
+    }
+}
+</style>
+
+<script>
+function openImageModal(src, caption) {
+    const modal = document.getElementById('imageModal');
+    const modalImage = document.getElementById('modalImage');
+    const modalCaption = document.getElementById('modalCaption');
+    
+    modal.style.display = 'block';
+    modalImage.src = src;
+    modalCaption.textContent = caption;
+    
+    // Prevent body scrolling when modal is open
+    document.body.style.overflow = 'hidden';
+}
+
+function closeImageModal() {
+    const modal = document.getElementById('imageModal');
+    modal.style.display = 'none';
+    
+    // Restore body scrolling
+    document.body.style.overflow = 'auto';
+}
+
+// Close modal with Escape key
+document.addEventListener('keydown', function(event) {
+    if (event.key === 'Escape') {
+        closeImageModal();
+    }
+});
+</script>
+{% endblock %}
