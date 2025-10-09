@@ -73,6 +73,10 @@ docker-compose up -d db
 echo -e "${YELLOW}⏳ Waiting for database to initialize...${NC}"
 sleep 15
 
+# Clear the database schema to avoid conflicts
+echo -e "${YELLOW}🧹 Clearing existing database schema...${NC}"
+docker exec -i sbms_db psql -U sbms_user sbms -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;" >/dev/null 2>&1
+
 # Restore database
 echo -e "${YELLOW}💾 Restoring database...${NC}"
 if [ -f "$BACKUP_DIR/database.sql" ]; then

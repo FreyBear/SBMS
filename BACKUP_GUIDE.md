@@ -1,8 +1,31 @@
 # SBMS Backup & Recovery Guide
 
-## 📋 Overview
+## 🎯 Quick Summary
 
-SBMS includes comprehensive backup solutions that protect both your database and uploaded files (receipts). This guide covers all backup methods and recovery procedures.
+### Backup Your System
+```bash
+./backup_sbms.sh  # Creates ./backups/sbms_backup_YYYYMMDD_HHMMSS.tar.gz
+```
+
+### Restore Your System (After Crash)
+```bash
+./restore_sbms.sh ./backups/sbms_backup_YYYYMMDD_HHMMSS.tar.gz
+# Automatically handles:
+# ✅ Stops current system
+# ✅ Removes old database 
+# ✅ Clears schema conflicts
+# ✅ Restores all data
+# ✅ Restores files
+# ✅ Starts system
+```
+
+### Test Your Restore (Optional)
+```bash
+./test_restore.sh ./backups/sbms_backup_YYYYMMDD_HHMMSS.tar.gz
+# Verifies restore works correctly
+```
+
+---
 
 ## 🚀 Quick Start
 
@@ -74,19 +97,45 @@ SBMS includes comprehensive backup solutions that protect both your database and
 
 ## 🔧 Recovery Procedures
 
-### Full System Restore
+### Full System Restore (Recommended)
 ```bash
-# 1. Stop current system
-docker-compose down
-
-# 2. Remove old database
-docker volume rm sbms_postgres_data
-
-# 3. Restore from backup
+# Simple one-command restore
 ./restore_sbms.sh ./backups/sbms_backup_YYYYMMDD_HHMMSS.tar.gz
 
-# 4. System will automatically restart
-# 5. Verify at http://localhost:8080
+# The script automatically:
+# 1. Stops current system
+# 2. Removes old database volume  
+# 3. Starts fresh database
+# 4. Clears any conflicting schema
+# 5. Restores your backup data
+# 6. Restores receipt files
+# 7. Starts complete system
+```
+
+### Manual Recovery (If script fails)
+```bash
+# 1. Stop system completely
+docker-compose down
+docker volume rm sbms_postgres_data
+
+# 2. Extract backup manually
+tar -xzf sbms_backup_YYYYMMDD_HHMMSS.tar.gz
+
+# 3. Start database only
+docker-compose up -d db
+sleep 15
+
+# 4. Clear existing schema to avoid conflicts
+docker exec -i sbms_db psql -U sbms_user sbms -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+
+# 5. Restore database
+docker exec -i sbms_db psql -U sbms_user sbms < sbms_backup_YYYYMMDD_HHMMSS/database.sql
+
+# 6. Restore files
+cp -r sbms_backup_YYYYMMDD_HHMMSS/uploads/* ./backend/uploads/
+
+# 7. Start complete system
+docker-compose up -d
 ```
 
 ### Database-Only Restore
@@ -188,6 +237,24 @@ rclone config reconnect gdrive:
 # Force remove database volume
 docker-compose down
 docker volume rm sbms_postgres_data --force
+
+# If database schema conflicts persist:
+docker exec -i sbms_db psql -U sbms_user sbms -c "DROP SCHEMA public CASCADE; CREATE SCHEMA public;"
+```
+
+**Partial restore (missing data)**
+```bash
+# This usually means the database schema conflicted during restore
+# Use the manual recovery process above, which includes schema clearing
+./restore_sbms.sh will now handle this automatically
+```
+
+**Password changed - can't connect to database**
+```bash
+# If .env has been updated with new database password:
+# 1. The restore process will recreate the database with new password
+# 2. Your data will be restored completely
+# 3. User passwords in the app remain unchanged (they use bcrypt hashing)
 ```
 
 **Large backup files**
