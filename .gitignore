@@ -6,6 +6,7 @@
 
 # Backup files (contain real data)
 backups/
+sbms_backup_*/
 *.tar.gz
 *.sql
 backup.log

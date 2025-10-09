@@ -18,6 +18,7 @@ SENSITIVE_FILES=(
     ".env.local" 
     ".env.production"
     "backups/"
+    "sbms_backup_*/"
     "backend/uploads/"
     "uploads/"
     "*.sql"
@@ -59,9 +60,9 @@ done
 # Check git status for untracked sensitive files
 echo -e "${YELLOW}🔍 Checking git status...${NC}"
 
-if git status --porcelain | grep -E "(\.env|backups|uploads|\.sql|\.tar\.gz|rclone\.conf)"; then
+if git status --porcelain | grep -E "(\.env|backups|sbms_backup_|uploads|\.sql|\.tar\.gz|rclone\.conf)"; then
     echo -e "${YELLOW}⚠️  Sensitive files detected (but not tracked):${NC}"
-    git status --porcelain | grep -E "(\.env|backups|uploads|\.sql|\.tar\.gz|rclone\.conf)"
+    git status --porcelain | grep -E "(\.env|backups|sbms_backup_|uploads|\.sql|\.tar\.gz|rclone\.conf)"
     echo -e "${GREEN}✅ These files are correctly ignored by git${NC}"
 fi
 
@@ -71,6 +72,7 @@ echo -e "${YELLOW}🔍 Checking .gitignore coverage...${NC}"
 REQUIRED_IGNORES=(
     ".env"
     "backups/"
+    "sbms_backup_*/"
     "backend/uploads/"
     "*.sql"
     "*.tar.gz"
@@ -78,11 +80,23 @@ REQUIRED_IGNORES=(
 )
 
 for ignore in "${REQUIRED_IGNORES[@]}"; do
-    if grep -q "$ignore" .gitignore; then
-        echo -e "${GREEN}✅ $ignore is in .gitignore${NC}"
+    # Handle wildcard patterns specially
+    if [[ "$ignore" == *"*"* ]]; then
+        # For wildcard patterns, check if the pattern exists
+        if grep -q "$(echo "$ignore" | sed 's/\*/\\*/g')" .gitignore; then
+            echo -e "${GREEN}✅ $ignore is in .gitignore${NC}"
+        else
+            echo -e "${RED}❌ $ignore missing from .gitignore${NC}"
+            ISSUES_FOUND=$((ISSUES_FOUND + 1))
+        fi
     else
-        echo -e "${RED}❌ $ignore missing from .gitignore${NC}"
-        ISSUES_FOUND=$((ISSUES_FOUND + 1))
+        # For regular patterns
+        if grep -q "$ignore" .gitignore; then
+            echo -e "${GREEN}✅ $ignore is in .gitignore${NC}"
+        else
+            echo -e "${RED}❌ $ignore missing from .gitignore${NC}"
+            ISSUES_FOUND=$((ISSUES_FOUND + 1))
+        fi
     fi
 done
 
