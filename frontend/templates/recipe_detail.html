@@ -1,0 +1,1154 @@
+{% extends "base.html" %}
+
+{% block title %}{{ recipe.name }} - Recipe Detail - SBMS{% endblock %}
+
+{% block content %}
+<div class="recipe-detail-page">
+    <div class="page-header">
+        <div>
+            <h1>{{ recipe.name }}</h1>
+            <div class="recipe-meta">
+                <div class="version-dropdown">
+                    <button class="version-badge dropdown-toggle" onclick="toggleVersionDropdown()">
+                        Version {{ recipe.version }} ▼
+                    </button>
+                    <div class="version-dropdown-menu" id="versionDropdown">
+                        {% for version in versions %}
+                        <a href="{{ url_for('recipe_detail', recipe_id=version.id) }}" 
+                           class="version-option {{ 'current' if version.is_current else '' }} {{ 'active' if version.is_active else '' }}">
+                            <span class="version-number">v{{ version.version }}</span>
+                            {% if version.is_active %}<span class="version-active-indicator">⭐</span>{% endif %}
+                            <span class="version-date">{{ version.last_modified.strftime('%d-%m-%Y') if version.last_modified else 'Unknown' }}</span>
+                            {% if version.notes %}
+                            <span class="version-notes">{{ version.notes[:50] }}{% if version.notes|length > 50 %}...{% endif %}</span>
+                            {% endif %}
+                        </a>
+                        {% endfor %}
+                    </div>
+                </div>
+                <span class="style-badge">{{ recipe.style or 'Unknown Style' }}</span>
+                {% if recipe.created_by_name %}
+                <span class="creator">Created by {{ recipe.created_by_name }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="actions">
+            <a href="{{ url_for('recipe_shopping_cart', recipe_id=recipe.id) }}" class="btn btn-shopping">
+                🛒 {{ _('Shopping Cart') }}
+            </a>
+            {% if current_user.can_access('recipes', 'edit') %}
+            <a href="#" onclick="showEditForm()" class="btn btn-warning">{{ _('Edit Recipe') }}</a>
+            {% endif %}
+            
+            <!-- Admin Controls -->
+            {% if current_user.role_name == 'admin' %}
+            <div class="admin-controls">
+                <button onclick="showVersionManager()" class="btn btn-info btn-sm">⚙️ {{ _('Manage Versions') }}</button>
+                {% if versions|length > 1 %}
+                <form method="POST" action="{{ url_for('delete_recipe_version', recipe_id=recipe.id) }}" 
+                      style="display: inline;"
+                      onsubmit="return confirm('Are you sure you want to delete this version? This action cannot be undone.')">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ {{ _('Delete Current Version') }}</button>
+                </form>
+                {% endif %}
+                <button onclick="confirmDeleteRecipe()" class="btn btn-danger btn-sm">💥 {{ _('Delete Recipe') }}</button>
+            </div>
+            {% endif %}
+            
+            <a href="{{ url_for('recipes') }}" class="btn btn-secondary">{{ _('Back to Recipes') }}</a>
+        </div>
+    </div>
+
+    <!-- Recipe Overview -->
+    <div class="recipe-overview">
+        <div class="overview-grid">
+            <div class="overview-item">
+                <label>{{ _('Batch Size') }}</label>
+                <span class="value">{{ "%.1f L"|format(recipe.batch_size_liters) if recipe.batch_size_liters else 'Not specified' }}</span>
+            </div>
+            <div class="overview-item">
+                <label>{{ _('Boil Time') }}</label>
+                <span class="value">{{ (recipe.boil_time_minutes|string + " min") if recipe.boil_time_minutes else 'Not specified' }}</span>
+            </div>
+            <div class="overview-item">
+                <label>{{ _('Target ABV') }}</label>
+                <span class="value">{{ "%.1f%%"|format(recipe.target_abv) if recipe.target_abv else 'Not specified' }}</span>
+            </div>
+            <div class="overview-item">
+                <label>{{ _('IBU') }}</label>
+                <span class="value">{{ "%.0f"|format(recipe.ibu) if recipe.ibu else 'Not specified' }}</span>
+            </div>
+            <div class="overview-item">
+                <label>{{ _('Original Gravity') }}</label>
+                <span class="value">{{ "%.3f"|format(recipe.target_og) if recipe.target_og else 'Not specified' }}</span>
+            </div>
+            <div class="overview-item">
+                <label>{{ _('Final Gravity') }}</label>
+                <span class="value">{{ "%.3f"|format(recipe.target_fg) if recipe.target_fg else 'Not specified' }}</span>
+            </div>
+            <div class="overview-item">
+                <label>{{ _('Efficiency') }}</label>
+                <span class="value">{{ "%.0f%%"|format(recipe.efficiency_percent) if recipe.efficiency_percent else 'Not specified' }}</span>
+            </div>
+        </div>
+    </div>
+
+    {% if recipe.description %}
+    <div class="section">
+        <h3>{{ _('Description') }}</h3>
+        <p>{{ recipe.description }}</p>
+    </div>
+    {% endif %}
+
+    <!-- Ingredients Section -->
+    <div class="ingredients-section">
+        <h2>{{ _('Ingredients') }}</h2>
+        
+        <!-- Malts -->
+        {% if malts %}
+        <div class="ingredient-category">
+            <h3>{{ _('Malts & Grains') }}</h3>
+            <table class="ingredients-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Malt') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('Percentage') }}</th>
+                        <th>{{ _('Color (°L)') }}</th>
+                        <th>{{ _('Notes') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for malt in malts %}
+                    <tr>
+                        <td>{{ malt.malt_name }}</td>
+                        <td>{{ "%.2f kg"|format(malt.amount_kg) }}</td>
+                        <td>{{ malt.malt_type or '-' }}</td>
+                        <td>{{ "%.1f%%"|format(malt.percentage) if malt.percentage else '-' }}</td>
+                        <td>{{ "%.0f"|format(malt.lovibond) if malt.lovibond else '-' }}</td>
+                        <td>{{ malt.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Hops -->
+        {% if hops %}
+        <div class="ingredient-category">
+            <h3>{{ _('Hops') }}</h3>
+            <table class="ingredients-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Hop Variety') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Time') }}</th>
+                        <th>{{ _('Alpha Acid') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('Form') }}</th>
+                        <th>{{ _('Notes') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hop in hops %}
+                    <tr>
+                        <td>{{ hop.hop_name }}</td>
+                        <td>{{ "%.1f g"|format(hop.amount_grams) }}</td>
+                        <td>{{ hop.time_minutes }} min</td>
+                        <td>{{ "%.1f%%"|format(hop.alpha_acid) if hop.alpha_acid else '-' }}</td>
+                        <td>{{ hop.hop_type or '-' }}</td>
+                        <td>{{ hop.hop_form or '-' }}</td>
+                        <td>{{ hop.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Yeast -->
+        {% if yeast %}
+        <div class="ingredient-category">
+            <h3>{{ _('Yeast') }}</h3>
+            <table class="ingredients-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Yeast Strain') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('Manufacturer') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Attenuation') }}</th>
+                        <th>{{ _('Temperature') }}</th>
+                        <th>{{ _('Notes') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for y in yeast %}
+                    <tr>
+                        <td>{{ y.yeast_name }}</td>
+                        <td>{{ y.yeast_type or '-' }}</td>
+                        <td>{{ y.manufacturer or '-' }}</td>
+                        <td>{{ y.amount or '-' }}</td>
+                        <td>{{ "%.0f%%"|format(y.attenuation) if y.attenuation else '-' }}</td>
+                        <td>{{ y.temperature_range or '-' }}</td>
+                        <td>{{ y.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Adjuncts -->
+        {% if adjuncts %}
+        <div class="ingredient-category">
+            <h3>{{ _('Other Ingredients') }}</h3>
+            <table class="ingredients-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Ingredient') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('When Added') }}</th>
+                        <th>{{ _('Notes') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adj in adjuncts %}
+                    <tr>
+                        <td>{{ adj.ingredient_name }}</td>
+                        <td>{{ adj.amount or '-' }}</td>
+                        <td>{{ adj.ingredient_type or '-' }}</td>
+                        <td>{{ adj.time_added or '-' }}</td>
+                        <td>{{ adj.notes or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Process Section -->
+    <div class="process-section">
+        <h2>{{ _('Brewing Process') }}</h2>
+        
+        {% if recipe.mash_schedule %}
+        <div class="process-step">
+            <h3>{{ _('Mash Schedule') }}</h3>
+            <div class="process-content">{{ recipe.mash_schedule }}</div>
+        </div>
+        {% endif %}
+
+        {% if recipe.brewing_instructions %}
+        <div class="process-step">
+            <h3>{{ _('Brewing Instructions') }}</h3>
+            <div class="process-content">{{ recipe.brewing_instructions|replace('\n', '<br>')|safe }}</div>
+        </div>
+        {% endif %}
+
+        {% if recipe.notes %}
+        <div class="process-step">
+            <h3>{{ _('Notes') }}</h3>
+            <div class="process-content">{{ recipe.notes|replace('\n', '<br>')|safe }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Version History -->
+    {% if versions and versions|length > 1 %}
+    <div class="versions-section">
+        <h2>{{ _('Version History') }}</h2>
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>{{ _('Version') }}</th>
+                    <th>{{ _('Last Modified') }}</th>
+                    <th>{{ _('Notes') }}</th>
+                    <th>{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for version in versions %}
+                <tr {% if version.is_current %}class="current-version"{% endif %}>
+                    <td>
+                        <span class="version-badge {% if version.is_current %}current{% endif %} {% if version.is_active %}active{% endif %}">
+                            v{{ version.version }}
+                            {% if version.is_active %}⭐{% endif %}
+                        </span>
+                        {% if version.is_current %}
+                        <small>(viewing)</small>
+                        {% endif %}
+                        {% if version.is_active %}
+                        <small>(active)</small>
+                        {% endif %}
+                    </td>
+                    <td>{{ version.last_modified.strftime('%Y-%m-%d %H:%M') if version.last_modified else '-' }}</td>
+                    <td>{{ version.notes or '-' }}</td>
+                    <td>
+                        <div class="version-actions">
+                            {% if not version.is_current %}
+                            <a href="{{ url_for('recipe_detail', recipe_id=version.id) }}" class="btn btn-small">
+                                {{ _('View') }}
+                            </a>
+                            {% endif %}
+                            
+                            {% if version.is_active %}
+                            <span class="status-badge active">{{ _('Active') }}</span>
+                            {% endif %}
+                            
+                            {% if current_user.role_name == 'admin' and versions|length > 1 %}
+                            <form method="POST" action="{{ url_for('delete_recipe_version', recipe_id=version.id) }}" 
+                                  style="display: inline;"
+                                  onsubmit="return confirm('Are you sure you want to delete version {{ version.version }}? This action cannot be undone.')">
+                                <button type="submit" class="btn btn-danger btn-small">🗑️ {{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Edit Form Modal (Hidden by default) -->
+<div id="editModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="hideEditForm()">&times;</span>
+        <h2>{{ _('Edit Recipe') }}</h2>
+        <form method="POST" action="{{ url_for('edit_recipe', recipe_id=recipe.id) }}">
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="name">{{ _('Recipe Name') }}</label>
+                    <input type="text" id="name" name="name" value="{{ recipe.name }}" required>
+                </div>
+                <div class="form-group">
+                    <label for="style">{{ _('Style') }}</label>
+                    <input type="text" id="style" name="style" value="{{ recipe.style or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="batch_size_liters">{{ _('Batch Size (L)') }}</label>
+                    <input type="number" step="0.1" id="batch_size_liters" name="batch_size_liters" value="{{ recipe.batch_size_liters or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="boil_time_minutes">{{ _('Boil Time (min)') }}</label>
+                    <input type="number" id="boil_time_minutes" name="boil_time_minutes" value="{{ recipe.boil_time_minutes or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="target_abv">{{ _('Target ABV (%)') }}</label>
+                    <input type="number" step="0.1" id="target_abv" name="target_abv" value="{{ recipe.target_abv or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="ibu">{{ _('IBU') }}</label>
+                    <input type="number" step="0.1" id="ibu" name="ibu" value="{{ recipe.ibu or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="target_og">{{ _('Original Gravity') }}</label>
+                    <input type="number" step="0.001" id="target_og" name="target_og" value="{{ recipe.target_og or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="target_fg">{{ _('Final Gravity') }}</label>
+                    <input type="number" step="0.001" id="target_fg" name="target_fg" value="{{ recipe.target_fg or '' }}">
+                </div>
+                <div class="form-group">
+                    <label for="efficiency_percent">{{ _('Efficiency (%)') }}</label>
+                    <input type="number" step="0.1" id="efficiency_percent" name="efficiency_percent" value="{{ recipe.efficiency_percent or '' }}">
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="description">{{ _('Description') }}</label>
+                <textarea id="description" name="description" rows="3">{{ recipe.description or '' }}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="mash_schedule">{{ _('Mash Schedule') }}</label>
+                <textarea id="mash_schedule" name="mash_schedule" rows="4">{{ recipe.mash_schedule or '' }}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="brewing_instructions">{{ _('Brewing Instructions') }}</label>
+                <textarea id="brewing_instructions" name="brewing_instructions" rows="6">{{ recipe.brewing_instructions or '' }}</textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="notes">{{ _('Version Notes') }}</label>
+                <textarea id="notes" name="notes" rows="3" placeholder="{{ _('What changed in this version?') }}"></textarea>
+            </div>
+
+            <!-- Ingredients Section -->
+            <div class="ingredients-edit-section">
+                <h3>{{ _('Ingredients') }}</h3>
+                
+                <!-- Malts Section -->
+                <div class="ingredient-category-edit">
+                    <h4>🌾 {{ _('Malts & Grains') }}</h4>
+                    <div id="malts-list">
+                        {% for malt in malts %}
+                        <div class="ingredient-row">
+                            <input type="text" name="malt_name[]" value="{{ malt.malt_name }}" placeholder="Malt name">
+                            <input type="number" step="0.01" name="malt_amount[]" value="{{ malt.amount_kg }}" placeholder="Amount (kg)">
+                            <input type="text" name="malt_type[]" value="{{ malt.malt_type or '' }}" placeholder="Type">
+                            <input type="number" name="malt_lovibond[]" value="{{ malt.lovibond or '' }}" placeholder="°L">
+                            <button type="button" onclick="removeIngredient(this)" class="btn-remove">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addMalt()" class="btn btn-secondary btn-sm">+ Add Malt</button>
+                </div>
+
+                <!-- Hops Section -->
+                <div class="ingredient-category-edit">
+                    <h4>🌿 {{ _('Hops') }}</h4>
+                    <div id="hops-list">
+                        {% for hop in hops %}
+                        <div class="ingredient-row">
+                            <input type="text" name="hop_name[]" value="{{ hop.hop_name }}" placeholder="Hop name">
+                            <input type="number" step="0.1" name="hop_amount[]" value="{{ hop.amount_grams }}" placeholder="Amount (g)">
+                            <input type="number" step="0.1" name="hop_alpha[]" value="{{ hop.alpha_acid or '' }}" placeholder="Alpha %">
+                            <input type="number" name="hop_time[]" value="{{ hop.time_minutes }}" placeholder="Time (min)">
+                            <select name="hop_type[]">
+                                <option value="">Type</option>
+                                <option value="Bittering" {{ 'selected' if hop.hop_type == 'Bittering' }}>Bittering</option>
+                                <option value="Aroma" {{ 'selected' if hop.hop_type == 'Aroma' }}>Aroma</option>
+                                <option value="Dual Purpose" {{ 'selected' if hop.hop_type == 'Dual Purpose' }}>Dual Purpose</option>
+                            </select>
+                            <button type="button" onclick="removeIngredient(this)" class="btn-remove">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addHop()" class="btn btn-secondary btn-sm">+ Add Hop</button>
+                </div>
+
+                <!-- Yeast Section -->
+                <div class="ingredient-category-edit">
+                    <h4>🍄 {{ _('Yeast') }}</h4>
+                    <div id="yeast-list">
+                        {% for yeast_item in yeast %}
+                        <div class="ingredient-row">
+                            <input type="text" name="yeast_name[]" value="{{ yeast_item.yeast_name }}" placeholder="Yeast name">
+                            <input type="text" name="yeast_type[]" value="{{ yeast_item.yeast_type or '' }}" placeholder="Type">
+                            <input type="text" name="yeast_amount[]" value="{{ yeast_item.amount or '' }}" placeholder="Amount">
+                            <input type="text" name="yeast_temp[]" value="{{ yeast_item.temperature_range or '' }}" placeholder="Temp range">
+                            <button type="button" onclick="removeIngredient(this)" class="btn-remove">×</button>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" onclick="addYeast()" class="btn btn-secondary btn-sm">+ Add Yeast</button>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" name="action" value="update" class="btn btn-warning">
+                    📝 {{ _('Update Current Recipe') }}
+                </button>
+                <button type="submit" name="action" value="new_version" class="btn btn-primary">
+                    🔄 {{ _('Create New Version') }}
+                </button>
+                <button type="button" onclick="hideEditForm()" class="btn btn-secondary">{{ _('Cancel') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Admin Version Manager Modal -->
+{% if current_user.role_name == 'admin' %}
+<div id="versionManagerModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="hideVersionManager()">&times;</span>
+        <h2>🔧 {{ _('Version Manager') }}</h2>
+        
+        <div class="version-manager-content">
+            <h3>{{ _('All Versions of') }} "{{ recipe.name }}"</h3>
+            
+            <div class="versions-list">
+                {% for version in versions %}
+                <div class="version-row {{ 'current-version' if version.is_current else '' }}">
+                    <div class="version-info">
+                        <form method="POST" action="{{ url_for('update_version_number', recipe_id=version.id) }}" class="version-edit-form">
+                            <label>{{ _('Version:') }}</label>
+                            <input type="number" step="0.1" name="new_version" value="{{ version.version }}" class="version-input">
+                            <button type="submit" class="btn btn-primary btn-sm">{{ _('Update') }}</button>
+                        </form>
+                        
+                        <div class="version-meta">
+                            <span class="version-date">{{ version.last_modified.strftime('%d-%m-%Y %H:%M') if version.last_modified else 'Unknown' }}</span>
+                            {% if version.notes %}
+                            <span class="version-notes">{{ version.notes }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="version-actions">
+                        <div class="version-status">
+                            {% if version.is_active %}
+                            <span class="active-label">{{ _('Active') }}</span>
+                            {% endif %}
+                            {% if version.is_current %}
+                            <span class="current-label">{{ _('Viewing') }}</span>
+                            {% endif %}
+                        </div>
+                        
+                        <div class="version-buttons">
+                            {% if not version.is_active %}
+                            <form method="POST" action="{{ url_for('set_active_version', recipe_id=version.id) }}" 
+                                  style="display: inline;"
+                                  onsubmit="return confirm('Set version {{ version.version }} as the active version?')">
+                                <button type="submit" class="btn btn-success btn-sm">⭐ {{ _('Set Active') }}</button>
+                            </form>
+                            {% endif %}
+                            
+                            {% if versions|length > 1 %}
+                            <form method="POST" action="{{ url_for('delete_recipe_version', recipe_id=version.id) }}" 
+                                  onsubmit="return confirm('Are you sure you want to delete version {{ version.version }}? This action cannot be undone.')" 
+                                  style="display: inline;">
+                                <button type="submit" class="btn btn-danger btn-sm">🗑️ {{ _('Delete') }}</button>
+                            </form>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            
+            <div class="danger-zone">
+                <h4>🚨 {{ _('Danger Zone') }}</h4>
+                <form method="POST" action="{{ url_for('delete_entire_recipe', recipe_name=recipe.name) }}" 
+                      onsubmit="return confirm('{{ _('DANGER: Delete ALL versions of') }} &quot;{{ recipe.name }}&quot;? {{ _('This will permanently delete the entire recipe and cannot be undone!') }}')" 
+                      class="delete-recipe-form">
+                    <button type="submit" class="btn btn-danger">💥 {{ _('Delete Entire Recipe') }}</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<style>
+.recipe-detail-page {
+    max-width: 1200px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.recipe-meta {
+    margin-top: 0.5rem;
+}
+
+/* Version dropdown styling */
+.version-dropdown {
+    position: relative;
+    display: inline-block;
+    margin-right: 0.5rem;
+}
+
+.version-badge {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 0.8em;
+    font-weight: bold;
+    border: none;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.version-badge:hover {
+    background: linear-gradient(135deg, #20c997, #17a085);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+
+.version-badge.active {
+    background: linear-gradient(135deg, #ffc107, #e0a800);
+    color: #212529;
+    border: 2px solid #ffc107;
+}
+
+.version-badge.current {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+}
+
+.version-dropdown-menu {
+    display: none;
+    position: absolute;
+    top: 100%;
+    left: 0;
+    background: white;
+    min-width: 300px;
+    box-shadow: 0 8px 25px rgba(0,0,0,0.15);
+    border-radius: 8px;
+    z-index: 1000;
+    border: 1px solid #dee2e6;
+    overflow: hidden;
+    margin-top: 5px;
+}
+
+.version-dropdown-menu.show {
+    display: block;
+}
+
+.version-option {
+    display: block;
+    padding: 12px 16px;
+    text-decoration: none;
+    color: #2c3e50;
+    border-bottom: 1px solid #f1f3f4;
+    transition: all 0.2s ease;
+}
+
+.version-option:hover {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    text-decoration: none;
+    color: #2c3e50;
+}
+
+.version-option.current {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border-left: 4px solid #2196f3;
+}
+
+.version-option.active {
+    font-weight: bold;
+}
+
+.version-active-indicator {
+    color: #ffc107;
+    margin-left: 0.25rem;
+}
+
+.version-option .version-number {
+    font-weight: bold;
+    color: #2c3e50;
+    margin-right: 10px;
+}
+
+.version-option .version-date {
+    color: #6c757d;
+    font-size: 0.85em;
+    margin-right: 10px;
+}
+
+.version-option .version-notes {
+    display: block;
+    color: #6c757d;
+    font-size: 0.8em;
+    margin-top: 4px;
+    font-style: italic;
+}
+
+.style-badge {
+    background: #6c757d;
+    color: white;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.8em;
+    margin-right: 0.5rem;
+}
+
+.creator {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    background: #f8f9fa;
+    border-radius: 8px;
+}
+
+.overview-item {
+    text-align: center;
+}
+
+.overview-item label {
+    display: block;
+    font-weight: bold;
+    color: #495057;
+    margin-bottom: 0.5rem;
+}
+
+.overview-item .value {
+    display: block;
+    font-size: 1.2em;
+    color: #2c5aa0;
+    font-weight: bold;
+}
+
+.section, .ingredient-category, .process-step {
+    margin-bottom: 2rem;
+}
+
+.ingredients-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-bottom: 1rem;
+}
+
+.ingredients-table th,
+.ingredients-table td {
+    padding: 8px 12px;
+    text-align: left;
+    border: 1px solid #dee2e6;
+}
+
+.ingredients-table th {
+    background-color: #e9ecef;
+    font-weight: bold;
+}
+
+.process-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 4px;
+    white-space: pre-line;
+}
+
+.current-version {
+    background-color: #e7f3ff;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+}
+
+.modal-content {
+    background-color: #fefefe;
+    margin: 5% auto;
+    padding: 20px;
+    border-radius: 8px;
+    width: 90%;
+    max-width: 800px;
+    max-height: 80vh;
+    overflow-y: auto;
+}
+
+.close {
+    color: #aaa;
+    float: right;
+    font-size: 28px;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.close:hover {
+    color: black;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+}
+
+.form-group input,
+.form-group textarea {
+    width: 100%;
+    padding: 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.form-actions {
+    margin-top: 1rem;
+    text-align: right;
+}
+
+.btn-small {
+    padding: 4px 8px;
+    font-size: 0.8em;
+}
+
+/* Ingredient editing styles */
+.ingredients-edit-section {
+    border-top: 2px solid #e9ecef;
+    padding-top: 2rem;
+    margin-top: 2rem;
+}
+
+.ingredient-category-edit {
+    margin-bottom: 2rem;
+}
+
+.ingredient-category-edit h4 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    border-bottom: 1px solid #e9ecef;
+    padding-bottom: 0.5rem;
+}
+
+.ingredient-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr auto;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.ingredient-row input,
+.ingredient-row select {
+    padding: 6px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 0.9em;
+}
+
+.btn-remove {
+    background: linear-gradient(135deg, #dc3545, #c82333);
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.btn-remove:hover {
+    background: linear-gradient(135deg, #c82333, #a71e2a);
+    transform: scale(1.1);
+}
+
+/* Admin controls styling */
+.admin-controls {
+    display: inline-block;
+    margin-left: 1rem;
+}
+
+/* Version manager modal styling */
+.version-manager-content {
+    max-height: 600px;
+    overflow-y: auto;
+}
+
+.versions-list {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 2rem;
+}
+
+.version-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem;
+    margin-bottom: 0.5rem;
+    background: white;
+    border-radius: 6px;
+    border-left: 4px solid #dee2e6;
+    transition: all 0.3s ease;
+}
+
+.version-row:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+    transform: translateY(-1px);
+}
+
+.version-row.current-version {
+    border-left-color: #28a745;
+    background: linear-gradient(135deg, #f8fff9, #e8f5e8);
+}
+
+.version-edit-form {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.version-input {
+    width: 80px;
+    padding: 4px 8px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+
+.version-meta {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.version-date {
+    color: #6c757d;
+    font-size: 0.9em;
+}
+
+.version-notes {
+    color: #495057;
+    font-size: 0.85em;
+    font-style: italic;
+}
+
+.current-label {
+    background: linear-gradient(135deg, #007bff, #0056b3);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: bold;
+    margin-left: 0.5rem;
+}
+
+.active-label {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-size: 0.8em;
+    font-weight: bold;
+}
+
+.version-status {
+    display: inline-block;
+    margin-right: 1rem;
+}
+
+.version-buttons {
+    display: inline-flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.status-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.75em;
+    font-weight: bold;
+    margin-left: 0.5rem;
+    display: inline-block;
+}
+
+.status-badge.active {
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+}
+
+.version-actions {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.version-actions .btn-small {
+    padding: 2px 6px;
+    font-size: 0.8em;
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.3s ease;
+}
+
+.version-actions .btn-small:hover {
+    background: linear-gradient(135deg, #2980b9, #1f6391);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+.btn-danger.btn-small {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    border: none;
+    border-radius: 4px;
+    padding: 4px 8px;
+    font-size: 0.75em;
+    font-weight: bold;
+    cursor: pointer;
+    transition: all 0.3s ease;
+}
+
+.btn-danger.btn-small:hover {
+    background: linear-gradient(135deg, #c0392b, #a93226);
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
+/* Fix for inline forms around delete buttons */
+form[style*="display: inline"] {
+    display: inline !important;
+    background: none !important;
+    border: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    box-shadow: none !important;
+}
+
+/* Remove any default form styling */
+.admin-controls form,
+.version-actions form {
+    display: inline;
+    background: transparent;
+    border: none;
+    padding: 0;
+    margin: 0;
+    box-shadow: none;
+}
+
+.danger-zone {
+    background: linear-gradient(135deg, #fff5f5, #fed7d7);
+    border: 2px solid #fc8181;
+    border-radius: 8px;
+    padding: 1.5rem;
+    text-align: center;
+}
+
+.danger-zone h4 {
+    color: #c53030;
+    margin-bottom: 1rem;
+}
+
+.delete-recipe-form .btn {
+    font-size: 1.1em;
+    padding: 12px 24px;
+}
+</style>
+
+<script>
+function showEditForm() {
+    document.getElementById('editModal').style.display = 'block';
+}
+
+function hideEditForm() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+function toggleVersionDropdown() {
+    var dropdown = document.getElementById('versionDropdown');
+    dropdown.classList.toggle('show');
+}
+
+// Close dropdowns when clicking outside
+window.onclick = function(event) {
+    var modal = document.getElementById('editModal');
+    if (event.target == modal) {
+        modal.style.display = 'none';
+    }
+    
+    // Close version dropdown when clicking outside
+    if (!event.target.matches('.dropdown-toggle')) {
+        var dropdowns = document.getElementsByClassName('version-dropdown-menu');
+        for (var i = 0; i < dropdowns.length; i++) {
+            var openDropdown = dropdowns[i];
+            if (openDropdown.classList.contains('show')) {
+                openDropdown.classList.remove('show');
+            }
+        }
+    }
+}
+
+// Ingredient editing functions
+function addMalt() {
+    var maltsList = document.getElementById('malts-list');
+    var newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.innerHTML = `
+        <input type="text" name="malt_name[]" placeholder="Malt name">
+        <input type="number" step="0.01" name="malt_amount[]" placeholder="Amount (kg)">
+        <input type="text" name="malt_type[]" placeholder="Type">
+        <input type="number" name="malt_lovibond[]" placeholder="°L">
+        <button type="button" onclick="removeIngredient(this)" class="btn-remove">×</button>
+    `;
+    maltsList.appendChild(newRow);
+}
+
+function addHop() {
+    var hopsList = document.getElementById('hops-list');
+    var newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.innerHTML = `
+        <input type="text" name="hop_name[]" placeholder="Hop name">
+        <input type="number" step="0.1" name="hop_amount[]" placeholder="Amount (g)">
+        <input type="number" step="0.1" name="hop_alpha[]" placeholder="Alpha %">
+        <input type="number" name="hop_time[]" placeholder="Time (min)">
+        <select name="hop_type[]">
+            <option value="">Type</option>
+            <option value="Bittering">Bittering</option>
+            <option value="Aroma">Aroma</option>
+            <option value="Dual Purpose">Dual Purpose</option>
+        </select>
+        <button type="button" onclick="removeIngredient(this)" class="btn-remove">×</button>
+    `;
+    hopsList.appendChild(newRow);
+}
+
+function addYeast() {
+    var yeastList = document.getElementById('yeast-list');
+    var newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.innerHTML = `
+        <input type="text" name="yeast_name[]" placeholder="Yeast name">
+        <input type="text" name="yeast_type[]" placeholder="Type">
+        <input type="text" name="yeast_amount[]" placeholder="Amount">
+        <input type="text" name="yeast_temp[]" placeholder="Temp range">
+        <button type="button" onclick="removeIngredient(this)" class="btn-remove">×</button>
+    `;
+    yeastList.appendChild(newRow);
+}
+
+function removeIngredient(button) {
+    button.parentElement.remove();
+}
+
+// Version manager functions
+function showVersionManager() {
+    document.getElementById('versionManagerModal').style.display = 'block';
+}
+
+function hideVersionManager() {
+    document.getElementById('versionManagerModal').style.display = 'none';
+}
+
+function confirmDeleteRecipe() {
+    if (confirm('DANGER: This will delete ALL versions of this recipe! Are you absolutely sure?')) {
+        showVersionManager();
+        // Scroll to danger zone
+        setTimeout(() => {
+            document.querySelector('.danger-zone').scrollIntoView({ behavior: 'smooth' });
+        }, 300);
+    }
+}
+</script>
+{% endblock %}

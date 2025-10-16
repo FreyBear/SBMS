@@ -1,0 +1,373 @@
+/* SBMS - Simple and Clean Styles */
+
+/* Basic reset and layout */
+* {
+    box-sizing: border-box;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0;
+    padding: 0;
+    background-color: #f8f9fa;
+    color: #333;
+    line-height: 1.6;
+}
+
+/* Navigation */
+.navbar {
+    background-color: #2c3e50;
+    color: white;
+    padding: 0;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.nav-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+}
+
+.nav-user {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.user-info {
+    color: #ecf0f1;
+    font-size: 14px;
+}
+
+.language-selector select {
+    background-color: #34495e;
+    color: white;
+    border: 1px solid #555;
+    padding: 5px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+nav ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    gap: 1.5rem;
+}
+
+nav a {
+    color: white;
+    text-decoration: none;
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    transition: background-color 0.2s;
+}
+
+nav a:hover {
+    background-color: rgba(255, 255, 255, 0.2);
+}
+
+/* Main content */
+main {
+    max-width: 1200px;
+    margin: 2rem auto;
+    padding: 0 2rem;
+}
+
+/* SIMPLE BUTTON SYSTEM - The core fix for styling issues */
+
+/* Base button styles - applies to ALL buttons and action links */
+.btn,
+button,
+input[type="submit"],
+a[href*="edit"],
+a[href*="delete"], 
+a[href*="view"],
+a[href*="detail"],
+a[href*="shopping-cart"],
+a[href*="create"],
+a[href*="add"],
+a[href*="approve"],
+a[href*="reject"] {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    margin: 0.2rem;
+    text-decoration: none;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    color: white !important;
+    transition: background-color 0.2s;
+}
+
+/* Button colors - simple and clear */
+.btn-primary,
+input[type="submit"],
+a[href*="view"],
+a[href*="detail"] {
+    background-color: #007bff;
+}
+
+.btn-primary:hover,
+input[type="submit"]:hover,
+a[href*="view"]:hover,
+a[href*="detail"]:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-success,
+a[href*="create"],
+a[href*="add"],
+a[href*="approve"] {
+    background-color: #28a745;
+}
+
+.btn-success:hover,
+a[href*="create"]:hover,
+a[href*="add"]:hover,
+a[href*="approve"]:hover {
+    background-color: #218838;
+}
+
+.btn-warning,
+a[href*="edit"] {
+    background-color: #ffc107;
+    color: #212529 !important;
+}
+
+.btn-warning:hover,
+a[href*="edit"]:hover {
+    background-color: #e0a800;
+    color: #212529 !important;
+}
+
+.btn-danger,
+a[href*="delete"],
+a[href*="reject"] {
+    background-color: #dc3545;
+}
+
+.btn-danger:hover,
+a[href*="delete"]:hover,
+a[href*="reject"]:hover {
+    background-color: #c82333;
+}
+
+/* Shopping cart specific */
+.btn-shopping,
+a[href*="shopping-cart"] {
+    background-color: #6f42c1;
+}
+
+.btn-shopping:hover,
+a[href*="shopping-cart"]:hover {
+    background-color: #5a32a3;
+}
+
+/* Small buttons for table actions */
+.btn-sm,
+.btn-small {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+}
+
+/* Tables */
+.data-table,
+table {
+    width: 100%;
+    border-collapse: collapse;
+    background: white;
+    border-radius: 4px;
+    overflow: hidden;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+.data-table th,
+table th {
+    background-color: #f8f9fa;
+    color: #495057;
+    padding: 0.75rem;
+    text-align: left;
+    font-weight: 600;
+    border-bottom: 2px solid #dee2e6;
+}
+
+.data-table td,
+table td {
+    padding: 0.75rem;
+    border-bottom: 1px solid #dee2e6;
+    vertical-align: middle;
+}
+
+.data-table tr:hover,
+table tr:hover {
+    background-color: #f8f9fa;
+}
+
+/* Forms */
+form {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #495057;
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+textarea,
+select {
+    width: 100%;
+    padding: 0.5rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+/* Cards and layout */
+.card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    margin-bottom: 1.5rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+/* Status indicators */
+.status-full { background-color: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+.status-started { background-color: #ffc107; color: #212529; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+.status-available { background-color: #17a2b8; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+.status-empty { background-color: #6c757d; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+.status-pending { background-color: #ffc107; color: #212529; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+.status-paid { background-color: #28a745; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+.status-rejected { background-color: #dc3545; color: white; padding: 0.25rem 0.5rem; border-radius: 3px; font-size: 0.8rem; }
+
+/* Alerts */
+.alert {
+    padding: 0.75rem 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+}
+
+.alert-success { background-color: #d4edda; border-left: 4px solid #28a745; color: #155724; }
+.alert-error { background-color: #f8d7da; border-left: 4px solid #dc3545; color: #721c24; }
+.alert-warning { background-color: #fff3cd; border-left: 4px solid #ffc107; color: #856404; }
+.alert-info { background-color: #d1ecf1; border-left: 4px solid #17a2b8; color: #0c5460; }
+
+/* Recipe specific */
+.version-badge {
+    background: #28a745;
+    color: white;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-size: 0.8em;
+    font-weight: 500;
+}
+
+.recipe-link {
+    font-weight: 600;
+    color: #007bff;
+    text-decoration: none;
+}
+
+.recipe-link:hover {
+    text-decoration: underline;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #6c757d;
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .nav-container {
+        flex-direction: column;
+        gap: 1rem;
+        padding: 1rem;
+    }
+    
+    nav ul {
+        flex-wrap: wrap;
+        justify-content: center;
+    }
+    
+    main {
+        padding: 0 1rem;
+        margin: 1rem auto;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .actions {
+        justify-content: center;
+    }
+    
+    .data-table,
+    table {
+        font-size: 0.9rem;
+    }
+    
+    .data-table th,
+    .data-table td,
+    table th,
+    table td {
+        padding: 0.5rem;
+    }
+}

@@ -49,16 +49,19 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 ## Technology Stack
 
-**Backend**: Python Flask with comprehensive authentication and authorization  
+**Backend**: Python Flask with Gunicorn production WSGI server  
 **Database**: PostgreSQL with full ACID compliance and advanced data types  
 **Frontend**: Server-side rendered HTML templates with Jinja2 and modern CSS  
 **File Management**: Secure file upload and storage for expense receipts  
 **Internationalization**: Flask-Babel for multi-language support  
 **Authentication**: Flask-Login with role-based access control  
 **Containerization**: Docker Compose for isolated, reproducible environments  
+**Production Server**: Gunicorn for multi-threaded, production-ready deployment  
+**Reverse Proxy Support**: Configured for Nginx Proxy Manager and HTTPS  
 
 **Core Dependencies**:
   - Flask 2.3.3 (web framework)
+  - Gunicorn 21.2.0 (production WSGI server)
   - Flask-Login (authentication)
   - Flask-Babel (internationalization)
   - psycopg2-binary 2.9.7 (PostgreSQL adapter)
@@ -67,11 +70,14 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
   - WTForms (form handling and validation)
 
 **Security Features**:  
+  - Production-ready Gunicorn WSGI server
+  - Reverse proxy support (Nginx Proxy Manager, HTTPS)
   - Secure password hashing with bcrypt
   - Role-based permission system
   - CSRF protection on all forms
   - Secure file upload validation
   - SQL injection prevention through parameterized queries  
+  - Environment-based configuration management
 
 ## Getting Started
 
@@ -97,10 +103,57 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
    - Open your browser and go to `http://localhost:8080`
    - **Default login**: username `admin`, password `admin123`
    - **⚠️ Important**: Change the default password immediately after first login!
+   - **For production**: Configure your domain in `.env` and set `ENABLE_HTTPS=true`
 
 4. **Create additional users**
    - Log in as admin and go to User Management
    - Create users with appropriate roles for your brewery team
+
+## Production Deployment
+
+SBMS is production-ready out of the box with Gunicorn WSGI server and reverse proxy support.
+
+### **For Public Access (Recommended)**
+
+1. **Configure your domain in `.env`**:
+   ```bash
+   # Add your domain to allowed hosts
+   ALLOWED_HOSTS=localhost,127.0.0.1,yourdomain.com
+   ENABLE_HTTPS=true
+   ```
+
+2. **Set up reverse proxy** (Nginx Proxy Manager example):
+   - **Domain**: `yourdomain.com`
+   - **Forward to**: `your-server-ip:8080`
+   - **SSL Certificate**: Enable SSL (Let's Encrypt)
+   - **Advanced Config**:
+     ```nginx
+     proxy_set_header Host $host;
+     proxy_set_header X-Real-IP $remote_addr;
+     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+     proxy_set_header X-Forwarded-Proto $scheme;
+     proxy_set_header X-Forwarded-Host $host;
+     proxy_redirect off;
+     ```
+
+3. **Restart SBMS**:
+   ```bash
+   docker-compose down
+   docker-compose up -d
+   ```
+
+### **Production Features**
+- ✅ **Gunicorn WSGI Server**: Multi-worker production server
+- ✅ **HTTPS Support**: Automatic HTTPS redirect when behind proxy
+- ✅ **Security Headers**: Proper handling of X-Forwarded-* headers
+- ✅ **Multi-user Support**: Concurrent user handling
+- ✅ **Auto-restart**: Worker processes automatically restart to prevent memory leaks
+
+### **Performance**
+- **Workers**: Automatically calculated based on CPU cores (typically 9+ workers)
+- **Concurrent Users**: Handles multiple simultaneous users
+- **Memory Management**: Workers restart after 1000 requests
+- **Request Timeout**: 30-second timeout for stability
 
 ## What's Included
 
@@ -113,7 +166,9 @@ When you clone and start SBMS, you get a **complete brewery management system** 
 ✅ **Multi-language Support**: English and Norwegian interfaces  
 ✅ **File Upload System**: Secure receipt storage for expense management  
 ✅ **Sample Data**: Example recipes, brews, and keg configurations  
-✅ **Production Ready**: Containerized with PostgreSQL and Flask  
+✅ **Production Ready**: Containerized with PostgreSQL, Flask, and Gunicorn  
+✅ **Reverse Proxy Support**: Pre-configured for Nginx Proxy Manager and HTTPS  
+✅ **Backup System**: Complete backup and restore functionality with cloud storage  
 
 **No additional setup required** - just clone, run, and start managing your brewery!
 
@@ -137,8 +192,10 @@ If you prefer manual setup or are not on Ubuntu/Debian:
 
 4. **Access the web interface**
    - Open your browser and go to `http://localhost:8080`
+   - **Default login**: username `admin`, password `admin123`
+   - **⚠️ Important**: Change the default password immediately after first login!
 
-### Management Commands
+## Management Commands
 
 ```bash
 # View logs
@@ -147,11 +204,20 @@ docker compose logs -f
 # Stop the system
 docker compose down
 
-# Rebuild and restart
+# Rebuild and restart (for updates)
 docker compose up -d --build
+
+# View production server status
+docker logs sbms_web
 
 # Access database directly
 docker exec -it sbms_db psql -U sbms_user -d sbms
+
+# Run security check
+./security_check.sh
+
+# Create backup
+./backup_sbms.sh
 
 # Import keg data from CSV
 python3 import_kegs.py keg_import_template.csv
@@ -234,8 +300,9 @@ SBMS/
 │   ├── auth.py              # Authentication and authorization
 │   ├── forms.py             # WTForms for all user inputs
 │   ├── i18n.py              # Internationalization setup
-│   ├── requirements.txt     # Python dependencies
-│   ├── Dockerfile          # Backend container config
+│   ├── requirements.txt     # Python dependencies (includes Gunicorn)
+│   ├── gunicorn.conf.py     # Production server configuration
+│   ├── Dockerfile           # Backend container config (production-ready)
 │   └── uploads/             # File storage for expense receipts
 ├── frontend/
 │   ├── templates/           # Jinja2 HTML templates
@@ -255,6 +322,10 @@ SBMS/
 │   ├── en/LC_MESSAGES/      # English translations
 │   └── no/LC_MESSAGES/      # Norwegian translations
 ├── keg_import_template.csv  # Sample keg data
+├── backup_sbms.sh          # Complete backup script
+├── restore_sbms.sh         # One-click restore script
+├── setup_auto_backup.sh    # Automated backup setup
+├── security_check.sh       # Security validation tool
 └── *.py                    # Import and utility scripts
 ```
 
@@ -343,14 +414,16 @@ PostgreSQL enables easy schema migrations and supports advanced data types.
 ## Backup & Recovery
 
 Automated backups ensure you can restore to a working state without data loss.
-Backup scripts and instructions will be included for both database and application data.
+Complete backup system with local and cloud storage options available.
 
-## Security
+### **Security & Production**
 
-The server runs behind NAT with port forwarding.
-HTTPS is enforced for all web traffic.
-User authentication and access control are required for all sensitive operations.
-Regular security updates and monitoring.
+- ✅ **Production WSGI Server**: Gunicorn with multi-worker support
+- ✅ **Reverse Proxy Ready**: Nginx Proxy Manager, Traefik, or Apache support
+- ✅ **HTTPS Support**: Automatic HTTPS handling behind SSL terminating proxy
+- ✅ **Environment Security**: Sensitive data protected in `.env` files
+- ✅ **Role-based Access**: Five-tier permission system
+- ✅ **Security Validation**: Built-in security check script
 
 ## Dynamic DNS (DuckDNS)
 
@@ -403,8 +476,17 @@ SBMS provides a **complete, production-ready brewery management solution** that 
 - Businesses needing expense tracking and approval workflows  
 - Multi-user environments requiring role-based access control
 - Organizations wanting a simple, maintainable system without vendor lock-in
+- Production deployments requiring HTTPS and reverse proxy support
 
-**Built with stability and simplicity in mind** - using proven technologies and straightforward architecture for long-term reliability and easy maintenance.
+**Built with stability and simplicity in mind** - using proven technologies (PostgreSQL, Flask, Gunicorn) and straightforward architecture for long-term reliability and easy maintenance.
+
+### **Key Advantages**
+- 🚀 **Production Ready**: Gunicorn WSGI server with multi-worker support
+- 🔒 **Security First**: Role-based access, HTTPS support, secure file handling
+- 🌐 **Internet Ready**: Reverse proxy support for public deployment
+- 💾 **Data Protection**: Comprehensive backup and restore system
+- 🌍 **Multi-language**: English and Norwegian interface support
+- 📊 **Complete System**: All brewery operations in one integrated platform
 
 ## 💾 Backup & Recovery
 
@@ -432,6 +514,9 @@ SBMS includes comprehensive backup solutions to protect your brewery data:
 
 # Options: Daily, weekly, or custom schedule
 # Includes Google Drive sync and log monitoring
+
+# Test backup and restore process
+./test_restore.sh ./backups/backup_file.tar.gz
 ```
 
 📖 **Complete documentation**: See [BACKUP_GUIDE.md](BACKUP_GUIDE.md) for detailed backup strategies, troubleshooting, and recovery procedures.

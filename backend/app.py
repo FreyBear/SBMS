@@ -10,6 +10,7 @@ import bcrypt
 import uuid
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
+from werkzeug.middleware.proxy_fix import ProxyFix
 from auth import User, require_auth, require_permission
 from forms import LoginForm, ChangePasswordForm, CreateUserForm, EditUserForm, CreateExpenseForm, MarkPaidForm, RejectExpenseForm, DeleteExpenseForm, EditExpenseForm
 from i18n import init_babel, _, _l
@@ -18,6 +19,10 @@ from i18n import init_babel, _, _l
 load_dotenv()
 
 app = Flask(__name__, template_folder='frontend/templates', static_folder='frontend/static')
+
+# Configure Flask for reverse proxy (Nginx Proxy Manager)
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+
 app.secret_key = os.getenv('SECRET_KEY', 'dev-secret-key')
 app.config['WTF_CSRF_ENABLED'] = True
 app.config['SERVER_NAME'] = None  # Allow any hostname
@@ -55,6 +60,20 @@ def get_db_connection():
         print(f"Database connection error: {e}")
         return None
 
+@app.before_request
+def force_https():
+    """Handle HTTPS redirects when behind reverse proxy"""
+    # Check if we're behind a proxy with HTTPS
+    if os.getenv('ENABLE_HTTPS', 'false').lower() == 'true':
+        # Check if request came through HTTPS proxy
+        if request.headers.get('X-Forwarded-Proto') == 'https':
+            # Request is already HTTPS, continue normally
+            pass
+        elif request.headers.get('X-Forwarded-Proto') == 'http':
+            # Request came through HTTP, redirect to HTTPS
+            url = request.url.replace('http://', 'https://', 1)
+            return redirect(url, code=301)
+    
 @login_manager.user_loader
 def load_user(user_id):
     """Load user for Flask-Login"""
@@ -299,7 +318,7 @@ def kegs():
                 FROM keg k
                 LEFT JOIN brew b ON k.brew_id = b.id
                 LEFT JOIN recipe r ON b.recipe_id = r.id
-                ORDER BY k.keg_number
+                ORDER BY k.last_measured DESC NULLS LAST, k.keg_number
             """)
             kegs = cur.fetchall()
     except psycopg2.Error as e:
@@ -380,50 +399,73 @@ def update_keg(keg_id):
         today = datetime.now().strftime('%Y-%m-%d')
         return render_template('update_keg.html', keg=keg, today=today)
     
-    # POST request - update keg and create history entry
+    # POST request - handle dual action (update current vs add new entry)
+    action = request.form.get('action', 'update_current')
+    
     try:
         with conn.cursor() as cur:
             # Parse the update date
             update_date = datetime.strptime(request.form['update_date'], '%Y-%m-%d').date()
             
-            # Update the main keg record
-            cur.execute("""
-                UPDATE keg SET
-                    contents = %s,
-                    status = %s,
-                    amount_left_liters = %s,
-                    location = %s,
-                    notes = %s,
-                    last_measured = %s
-                WHERE id = %s
-            """, (
-                request.form['contents'],
-                request.form['status'],
-                float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
-                request.form['location'],
-                request.form['notes'],
-                update_date,
-                keg_id
-            ))
-            
-            # Create a history entry for this update
-            cur.execute("""
-                INSERT INTO keg_history 
-                (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-            """, (
-                keg_id,
-                update_date,
-                request.form['contents'],
-                request.form['status'],
-                float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
-                request.form['location'],
-                request.form.get('arrangement', 'Normal operation'),
-                request.form['notes']
-            ))
+            if action == 'update_current':
+                # Update the main keg record AND create history entry
+                cur.execute("""
+                    UPDATE keg SET
+                        contents = %s,
+                        status = %s,
+                        amount_left_liters = %s,
+                        location = %s,
+                        notes = %s,
+                        last_measured = %s
+                    WHERE id = %s
+                """, (
+                    request.form['contents'],
+                    request.form['status'],
+                    float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                    request.form['location'],
+                    request.form['notes'],
+                    update_date,
+                    keg_id
+                ))
+                
+                # Create a history entry for this update
+                cur.execute("""
+                    INSERT INTO keg_history 
+                    (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    keg_id,
+                    update_date,
+                    request.form['contents'],
+                    request.form['status'],
+                    float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                    request.form['location'],
+                    request.form.get('arrangement', 'Normal operation'),
+                    request.form['notes']
+                ))
+                
+                flash(_('Keg updated successfully and history entry created'), 'success')
+                
+            elif action == 'add_new_entry':
+                # Only create history entry, don't update main keg record
+                cur.execute("""
+                    INSERT INTO keg_history 
+                    (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    keg_id,
+                    update_date,
+                    request.form['contents'],
+                    request.form['status'],
+                    float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                    request.form['location'],
+                    request.form.get('arrangement', 'Normal operation'),
+                    request.form['notes']
+                ))
+                
+                flash(_('New history entry created without updating current keg status'), 'success')
             
             conn.commit()
-            flash(_('Keg updated successfully and history entry created'), 'success')
     except (psycopg2.Error, ValueError) as e:
         flash(f'Error updating keg: {e}', 'error')
     finally:
@@ -571,7 +613,7 @@ def brews():
 @app.route('/recipes')
 @require_permission('recipes', 'view')
 def recipes():
-    """View all recipes"""
+    """View all recipes with versioning support"""
     conn = get_db_connection()
     if not conn:
         flash('Database connection error', 'error')
@@ -579,12 +621,23 @@ def recipes():
     
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get latest version of each recipe (only the highest version number per recipe name)
             cur.execute("""
-                SELECT r.*, COUNT(b.id) as brew_count
+                SELECT r.*, COUNT(b.id) as brew_count,
+                       CASE WHEN r.target_abv IS NOT NULL THEN r.target_abv ELSE 0 END as target_abv,
+                       CASE WHEN r.ibu IS NOT NULL THEN r.ibu ELSE 0 END as ibu,
+                       CASE WHEN r.batch_size_liters IS NOT NULL THEN r.batch_size_liters ELSE 0 END as batch_size_liters,
+                       (SELECT COUNT(*) FROM recipe r2 WHERE r2.name = r.name) as version_count
                 FROM recipe r
                 LEFT JOIN brew b ON r.id = b.recipe_id
+                WHERE r.id IN (
+                    SELECT DISTINCT ON (name) id
+                    FROM recipe
+                    WHERE is_active = true
+                    ORDER BY name, version DESC
+                )
                 GROUP BY r.id
-                ORDER BY r.name
+                ORDER BY r.name, r.version DESC
             """)
             recipes = cur.fetchall()
     except psycopg2.Error as e:
@@ -594,6 +647,707 @@ def recipes():
         conn.close()
     
     return render_template('recipes.html', recipes=recipes)
+
+@app.route('/recipe/<int:recipe_id>')
+@require_permission('recipes', 'view')
+def recipe_detail(recipe_id):
+    """View detailed recipe with all ingredients and versions"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get recipe details
+            cur.execute("""
+                SELECT r.*, u.username as created_by_name
+                FROM recipe r
+                LEFT JOIN users u ON r.created_by = u.id
+                WHERE r.id = %s
+            """, (recipe_id,))
+            recipe = cur.fetchone()
+            
+            if not recipe:
+                flash('Recipe not found', 'error')
+                return redirect(url_for('recipes'))
+            
+            # Get malts
+            cur.execute("""
+                SELECT * FROM recipe_malts 
+                WHERE recipe_id = %s 
+                ORDER BY sort_order, id
+            """, (recipe_id,))
+            malts = cur.fetchall()
+            
+            # Get hops
+            cur.execute("""
+                SELECT * FROM recipe_hops 
+                WHERE recipe_id = %s 
+                ORDER BY time_minutes DESC, sort_order, id
+            """, (recipe_id,))
+            hops = cur.fetchall()
+            
+            # Get yeast
+            cur.execute("""
+                SELECT * FROM recipe_yeast 
+                WHERE recipe_id = %s 
+                ORDER BY sort_order, id
+            """, (recipe_id,))
+            yeast = cur.fetchall()
+            
+            # Get adjuncts
+            cur.execute("""
+                SELECT * FROM recipe_adjuncts 
+                WHERE recipe_id = %s 
+                ORDER BY sort_order, id
+            """, (recipe_id,))
+            adjuncts = cur.fetchall()
+            
+            # Get recipe versions - find all recipes with same name
+            cur.execute("""
+                SELECT id, version, last_modified, notes, is_active,
+                       CASE WHEN id = %s THEN true ELSE false END as is_current
+                FROM recipe 
+                WHERE name = (SELECT name FROM recipe WHERE id = %s)
+                ORDER BY version DESC
+            """, (recipe_id, recipe_id))
+            versions = cur.fetchall()
+            
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('recipes'))
+    finally:
+        conn.close()
+    
+    return render_template('recipe_detail.html', 
+                         recipe=recipe, malts=malts, hops=hops, 
+                         yeast=yeast, adjuncts=adjuncts, versions=versions)
+
+@app.route('/recipe/<int:recipe_id>/shopping-cart')
+@require_permission('recipes', 'view')
+def recipe_shopping_cart(recipe_id):
+    """Generate shopping cart/ingredient list for a recipe"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get recipe details
+            cur.execute("""
+                SELECT r.*, u.username as created_by_name
+                FROM recipe r
+                LEFT JOIN users u ON r.created_by = u.id
+                WHERE r.id = %s
+            """, (recipe_id,))
+            recipe = cur.fetchone()
+            
+            if not recipe:
+                flash('Recipe not found', 'error')
+                return redirect(url_for('recipes'))
+            
+            # Get all ingredients for shopping list (aggregated by name)
+            # Malts - sum by malt name
+            cur.execute("""
+                SELECT malt_name as name, 
+                       SUM(amount_kg) as amount_kg, 
+                       STRING_AGG(DISTINCT malt_type, ', ') as malt_type,
+                       AVG(lovibond) as lovibond
+                FROM recipe_malts 
+                WHERE recipe_id = %s 
+                GROUP BY malt_name
+                ORDER BY SUM(amount_kg) DESC
+            """, (recipe_id,))
+            malts = cur.fetchall()
+            
+            # Hops - sum by hop name (remove boil time from display)
+            cur.execute("""
+                SELECT hop_name as variety, 
+                       SUM(amount_grams) as amount_g, 
+                       AVG(alpha_acid) as alpha_acid,
+                       STRING_AGG(DISTINCT hop_type, ', ') as hop_type
+                FROM recipe_hops 
+                WHERE recipe_id = %s 
+                GROUP BY hop_name
+                ORDER BY SUM(amount_grams) DESC
+            """, (recipe_id,))
+            hops = cur.fetchall()
+            
+            # Yeast - aggregate by name
+            cur.execute("""
+                SELECT yeast_name as strain, 
+                       STRING_AGG(DISTINCT yeast_type, ', ') as yeast_type, 
+                       STRING_AGG(DISTINCT amount, ', ') as amount, 
+                       STRING_AGG(DISTINCT temperature_range, ', ') as temperature_range
+                FROM recipe_yeast 
+                WHERE recipe_id = %s
+                GROUP BY yeast_name
+                ORDER BY yeast_name
+            """, (recipe_id,))
+            yeast = cur.fetchall()
+            
+            # Adjuncts - aggregate by name
+            cur.execute("""
+                SELECT ingredient_name as name, 
+                       STRING_AGG(DISTINCT amount, ', ') as amount, 
+                       STRING_AGG(DISTINCT ingredient_type, ', ') as adjunct_type, 
+                       STRING_AGG(DISTINCT time_added, ', ') as addition_time
+                FROM recipe_adjuncts 
+                WHERE recipe_id = %s 
+                GROUP BY ingredient_name
+                ORDER BY ingredient_name
+            """, (recipe_id,))
+            adjuncts = cur.fetchall()
+    
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('recipes'))
+    finally:
+        conn.close()
+    
+    return render_template('recipe_shopping_cart.html', 
+                         recipe=recipe, malts=malts, hops=hops, 
+                         yeast=yeast, adjuncts=adjuncts)
+
+@app.route('/recipe/<int:recipe_id>/edit', methods=['GET', 'POST'])
+@require_permission('recipes', 'edit')
+def edit_recipe(recipe_id):
+    """Edit recipe - creates new version"""
+    if request.method == 'POST':
+        conn = get_db_connection()
+        if not conn:
+            flash('Database connection error', 'error')
+            return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+        
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Get current recipe
+                cur.execute("SELECT * FROM recipe WHERE id = %s", (recipe_id,))
+                current_recipe = cur.fetchone()
+                
+                if not current_recipe:
+                    flash('Recipe not found', 'error')
+                    return redirect(url_for('recipes'))
+                
+                # Get the action type from the form
+                action = request.form.get('action', 'new_version')
+                
+                if action == 'update':
+                    # Update current recipe in place
+                    cur.execute("""
+                        UPDATE recipe SET 
+                        name = %s, style = %s, description = %s, batch_size_liters = %s, boil_time_minutes = %s,
+                        target_abv = %s, target_og = %s, target_fg = %s, ibu = %s, efficiency_percent = %s,
+                        mash_schedule = %s, brewing_instructions = %s, last_modified = %s
+                        WHERE id = %s
+                    """, (
+                        request.form.get('name', current_recipe['name']),
+                        request.form.get('style', current_recipe['style']),
+                        request.form.get('description', current_recipe.get('description', '')),
+                        float(request.form.get('batch_size_liters', 0)) if request.form.get('batch_size_liters') else None,
+                        int(request.form.get('boil_time_minutes', 0)) if request.form.get('boil_time_minutes') else None,
+                        float(request.form.get('target_abv', 0)) if request.form.get('target_abv') else None,
+                        float(request.form.get('target_og', 0)) if request.form.get('target_og') else None,
+                        float(request.form.get('target_fg', 0)) if request.form.get('target_fg') else None,
+                        float(request.form.get('ibu', 0)) if request.form.get('ibu') else None,
+                        float(request.form.get('efficiency_percent', 0)) if request.form.get('efficiency_percent') else None,
+                        request.form.get('mash_schedule', current_recipe.get('mash_schedule', '')),
+                        request.form.get('brewing_instructions', current_recipe.get('brewing_instructions', '')),
+                        datetime.now(),
+                        recipe_id
+                    ))
+                    
+                    # Update ingredients for current recipe
+                    # Clear existing ingredients
+                    cur.execute("DELETE FROM recipe_malts WHERE recipe_id = %s", (recipe_id,))
+                    cur.execute("DELETE FROM recipe_hops WHERE recipe_id = %s", (recipe_id,))
+                    cur.execute("DELETE FROM recipe_yeast WHERE recipe_id = %s", (recipe_id,))
+                    
+                    updated_recipe_id = recipe_id
+                    flash(f'Recipe updated successfully (version {current_recipe["version"]})', 'success')
+                    
+                else:
+                    # Create new version
+                    new_version = float(current_recipe['version']) + 0.1
+                    
+                    cur.execute("""
+                        INSERT INTO recipe (name, style, description, batch_size_liters, boil_time_minutes,
+                                          target_abv, target_og, target_fg, ibu, efficiency_percent,
+                                          mash_schedule, brewing_instructions, notes, version, is_active,
+                                          parent_recipe_id, created_by, last_modified)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (
+                        request.form.get('name', current_recipe['name']),
+                        request.form.get('style', current_recipe['style']),
+                        request.form.get('description', current_recipe.get('description', '')),
+                        float(request.form.get('batch_size_liters', 0)) if request.form.get('batch_size_liters') else None,
+                        int(request.form.get('boil_time_minutes', 0)) if request.form.get('boil_time_minutes') else None,
+                        float(request.form.get('target_abv', 0)) if request.form.get('target_abv') else None,
+                        float(request.form.get('target_og', 0)) if request.form.get('target_og') else None,
+                        float(request.form.get('target_fg', 0)) if request.form.get('target_fg') else None,
+                        float(request.form.get('ibu', 0)) if request.form.get('ibu') else None,
+                        float(request.form.get('efficiency_percent', 0)) if request.form.get('efficiency_percent') else None,
+                        request.form.get('mash_schedule', current_recipe.get('mash_schedule', '')),
+                        request.form.get('brewing_instructions', current_recipe.get('brewing_instructions', '')),
+                        request.form.get('notes', ''),
+                        new_version,
+                        True,
+                        current_recipe.get('parent_recipe_id') or current_recipe['id'],
+                        current_user.id,
+                        datetime.now()
+                    ))
+                    
+                    updated_recipe_id = cur.fetchone()['id']
+                    
+                    # Copy ingredients from old version to new version first
+                    # Copy malts
+                    cur.execute("""
+                        INSERT INTO recipe_malts (recipe_id, malt_name, amount_kg, malt_type, lovibond, percentage, notes, sort_order)
+                        SELECT %s, malt_name, amount_kg, malt_type, lovibond, percentage, notes, sort_order
+                        FROM recipe_malts WHERE recipe_id = %s
+                    """, (updated_recipe_id, recipe_id))
+                    
+                    # Copy hops
+                    cur.execute("""
+                        INSERT INTO recipe_hops (recipe_id, hop_name, amount_grams, alpha_acid, time_minutes, hop_type, hop_form, notes, sort_order)
+                        SELECT %s, hop_name, amount_grams, alpha_acid, time_minutes, hop_type, hop_form, notes, sort_order
+                        FROM recipe_hops WHERE recipe_id = %s
+                    """, (updated_recipe_id, recipe_id))
+                    
+                    # Copy yeast
+                    cur.execute("""
+                        INSERT INTO recipe_yeast (recipe_id, yeast_name, yeast_type, manufacturer, product_code, amount, attenuation, temperature_range, notes, sort_order)
+                        SELECT %s, yeast_name, yeast_type, manufacturer, product_code, amount, attenuation, temperature_range, notes, sort_order
+                        FROM recipe_yeast WHERE recipe_id = %s
+                    """, (updated_recipe_id, recipe_id))
+                    
+                    # Copy adjuncts
+                    cur.execute("""
+                        INSERT INTO recipe_adjuncts (recipe_id, ingredient_name, amount, ingredient_type, time_added, notes, sort_order)
+                        SELECT %s, ingredient_name, amount, ingredient_type, time_added, notes, sort_order
+                        FROM recipe_adjuncts WHERE recipe_id = %s
+                    """, (updated_recipe_id, recipe_id))
+                    
+                    # Clear existing ingredients for new version (we copied them above, now we replace with form data)
+                    cur.execute("DELETE FROM recipe_malts WHERE recipe_id = %s", (updated_recipe_id,))
+                    cur.execute("DELETE FROM recipe_hops WHERE recipe_id = %s", (updated_recipe_id,))
+                    cur.execute("DELETE FROM recipe_yeast WHERE recipe_id = %s", (updated_recipe_id,))
+                    
+                    # Mark old versions as inactive and set new version as the only active one
+                    cur.execute("UPDATE recipe SET is_active = false WHERE name = %s", (current_recipe['name'],))
+                    cur.execute("UPDATE recipe SET is_active = true WHERE id = %s", (updated_recipe_id,))
+                    
+                    flash(f'New recipe version {new_version} created successfully', 'success')
+                
+                # Process malts
+                malt_names = request.form.getlist('malt_name[]')
+                malt_amounts = request.form.getlist('malt_amount[]')
+                malt_types = request.form.getlist('malt_type[]')
+                malt_lovibonds = request.form.getlist('malt_lovibond[]')
+                
+                for i, name in enumerate(malt_names):
+                    if name.strip():  # Only add non-empty entries
+                        cur.execute("""
+                            INSERT INTO recipe_malts (recipe_id, malt_name, amount_kg, malt_type, lovibond, sort_order)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """, (
+                            updated_recipe_id, name.strip(),
+                            float(malt_amounts[i]) if malt_amounts[i] else None,
+                            malt_types[i].strip() if malt_types[i] else None,
+                            float(malt_lovibonds[i]) if malt_lovibonds[i] else None,
+                            i + 1
+                        ))
+                
+                # Process hops
+                hop_names = request.form.getlist('hop_name[]')
+                hop_amounts = request.form.getlist('hop_amount[]')
+                hop_alphas = request.form.getlist('hop_alpha[]')
+                hop_times = request.form.getlist('hop_time[]')
+                hop_types = request.form.getlist('hop_type[]')
+                
+                for i, name in enumerate(hop_names):
+                    if name.strip():  # Only add non-empty entries
+                        cur.execute("""
+                            INSERT INTO recipe_hops (recipe_id, hop_name, amount_grams, alpha_acid, time_minutes, hop_type, sort_order)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            updated_recipe_id, name.strip(),
+                            float(hop_amounts[i]) if hop_amounts[i] else None,
+                            float(hop_alphas[i]) if hop_alphas[i] else None,
+                            int(hop_times[i]) if hop_times[i] else None,
+                            hop_types[i].strip() if hop_types[i] else None,
+                            i + 1
+                        ))
+                
+                # Process yeast
+                yeast_names = request.form.getlist('yeast_name[]')
+                yeast_types = request.form.getlist('yeast_type[]')
+                yeast_amounts = request.form.getlist('yeast_amount[]')
+                yeast_temps = request.form.getlist('yeast_temp[]')
+                
+                for i, name in enumerate(yeast_names):
+                    if name.strip():  # Only add non-empty entries
+                        cur.execute("""
+                            INSERT INTO recipe_yeast (recipe_id, yeast_name, yeast_type, amount, temperature_range, sort_order)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """, (
+                            updated_recipe_id, name.strip(),
+                            yeast_types[i].strip() if yeast_types[i] else None,
+                            yeast_amounts[i].strip() if yeast_amounts[i] else None,
+                            yeast_temps[i].strip() if yeast_temps[i] else None,
+                            i + 1
+                        ))
+                
+                conn.commit()
+                return redirect(url_for('recipe_detail', recipe_id=updated_recipe_id))
+                
+        except psycopg2.Error as e:
+            conn.rollback()
+            flash(f'Database error: {e}', 'error')
+        finally:
+            conn.close()
+    
+    # GET request - show edit form
+    return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+
+@app.route('/recipe/<int:recipe_id>/update-version', methods=['POST'])
+def update_version_number(recipe_id):
+    """Admin: Update recipe version number"""
+    if not current_user.is_authenticated or current_user.role_name != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+    
+    try:
+        new_version = float(request.form.get('new_version', 0))
+        if new_version <= 0:
+            flash('Version number must be positive', 'error')
+            return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+        
+        with conn.cursor() as cur:
+            # Check if version already exists for this recipe family
+            cur.execute("""
+                SELECT id FROM recipe 
+                WHERE name = (SELECT name FROM recipe WHERE id = %s) 
+                AND version = %s AND id != %s
+            """, (recipe_id, new_version, recipe_id))
+            
+            if cur.fetchone():
+                flash(f'Version {new_version} already exists for this recipe', 'error')
+                return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+            
+            # Update version number
+            cur.execute("UPDATE recipe SET version = %s WHERE id = %s", (new_version, recipe_id))
+            conn.commit()
+            flash(f'Version number updated to {new_version}', 'success')
+            
+    except (ValueError, psycopg2.Error) as e:
+        conn.rollback()
+        flash(f'Error updating version: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+
+@app.route('/recipe/<int:recipe_id>/delete-version', methods=['POST'])
+def delete_recipe_version(recipe_id):
+    """Admin: Delete a specific recipe version"""
+    if not current_user.is_authenticated or current_user.role_name != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('recipes'))
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get recipe info before deletion
+            cur.execute("SELECT name, version, is_active FROM recipe WHERE id = %s", (recipe_id,))
+            recipe = cur.fetchone()
+            
+            if not recipe:
+                flash('Recipe not found', 'error')
+                return redirect(url_for('recipes'))
+            
+            # Check if this is the only version
+            cur.execute("SELECT COUNT(*) as count FROM recipe WHERE name = %s", (recipe['name'],))
+            version_count_result = cur.fetchone()
+            version_count = version_count_result['count']
+            
+            if version_count <= 1:
+                flash('Cannot delete the only version of a recipe. Use "Delete Recipe" instead.', 'error')
+                return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+            
+            was_active = recipe['is_active']
+            
+            # Delete ingredients first (foreign key constraints)
+            cur.execute("DELETE FROM recipe_malts WHERE recipe_id = %s", (recipe_id,))
+            cur.execute("DELETE FROM recipe_hops WHERE recipe_id = %s", (recipe_id,))
+            cur.execute("DELETE FROM recipe_yeast WHERE recipe_id = %s", (recipe_id,))
+            cur.execute("DELETE FROM recipe_adjuncts WHERE recipe_id = %s", (recipe_id,))
+            
+            # Delete the recipe version
+            cur.execute("DELETE FROM recipe WHERE id = %s", (recipe_id,))
+            
+            # If we deleted the active version, make the highest version number the new active one
+            if was_active:
+                cur.execute("""
+                    SELECT id FROM recipe 
+                    WHERE name = %s 
+                    ORDER BY version DESC 
+                    LIMIT 1
+                """, (recipe['name'],))
+                highest_version = cur.fetchone()
+                
+                if highest_version:
+                    cur.execute("UPDATE recipe SET is_active = true WHERE id = %s", (highest_version['id'],))
+            
+            conn.commit()
+            flash(f'Version {recipe["version"]} of "{recipe["name"]}" deleted successfully', 'success')
+            
+            # Redirect to the current active version
+            cur.execute("SELECT id FROM recipe WHERE name = %s AND is_active = true", (recipe['name'],))
+            active_recipe = cur.fetchone()
+            if active_recipe:
+                return redirect(url_for('recipe_detail', recipe_id=active_recipe['id']))
+            else:
+                # Fallback to highest version if no active version (shouldn't happen)
+                cur.execute("SELECT id FROM recipe WHERE name = %s ORDER BY version DESC LIMIT 1", (recipe['name'],))
+                remaining_recipe = cur.fetchone()
+                if remaining_recipe:
+                    return redirect(url_for('recipe_detail', recipe_id=remaining_recipe['id']))
+                else:
+                    return redirect(url_for('recipes'))
+                
+    except psycopg2.Error as e:
+        conn.rollback()
+        flash(f'Error deleting version: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('recipes'))
+
+@app.route('/recipe/<int:recipe_id>/set-active', methods=['POST'])
+def set_active_version(recipe_id):
+    """Admin: Set a specific recipe version as active"""
+    if not current_user.is_authenticated or current_user.role_name != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('recipes'))
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get recipe info
+            cur.execute("SELECT name, version FROM recipe WHERE id = %s", (recipe_id,))
+            recipe = cur.fetchone()
+            
+            if not recipe:
+                flash('Recipe not found', 'error')
+                return redirect(url_for('recipes'))
+            
+            # Set all versions of this recipe as inactive
+            cur.execute("UPDATE recipe SET is_active = false WHERE name = %s", (recipe['name'],))
+            
+            # Set the selected version as active
+            cur.execute("UPDATE recipe SET is_active = true WHERE id = %s", (recipe_id,))
+            
+            conn.commit()
+            flash(f'Version {recipe["version"]} of "{recipe["name"]}" is now the active version', 'success')
+            
+            return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+                
+    except psycopg2.Error as e:
+        conn.rollback()
+        flash(f'Error setting active version: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('recipes'))
+
+@app.route('/recipe/delete-entire/<recipe_name>', methods=['POST'])
+def delete_entire_recipe(recipe_name):
+    """Admin: Delete all versions of a recipe"""
+    if not current_user.is_authenticated or current_user.role_name != 'admin':
+        flash('Admin access required', 'error')
+        return redirect(url_for('recipes'))
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        with conn.cursor() as cur:
+            # Get all recipe IDs for this recipe name
+            cur.execute("SELECT id FROM recipe WHERE name = %s", (recipe_name,))
+            recipe_ids = [row[0] for row in cur.fetchall()]
+            
+            if not recipe_ids:
+                flash('Recipe not found', 'error')
+                return redirect(url_for('recipes'))
+            
+            # Delete all ingredients for all versions
+            for recipe_id in recipe_ids:
+                cur.execute("DELETE FROM recipe_malts WHERE recipe_id = %s", (recipe_id,))
+                cur.execute("DELETE FROM recipe_hops WHERE recipe_id = %s", (recipe_id,))
+                cur.execute("DELETE FROM recipe_yeast WHERE recipe_id = %s", (recipe_id,))
+                cur.execute("DELETE FROM recipe_adjuncts WHERE recipe_id = %s", (recipe_id,))
+            
+            # Delete all recipe versions
+            cur.execute("DELETE FROM recipe WHERE name = %s", (recipe_name,))
+            
+            conn.commit()
+            flash(f'All versions of "{recipe_name}" deleted successfully', 'success')
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        flash(f'Error deleting recipe: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('recipes'))
+
+@app.route('/recipe/create', methods=['GET', 'POST'])
+@require_permission('recipes', 'edit')
+def create_recipe():
+    """Create new recipe"""
+    if request.method == 'POST':
+        conn = get_db_connection()
+        if not conn:
+            flash('Database connection error', 'error')
+            return redirect(url_for('recipes'))
+        
+        try:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Create new recipe
+                cur.execute("""
+                    INSERT INTO recipe (name, style, description, batch_size_liters, boil_time_minutes,
+                                      target_abv, target_og, target_fg, ibu, efficiency_percent,
+                                      mash_schedule, brewing_instructions, notes, version, is_active,
+                                      created_by, last_modified)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (
+                    request.form.get('name', ''),
+                    request.form.get('style', ''),
+                    request.form.get('description', ''),
+                    float(request.form.get('batch_size_liters', 0)) if request.form.get('batch_size_liters') else None,
+                    int(request.form.get('boil_time_minutes', 0)) if request.form.get('boil_time_minutes') else None,
+                    float(request.form.get('target_abv', 0)) if request.form.get('target_abv') else None,
+                    float(request.form.get('target_og', 0)) if request.form.get('target_og') else None,
+                    float(request.form.get('target_fg', 0)) if request.form.get('target_fg') else None,
+                    float(request.form.get('ibu', 0)) if request.form.get('ibu') else None,
+                    float(request.form.get('efficiency_percent', 0)) if request.form.get('efficiency_percent') else None,
+                    request.form.get('mash_schedule', ''),
+                    request.form.get('brewing_instructions', ''),
+                    request.form.get('notes', ''),
+                    1.0,
+                    True,
+                    current_user.id,
+                    datetime.now()
+                ))
+                
+                new_recipe_id = cur.fetchone()['id']
+                
+                # Process malts
+                malt_names = request.form.getlist('malt_name[]')
+                malt_amounts = request.form.getlist('malt_amount[]')
+                malt_types = request.form.getlist('malt_type[]')
+                malt_lovibonds = request.form.getlist('malt_lovibond[]')
+                
+                for i, name in enumerate(malt_names):
+                    if name.strip():  # Only add non-empty entries
+                        cur.execute("""
+                            INSERT INTO recipe_malts (recipe_id, malt_name, amount_kg, malt_type, lovibond, sort_order)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """, (
+                            new_recipe_id, name.strip(),
+                            float(malt_amounts[i]) if i < len(malt_amounts) and malt_amounts[i] else None,
+                            malt_types[i].strip() if i < len(malt_types) and malt_types[i] else None,
+                            float(malt_lovibonds[i]) if i < len(malt_lovibonds) and malt_lovibonds[i] else None,
+                            i + 1
+                        ))
+                
+                # Process hops
+                hop_names = request.form.getlist('hop_name[]')
+                hop_amounts = request.form.getlist('hop_amount[]')
+                hop_times = request.form.getlist('hop_time[]')
+                hop_forms = request.form.getlist('hop_form[]')
+                hop_alphas = request.form.getlist('hop_alpha[]')
+                
+                for i, name in enumerate(hop_names):
+                    if name.strip():  # Only add non-empty entries
+                        cur.execute("""
+                            INSERT INTO recipe_hops (recipe_id, hop_name, amount_grams, time_minutes, hop_form, alpha_acid, sort_order)
+                            VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        """, (
+                            new_recipe_id, name.strip(),
+                            float(hop_amounts[i]) if i < len(hop_amounts) and hop_amounts[i] else None,
+                            int(hop_times[i]) if i < len(hop_times) and hop_times[i] else None,
+                            hop_forms[i].strip() if i < len(hop_forms) and hop_forms[i] else None,
+                            float(hop_alphas[i]) if i < len(hop_alphas) and hop_alphas[i] else None,
+                            i + 1
+                        ))
+                
+                # Process yeast
+                yeast_strains = request.form.getlist('yeast_strain[]')
+                yeast_types = request.form.getlist('yeast_type[]')
+                yeast_amounts = request.form.getlist('yeast_amount[]')
+                yeast_temp_lows = request.form.getlist('yeast_temp_low[]')
+                yeast_temp_highs = request.form.getlist('yeast_temp_high[]')
+                
+                for i, strain in enumerate(yeast_strains):
+                    if strain.strip():  # Only add non-empty entries
+                        # Combine temperature range if both are provided
+                        temp_range = None
+                        if i < len(yeast_temp_lows) and yeast_temp_lows[i] and i < len(yeast_temp_highs) and yeast_temp_highs[i]:
+                            temp_range = f"{yeast_temp_lows[i]}-{yeast_temp_highs[i]}°C"
+                        elif i < len(yeast_temp_lows) and yeast_temp_lows[i]:
+                            temp_range = f"{yeast_temp_lows[i]}°C"
+                        elif i < len(yeast_temp_highs) and yeast_temp_highs[i]:
+                            temp_range = f"{yeast_temp_highs[i]}°C"
+                            
+                        # Format amount as string with unit
+                        amount_str = None
+                        if i < len(yeast_amounts) and yeast_amounts[i]:
+                            amount_str = f"{yeast_amounts[i]}g"
+                        
+                        cur.execute("""
+                            INSERT INTO recipe_yeast (recipe_id, yeast_name, yeast_type, amount, temperature_range, sort_order)
+                            VALUES (%s, %s, %s, %s, %s, %s)
+                        """, (
+                            new_recipe_id, strain.strip(),
+                            yeast_types[i].strip() if i < len(yeast_types) and yeast_types[i] else None,
+                            amount_str,
+                            temp_range,
+                            i + 1
+                        ))
+                
+                conn.commit()
+                
+                flash('Recipe created successfully with ingredients', 'success')
+                return redirect(url_for('recipe_detail', recipe_id=new_recipe_id))
+                
+        except psycopg2.Error as e:
+            conn.rollback()
+            flash(f'Database error: {e}', 'error')
+        finally:
+            conn.close()
+    
+    return render_template('create_recipe.html')
 
 @app.errorhandler(404)
 def not_found(error):
@@ -1611,5 +2365,12 @@ def expense_image(expense_id, filename):
     return redirect(url_for('expenses'))
 
 if __name__ == '__main__':
+    # This is only used for development/testing
+    # In production, use: gunicorn --config gunicorn.conf.py app:app
     debug_mode = os.getenv('DEBUG', 'false').lower() == 'true'
-    app.run(host='0.0.0.0', port=5000, debug=debug_mode)
+    port = int(os.getenv('WEB_PORT', 5000))
+    
+    print("⚠️  WARNING: Running Flask development server")
+    print("💡 For production, use: gunicorn --config gunicorn.conf.py app:app")
+    
+    app.run(host='0.0.0.0', port=port, debug=debug_mode)

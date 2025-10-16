@@ -1,0 +1,407 @@
+{% extends "base.html" %}
+
+{% block title %}Create Recipe - SBMS{% endblock %}
+
+{% block content %}
+<div class="create-recipe-page">
+    <div class="page-header">
+        <h1>{{ _('Create New Recipe') }}</h1>
+        <a href="{{ url_for('recipes') }}" class="btn btn-secondary">{{ _('Back to Recipes') }}</a>
+    </div>
+
+    <form method="POST" class="recipe-form">
+        <div class="form-section">
+            <h2>{{ _('Basic Information') }}</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="name">{{ _('Recipe Name') }} *</label>
+                    <input type="text" id="name" name="name" required>
+                </div>
+                <div class="form-group">
+                    <label for="style">{{ _('Beer Style') }}</label>
+                    <input type="text" id="style" name="style" placeholder="e.g., American IPA, Pilsner">
+                </div>
+                <div class="form-group">
+                    <label for="batch_size_liters">{{ _('Batch Size (Liters)') }}</label>
+                    <input type="number" step="0.1" id="batch_size_liters" name="batch_size_liters" placeholder="20.0">
+                </div>
+                <div class="form-group">
+                    <label for="boil_time_minutes">{{ _('Boil Time (Minutes)') }}</label>
+                    <input type="number" id="boil_time_minutes" name="boil_time_minutes" placeholder="60">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>{{ _('Target Specifications') }}</h2>
+            <div class="form-grid">
+                <div class="form-group">
+                    <label for="target_abv">{{ _('Target ABV (%)') }}</label>
+                    <input type="number" step="0.1" id="target_abv" name="target_abv" placeholder="5.2">
+                </div>
+                <div class="form-group">
+                    <label for="ibu">{{ _('IBU (International Bitterness Units)') }}</label>
+                    <input type="number" step="0.1" id="ibu" name="ibu" placeholder="35">
+                </div>
+                <div class="form-group">
+                    <label for="target_og">{{ _('Original Gravity (OG)') }}</label>
+                    <input type="number" step="0.001" id="target_og" name="target_og" placeholder="1.052">
+                </div>
+                <div class="form-group">
+                    <label for="target_fg">{{ _('Final Gravity (FG)') }}</label>
+                    <input type="number" step="0.001" id="target_fg" name="target_fg" placeholder="1.012">
+                </div>
+                <div class="form-group">
+                    <label for="efficiency_percent">{{ _('Mash Efficiency (%)') }}</label>
+                    <input type="number" step="0.1" id="efficiency_percent" name="efficiency_percent" placeholder="75">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>{{ _('Description') }}</h2>
+            <div class="form-group">
+                <label for="description">{{ _('Recipe Description') }}</label>
+                <textarea id="description" name="description" rows="4" 
+                          placeholder="{{ _('Describe the beer, its characteristics, and what makes it special...') }}"></textarea>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>{{ _('Brewing Process') }}</h2>
+            <div class="form-group">
+                <label for="mash_schedule">{{ _('Mash Schedule') }}</label>
+                <textarea id="mash_schedule" name="mash_schedule" rows="4" 
+                          placeholder="{{ _('e.g., Mash at 66°C for 60 minutes, mash out at 76°C for 10 minutes') }}"></textarea>
+            </div>
+            
+            <div class="form-group">
+                <label for="brewing_instructions">{{ _('Brewing Instructions') }}</label>
+                <textarea id="brewing_instructions" name="brewing_instructions" rows="8" 
+                          placeholder="{{ _('Step-by-step brewing process:\n1. Heat strike water to...\n2. Mash in at...\n3. Boil for... adding hops at...\n4. Cool to...\n5. Ferment for...') }}"></textarea>
+            </div>
+        </div>
+
+        <!-- Ingredients Section -->
+        <div class="form-section">
+            <h2>{{ _('Ingredients') }}</h2>
+            
+            <!-- Malts -->
+            <div class="ingredient-category">
+                <h3>{{ _('Malts') }}</h3>
+                <div class="ingredient-list" id="malt-list">
+                    <div class="ingredient-row">
+                        <input type="text" name="malt_name[]" placeholder="{{ _('Malt name (e.g., Pilsner Malt)') }}">
+                        <input type="number" step="0.01" name="malt_amount[]" placeholder="{{ _('Amount (kg)') }}">
+                        <input type="text" name="malt_type[]" placeholder="{{ _('Type (e.g., Base, Crystal)') }}">
+                        <input type="number" name="malt_lovibond[]" placeholder="{{ _('Lovibond') }}">
+                        <button type="button" onclick="removeIngredientRow(this)" class="btn-remove">×</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addMaltRow()" class="btn btn-small btn-secondary">+ {{ _('Add Malt') }}</button>
+            </div>
+
+            <!-- Hops -->
+            <div class="ingredient-category">
+                <h3>{{ _('Hops') }}</h3>
+                <div class="ingredient-list" id="hop-list">
+                    <div class="ingredient-row">
+                        <input type="text" name="hop_name[]" placeholder="{{ _('Hop variety (e.g., Cascade)') }}">
+                        <input type="number" step="0.1" name="hop_amount[]" placeholder="{{ _('Amount (g)') }}">
+                        <input type="number" name="hop_time[]" placeholder="{{ _('Time (min)') }}">
+                        <input type="text" name="hop_form[]" placeholder="{{ _('Form (e.g., Pellets)') }}">
+                        <input type="number" step="0.1" name="hop_alpha[]" placeholder="{{ _('Alpha %') }}">
+                        <button type="button" onclick="removeIngredientRow(this)" class="btn-remove">×</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addHopRow()" class="btn btn-small btn-secondary">+ {{ _('Add Hop') }}</button>
+            </div>
+
+            <!-- Yeast -->
+            <div class="ingredient-category">
+                <h3>{{ _('Yeast') }}</h3>
+                <div class="ingredient-list" id="yeast-list">
+                    <div class="ingredient-row">
+                        <input type="text" name="yeast_strain[]" placeholder="{{ _('Yeast strain (e.g., SafAle US-05)') }}">
+                        <input type="text" name="yeast_type[]" placeholder="{{ _('Type (e.g., Ale, Lager)') }}">
+                        <input type="number" step="0.1" name="yeast_amount[]" placeholder="{{ _('Amount (g)') }}">
+                        <input type="number" step="0.1" name="yeast_temp_low[]" placeholder="{{ _('Temp Low (°C)') }}">
+                        <input type="number" step="0.1" name="yeast_temp_high[]" placeholder="{{ _('Temp High (°C)') }}">
+                        <button type="button" onclick="removeIngredientRow(this)" class="btn-remove">×</button>
+                    </div>
+                </div>
+                <button type="button" onclick="addYeastRow()" class="btn btn-small btn-secondary">+ {{ _('Add Yeast') }}</button>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h2>{{ _('Notes') }}</h2>
+            <div class="form-group">
+                <label for="notes">{{ _('Recipe Notes') }}</label>
+                <textarea id="notes" name="notes" rows="3" 
+                          placeholder="{{ _('Any additional notes about this recipe...') }}"></textarea>
+            </div>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">{{ _('Create Recipe') }}</button>
+            <a href="{{ url_for('recipes') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+
+    <div class="help-section">
+        <h3>{{ _('Tips for Recipe Creation') }}</h3>
+        <ul>
+            <li>{{ _('Add as many ingredients as you need using the + buttons') }}</li>
+            <li>{{ _('Empty ingredient rows will be ignored') }}</li>
+            <li>{{ _('You can edit and add more ingredients after creation') }}</li>
+            <li>{{ _('Create versions as you refine the recipe') }}</li>
+            <li>{{ _('Generate shopping carts for ingredient purchases') }}</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.create-recipe-page {
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.recipe-form {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h2 {
+    color: #2c5aa0;
+    margin-bottom: 1rem;
+    font-size: 1.3em;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: bold;
+    color: #495057;
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-group input:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #2c5aa0;
+    box-shadow: 0 0 0 2px rgba(44, 90, 160, 0.2);
+}
+
+.form-actions {
+    margin-top: 2rem;
+    text-align: right;
+}
+
+.form-actions .btn {
+    margin-left: 0.5rem;
+}
+
+.help-section {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 8px;
+    border-left: 4px solid #2c5aa0;
+}
+
+.help-section h3 {
+    color: #2c5aa0;
+    margin-bottom: 1rem;
+}
+
+.help-section ul {
+    margin-bottom: 1rem;
+}
+
+.help-section li {
+    margin-bottom: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .form-actions {
+        text-align: center;
+    }
+    
+    .form-actions .btn {
+        margin: 0.25rem;
+    }
+}
+
+/* Ingredient management styles */
+.ingredient-category {
+    margin-bottom: 2rem;
+    padding: 1rem;
+    border: 1px solid #e9ecef;
+    border-radius: 6px;
+    background: #f8f9fa;
+}
+
+.ingredient-category h3 {
+    margin-top: 0;
+    color: #495057;
+    border-bottom: 2px solid #dee2e6;
+    padding-bottom: 0.5rem;
+}
+
+.ingredient-row {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr 1fr auto;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    align-items: center;
+}
+
+.ingredient-row input {
+    margin-bottom: 0;
+}
+
+.btn-remove {
+    background: #dc3545;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 30px;
+    height: 30px;
+    cursor: pointer;
+    font-size: 16px;
+    font-weight: bold;
+}
+
+.btn-remove:hover {
+    background: #c82333;
+}
+
+.ingredient-list {
+    margin-bottom: 1rem;
+}
+
+/* Responsive ingredient rows */
+@media (max-width: 768px) {
+    .ingredient-row {
+        grid-template-columns: 1fr;
+        gap: 0.25rem;
+    }
+    
+    .btn-remove {
+        justify-self: end;
+    }
+}
+</style>
+
+<script>
+function addMaltRow() {
+    const container = document.getElementById('malt-list');
+    const newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.innerHTML = `
+        <input type="text" name="malt_name[]" placeholder="Malt name (e.g., Pilsner Malt)">
+        <input type="number" step="0.01" name="malt_amount[]" placeholder="Amount (kg)">
+        <input type="text" name="malt_type[]" placeholder="Type (e.g., Base, Crystal)">
+        <input type="number" name="malt_lovibond[]" placeholder="Lovibond">
+        <button type="button" onclick="removeIngredientRow(this)" class="btn-remove">×</button>
+    `;
+    container.appendChild(newRow);
+}
+
+function addHopRow() {
+    const container = document.getElementById('hop-list');
+    const newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.innerHTML = `
+        <input type="text" name="hop_name[]" placeholder="Hop variety (e.g., Cascade)">
+        <input type="number" step="0.1" name="hop_amount[]" placeholder="Amount (g)">
+        <input type="number" name="hop_time[]" placeholder="Time (min)">
+        <input type="text" name="hop_form[]" placeholder="Form (e.g., Pellets)">
+        <input type="number" step="0.1" name="hop_alpha[]" placeholder="Alpha %">
+        <button type="button" onclick="removeIngredientRow(this)" class="btn-remove">×</button>
+    `;
+    container.appendChild(newRow);
+}
+
+function addYeastRow() {
+    const container = document.getElementById('yeast-list');
+    const newRow = document.createElement('div');
+    newRow.className = 'ingredient-row';
+    newRow.innerHTML = `
+        <input type="text" name="yeast_strain[]" placeholder="Yeast strain (e.g., SafAle US-05)">
+        <input type="text" name="yeast_type[]" placeholder="Type (e.g., Ale, Lager)">
+        <input type="number" step="0.1" name="yeast_amount[]" placeholder="Amount (g)">
+        <input type="number" step="0.1" name="yeast_temp_low[]" placeholder="Temp Low (°C)">
+        <input type="number" step="0.1" name="yeast_temp_high[]" placeholder="Temp High (°C)">
+        <button type="button" onclick="removeIngredientRow(this)" class="btn-remove">×</button>
+    `;
+    container.appendChild(newRow);
+}
+
+function removeIngredientRow(button) {
+    const row = button.parentNode;
+    const container = row.parentNode;
+    
+    // Don't remove the last row in each category
+    if (container.children.length > 1) {
+        row.remove();
+    } else {
+        // Clear the inputs instead of removing the row
+        const inputs = row.querySelectorAll('input');
+        inputs.forEach(input => input.value = '');
+    }
+}
+</script>
+
+{% endblock %}

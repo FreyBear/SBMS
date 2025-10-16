@@ -1,0 +1,166 @@
+{% extends "base.html" %}
+
+{% block title %}Shopping Cart - {{ recipe.name }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="shopping-cart-page">
+    <div class="page-header">
+        <h1>🛒 {{ _('Shopping Cart') }}</h1>
+        <div class="recipe-info">
+            <h2>{{ recipe.name }} v{{ recipe.version }}</h2>
+            <p class="recipe-meta">
+                {% if recipe.style %}{{ recipe.style }} • {% endif %}
+                {% if recipe.batch_size_liters %}{{ "%.1f"|format(recipe.batch_size_liters) }}L batch{% endif %}
+                {% if recipe.target_abv %} • {{ "%.1f"|format(recipe.target_abv) }}% ABV{% endif %}
+                {% if recipe.ibu %} • {{ "%.0f"|format(recipe.ibu) }} IBU{% endif %}
+            </p>
+        </div>
+    </div>
+
+    <div class="shopping-sections">
+        <!-- Malts Section -->
+        {% if malts %}
+        <div class="card">
+            <h3>🌾 {{ _('Malts & Grains') }}</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Malt/Grain') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('Color') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for malt in malts %}
+                    <tr>
+                        <td><strong>{{ malt.name }}</strong></td>
+                        <td class="amount">{{ "%.2f"|format(malt.amount_kg) }} kg</td>
+                        <td>{{ malt.malt_type or '-' }}</td>
+                        <td>
+                            {% if malt.lovibond %}{{ malt.lovibond }}°L{% else %}-{% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>{{ _('Total Malt') }}</strong></td>
+                        <td class="amount"><strong>{{ "%.2f"|format(malts|sum(attribute='amount_kg')) }} kg</strong></td>
+                        <td colspan="2">-</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Hops Section -->
+        {% if hops %}
+        <div class="card">
+            <h3>🌿 {{ _('Hops') }}</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Hop Variety') }}</th>
+                        <th>{{ _('Total Amount') }}</th>
+                        <th>{{ _('Alpha Acid') }}</th>
+                        <th>{{ _('Type') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for hop in hops %}
+                    <tr>
+                        <td><strong>{{ hop.variety }}</strong></td>
+                        <td class="amount">{{ "%.1f"|format(hop.amount_g) }} g</td>
+                        <td>
+                            {% if hop.alpha_acid %}{{ "%.1f"|format(hop.alpha_acid) }}%{% else %}-{% endif %}
+                        </td>
+                        <td>{{ hop.hop_type or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+                <tfoot>
+                    <tr class="total-row">
+                        <td><strong>{{ _('Total Hops') }}</strong></td>
+                        <td class="amount"><strong>{{ "%.1f"|format(hops|sum(attribute='amount_g')) }} g</strong></td>
+                        <td colspan="2">-</td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Yeast Section -->
+        {% if yeast %}
+        <div class="card">
+            <h3>🧬 {{ _('Yeast') }}</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Yeast Strain') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('Temperature Range') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for y in yeast %}
+                    <tr>
+                        <td><strong>{{ y.strain }}</strong></td>
+                        <td class="amount">{{ y.amount or '-' }}</td>
+                        <td>{{ y.yeast_type or '-' }}</td>
+                        <td>
+                            {% if y.temperature_range %}
+                                {{ y.temperature_range }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+
+        <!-- Adjuncts Section -->
+        {% if adjuncts %}
+        <div class="card">
+            <h3>🥄 {{ _('Adjuncts & Additives') }}</h3>
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Name') }}</th>
+                        <th>{{ _('Amount') }}</th>
+                        <th>{{ _('Type') }}</th>
+                        <th>{{ _('Addition Time') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for adj in adjuncts %}
+                    <tr>
+                        <td><strong>{{ adj.name }}</strong></td>
+                        <td class="amount">{{ adj.amount or '-' }}</td>
+                        <td>{{ adj.adjunct_type or '-' }}</td>
+                        <td>{{ adj.addition_time or '-' }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+        {% endif %}
+    </div>
+
+    <div class="shopping-actions">
+        <button onclick="window.print()" class="btn btn-primary">
+            🖨️ {{ _('Print Shopping List') }}
+        </button>
+        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-info">
+            ← {{ _('Back to Recipe') }}
+        </a>
+        <a href="{{ url_for('recipes') }}" class="btn btn-secondary">
+            {{ _('All Recipes') }}
+        </a>
+    </div>
+</div>
+{% endblock %}

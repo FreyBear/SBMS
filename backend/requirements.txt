@@ -8,3 +8,4 @@ Flask-WTF==1.2.1
 WTForms==3.1.1
 Flask-Babel==4.0.0
 email-validator==2.0.0
+gunicorn==21.2.0

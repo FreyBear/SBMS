@@ -70,9 +70,60 @@
         </div>
 
         <div class="form-actions">
-            <button type="submit" class="btn btn-primary">{{ _('Update Keg') }}</button>
+            <button type="button" onclick="setEmpty()" class="btn btn-warning">🗑️ {{ _('Set Empty') }}</button>
+            <button type="submit" name="action" value="update_current" class="btn btn-primary">
+                💾 {{ _('Update Current Status') }}
+            </button>
+            <button type="submit" name="action" value="add_new_entry" class="btn btn-success">
+                📝 {{ _('Add New History Entry') }}
+            </button>
             <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
         </div>
     </form>
 </div>
+
+<script>
+function setEmpty() {
+    if (confirm('Set this keg as empty? This will fill the form with empty keg values.')) {
+        // Set all fields to empty keg values
+        document.getElementById('contents').value = 'Empty';
+        document.getElementById('status').value = 'Empty';
+        document.getElementById('amount_left_liters').value = '0';
+        document.getElementById('location').value = 'Storage';
+        document.getElementById('arrangement').value = 'Normal operation';
+        document.getElementById('notes').value = 'Fatet er tomt';
+        
+        // Set update date to today if not already set
+        const today = new Date().toISOString().split('T')[0];
+        document.getElementById('update_date').value = today;
+    }
+}
+</script>
+
+<style>
+.form-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.form-actions .btn {
+    white-space: nowrap;
+}
+
+/* Style the dual-action buttons differently */
+.btn-warning {
+    background: linear-gradient(135deg, #ff9800, #f57c00);
+    color: white;
+    border: none;
+}
+
+.btn-warning:hover {
+    background: linear-gradient(135deg, #f57c00, #ef6c00);
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+}
+</style>
+
 {% endblock %}

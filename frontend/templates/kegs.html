@@ -201,8 +201,20 @@ document.addEventListener('DOMContentLoaded', function() {
                     // Handle dates and "Never"/"Unknown"
                     if (aValue.toLowerCase() === 'never' || aValue.toLowerCase() === 'unknown') aValue = '1900-01-01';
                     if (bValue.toLowerCase() === 'never' || bValue.toLowerCase() === 'unknown') bValue = '1900-01-01';
-                    aValue = new Date(aValue);
-                    bValue = new Date(bValue);
+                    
+                    // Convert dd-mm-yyyy to yyyy-mm-dd for proper Date parsing
+                    function convertDateFormat(dateStr) {
+                        if (dateStr === '1900-01-01') return dateStr;
+                        const parts = dateStr.split('-');
+                        if (parts.length === 3) {
+                            // Convert dd-mm-yyyy to yyyy-mm-dd
+                            return `${parts[2]}-${parts[1]}-${parts[0]}`;
+                        }
+                        return dateStr;
+                    }
+                    
+                    aValue = new Date(convertDateFormat(aValue));
+                    bValue = new Date(convertDateFormat(bValue));
                     break;
                     
                 case 'text':
