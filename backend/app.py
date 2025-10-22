@@ -1,7 +1,7 @@
 import os
 import psycopg2
 from psycopg2.extras import RealDictCursor
-from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file
+from flask import Flask, render_template, request, redirect, url_for, flash, jsonify, session, send_file, send_from_directory
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from flask_babel import gettext, ngettext
 from dotenv import load_dotenv
@@ -12,7 +12,7 @@ from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.middleware.proxy_fix import ProxyFix
 from auth import User, require_auth, require_permission
-from forms import LoginForm, ChangePasswordForm, CreateUserForm, EditUserForm, CreateExpenseForm, MarkPaidForm, RejectExpenseForm, DeleteExpenseForm, EditExpenseForm
+from forms import LoginForm, ChangePasswordForm, CreateUserForm, EditUserForm, CreateExpenseForm, MarkPaidForm, RejectExpenseForm, DeleteExpenseForm, EditExpenseForm, CreateKitForm, EditKitForm, DeleteKitForm
 from i18n import init_babel, _, _l
 
 # Load environment variables
@@ -41,6 +41,50 @@ login_manager.login_message_category = 'info'
 
 # Initialize Babel for i18n
 babel = init_babel(app)
+
+# Custom template filters for translations
+@app.template_filter('translate_status')
+def translate_status(status):
+    """Translate keg status values to current locale"""
+    from flask_babel import get_locale
+    
+    current_locale = str(get_locale())
+    
+    if current_locale == 'no':
+        # Norwegian Bokmål translations
+        status_translations = {
+            # Keg statuses
+            'Empty': 'Tomt',
+            'Full': 'Fullt', 
+            'Started': 'Påbegynt',
+            'Available/Cleaned': 'Vasket',
+            'Never': 'Aldri',
+            'Unknown': 'Ukjent',
+            # Expense statuses
+            'Pending': 'Venter',
+            'Paid': 'Betalt',
+            'Rejected': 'Avvist'
+        }
+        return status_translations.get(status, status)
+    elif current_locale == 'nn':
+        # Norwegian Nynorsk translations
+        status_translations = {
+            # Keg statuses
+            'Empty': 'Tomt',
+            'Full': 'Fullt', 
+            'Started': 'Påbegynt',
+            'Available/Cleaned': 'Vaska',
+            'Never': 'Aldri',
+            'Unknown': 'Ukjent',
+            # Expense statuses
+            'Pending': 'Ventar',
+            'Paid': 'Betalt',
+            'Rejected': 'Avvist'
+        }
+        return status_translations.get(status, status)
+    
+    # Default to English
+    return status
 
 # Database configuration
 DB_CONFIG = {
@@ -167,6 +211,7 @@ def login():
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("""
                     SELECT u.id, u.username, u.email, u.password_hash, u.full_name, u.is_active,
+                           u.language, u.bank_account,
                            r.name as role_name, r.permissions
                     FROM users u
                     JOIN user_role r ON u.role_id = r.id
@@ -182,7 +227,9 @@ def login():
                         user_data['full_name'],
                         user_data['role_name'],
                         user_data['permissions'],
-                        user_data['is_active']
+                        user_data['is_active'],
+                        user_data['language'] or 'en',
+                        user_data['bank_account']
                     )
                     login_user(user, remember=form.remember_me.data)
                     
@@ -318,7 +365,7 @@ def kegs():
                 FROM keg k
                 LEFT JOIN brew b ON k.brew_id = b.id
                 LEFT JOIN recipe r ON b.recipe_id = r.id
-                ORDER BY k.last_measured DESC NULLS LAST, k.keg_number
+                ORDER BY k.keg_number::integer
             """)
             kegs = cur.fetchall()
     except psycopg2.Error as e:
@@ -1784,6 +1831,343 @@ def debug_translation():
     return debug_info
 
 # ==========================================
+# KIT MANAGEMENT ROUTES
+# ==========================================
+
+@app.route('/kits')
+@require_permission('kits', 'view')
+def kits():
+    """View all kits"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT k.*, COUNT(b.id) as brew_count
+                FROM kit k
+                LEFT JOIN brew b ON k.id = b.kit_id
+                GROUP BY k.id
+                ORDER BY k.name
+            """)
+            kits = cur.fetchall()
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        kits = []
+    finally:
+        conn.close()
+    
+    return render_template('kits.html', kits=kits)
+
+@app.route('/kit/<int:kit_id>')
+@require_permission('kits', 'view')
+def kit_detail(kit_id):
+    """View detailed kit information"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get kit details
+            cur.execute("SELECT * FROM kit WHERE id = %s", (kit_id,))
+            kit = cur.fetchone()
+            
+            if not kit:
+                flash('Kit not found', 'error')
+                return redirect(url_for('kits'))
+            
+            # Get brews made with this kit
+            cur.execute("""
+                SELECT b.*
+                FROM brew b
+                WHERE b.kit_id = %s
+                ORDER BY b.date_brewed DESC
+            """, (kit_id,))
+            brews = cur.fetchall()
+            
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('kits'))
+    finally:
+        conn.close()
+    
+    return render_template('kit_detail.html', kit=kit, brews=brews)
+
+def save_kit_file(file, kit_id, file_type):
+    """Save uploaded kit file (image or PDF) and return file info"""
+    if file and allowed_kit_file(file.filename, file_type):
+        # Generate unique filename with descriptive prefix
+        file_extension = file.filename.rsplit('.', 1)[1].lower()
+        prefix = f"kit_{kit_id}_{file_type}_" if kit_id else f"kit_new_{file_type}_"
+        unique_filename = f"{prefix}{uuid.uuid4().hex}.{file_extension}"
+        
+        # Ensure kits upload directory exists
+        kit_upload_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'kits')
+        os.makedirs(kit_upload_dir, exist_ok=True)
+        
+        # Save file
+        file_path = os.path.join(kit_upload_dir, unique_filename)
+        file.save(file_path)
+        
+        return {
+            'filename': unique_filename,
+            'original_filename': file.filename,
+            'file_path': file_path,
+            'file_size': os.path.getsize(file_path),
+            'mime_type': file.mimetype
+        }
+    return None
+
+def allowed_kit_file(filename, file_type):
+    """Check if file type is allowed for kits"""
+    if not filename:
+        return False
+    
+    file_extension = filename.rsplit('.', 1)[1].lower()
+    
+    if file_type == 'image':
+        return file_extension in ['png', 'jpg', 'jpeg']
+    elif file_type == 'pdf':
+        return file_extension == 'pdf'
+    
+    return False
+
+@app.route('/kits/create', methods=['GET', 'POST'])
+@require_permission('kits', 'edit')
+def create_kit():
+    """Create a new kit"""
+    form = CreateKitForm()
+    
+    if form.validate_on_submit():
+        try:
+            conn = get_db_connection()
+            if not conn:
+                flash('Database connection error', 'error')
+                return render_template('create_kit.html', form=form)
+            
+            try:
+                with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                    # Insert kit
+                    cur.execute("""
+                        INSERT INTO kit (name, kit_type, manufacturer, style, estimated_abv, 
+                                       volume_liters, cost, supplier, additional_ingredients_needed,
+                                       description, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (form.name.data, form.kit_type.data, form.manufacturer.data, 
+                          form.style.data, form.estimated_abv.data, form.volume_liters.data,
+                          form.cost.data, form.supplier.data, form.additional_ingredients_needed.data, 
+                          form.description.data, form.notes.data))
+                    
+                    kit_id = cur.fetchone()['id']
+                    
+                    # Handle file uploads
+                    label_filename = None
+                    pdf_filename = None
+                    
+                    # Handle label image upload
+                    if form.label_image.data:
+                        file_info = save_kit_file(form.label_image.data, kit_id, 'image')
+                        if file_info:
+                            label_filename = file_info['filename']
+                    
+                    # Handle instruction PDF upload
+                    if form.instruction_pdf.data:
+                        file_info = save_kit_file(form.instruction_pdf.data, kit_id, 'pdf')
+                        if file_info:
+                            pdf_filename = file_info['filename']
+                    
+                    # Update kit with file names
+                    if label_filename or pdf_filename:
+                        cur.execute("""
+                            UPDATE kit 
+                            SET label_image_filename = COALESCE(%s, label_image_filename),
+                                instruction_pdf_filename = COALESCE(%s, instruction_pdf_filename)
+                            WHERE id = %s
+                        """, (label_filename, pdf_filename, kit_id))
+                    
+                    conn.commit()
+                    flash(f'Kit "{form.name.data}" created successfully', 'success')
+                    return redirect(url_for('kit_detail', kit_id=kit_id))
+                    
+            except psycopg2.Error as e:
+                conn.rollback()
+                flash(f'Database error: {e}', 'error')
+            finally:
+                conn.close()
+                
+        except Exception as e:
+            flash(f'Error creating kit: {e}', 'error')
+    
+    return render_template('create_kit.html', form=form)
+
+@app.route('/kit/<int:kit_id>/edit', methods=['GET', 'POST'])
+@require_permission('kits', 'edit')
+def edit_kit(kit_id):
+    """Edit an existing kit"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kits'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get kit details
+            cur.execute("SELECT * FROM kit WHERE id = %s", (kit_id,))
+            kit = cur.fetchone()
+            
+            if not kit:
+                flash('Kit not found', 'error')
+                return redirect(url_for('kits'))
+            
+            # Create form and populate with existing data
+            form = EditKitForm()
+            
+            if form.validate_on_submit():
+                
+                try:
+                    # Update kit basic info
+                    cur.execute("""
+                        UPDATE kit 
+                        SET name = %s, kit_type = %s, manufacturer = %s, style = %s, 
+                            estimated_abv = %s, volume_liters = %s, cost = %s, supplier = %s,
+                            additional_ingredients_needed = %s, description = %s, notes = %s,
+                            updated_date = CURRENT_TIMESTAMP
+                        WHERE id = %s
+                    """, (form.name.data, form.kit_type.data, form.manufacturer.data, form.style.data, 
+                          form.estimated_abv.data, form.volume_liters.data, form.cost.data, form.supplier.data,
+                          form.additional_ingredients_needed.data, form.description.data, 
+                          form.notes.data, kit_id))
+                    
+                    # Handle file uploads
+                    files_updated = []
+                    
+                    # Handle label image upload
+                    if form.label_image.data:
+                        file_info = save_kit_file(form.label_image.data, kit_id, 'image')
+                        if file_info:
+                            cur.execute("""
+                                UPDATE kit SET label_image_filename = %s WHERE id = %s
+                            """, (file_info['filename'], kit_id))
+                            files_updated.append('label image')
+                    
+                    # Handle instruction PDF upload
+                    if form.instruction_pdf.data:
+                        file_info = save_kit_file(form.instruction_pdf.data, kit_id, 'pdf')
+                        if file_info:
+                            cur.execute("""
+                                UPDATE kit SET instruction_pdf_filename = %s WHERE id = %s
+                            """, (file_info['filename'], kit_id))
+                            files_updated.append('instruction PDF')
+                    
+                    conn.commit()
+                    
+                    success_msg = f'Kit "{form.name.data}" updated successfully'
+                    if files_updated:
+                        success_msg += f' (new files: {", ".join(files_updated)})'
+                    
+                    flash(success_msg, 'success')
+                    return redirect(url_for('kit_detail', kit_id=kit_id))
+                    
+                except psycopg2.Error as e:
+                    conn.rollback()
+                    flash(f'Database error: {e}', 'error')
+            else:
+                # Populate form with existing data for GET request
+                form.name.data = kit['name']
+                form.kit_type.data = kit['kit_type']
+                form.manufacturer.data = kit['manufacturer']
+                form.style.data = kit['style']
+                form.estimated_abv.data = kit['estimated_abv']
+                form.volume_liters.data = kit['volume_liters']
+                form.cost.data = kit['cost']
+                form.supplier.data = kit['supplier']
+                form.additional_ingredients_needed.data = kit['additional_ingredients_needed']
+                form.description.data = kit['description']
+                form.notes.data = kit['notes']
+            
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('kits'))
+    finally:
+        conn.close()
+    
+    return render_template('edit_kit.html', kit=kit, form=form)
+
+@app.route('/kit/<int:kit_id>/delete', methods=['POST'])
+@require_permission('kits', 'full')  # Only admins can delete
+def delete_kit(kit_id):
+    """Delete a kit (admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kits'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Check if kit exists and get file names
+            cur.execute("SELECT name, label_image_filename, instruction_pdf_filename FROM kit WHERE id = %s", (kit_id,))
+            kit = cur.fetchone()
+            
+            if not kit:
+                flash('Kit not found', 'error')
+                return redirect(url_for('kits'))
+            
+            # Check if kit is used in any brews
+            cur.execute("SELECT COUNT(*) as count FROM brew WHERE kit_id = %s", (kit_id,))
+            brew_count = cur.fetchone()['count']
+            
+            if brew_count > 0:
+                flash(f'Cannot delete kit "{kit["name"]}" - it is used in {brew_count} brew(s)', 'error')
+                return redirect(url_for('kit_detail', kit_id=kit_id))
+            
+            # Delete the kit
+            cur.execute("DELETE FROM kit WHERE id = %s", (kit_id,))
+            
+            # Delete associated files
+            kit_upload_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'kits')
+            
+            if kit['label_image_filename']:
+                try:
+                    os.remove(os.path.join(kit_upload_dir, kit['label_image_filename']))
+                except OSError:
+                    pass  # File might not exist
+            
+            if kit['instruction_pdf_filename']:
+                try:
+                    os.remove(os.path.join(kit_upload_dir, kit['instruction_pdf_filename']))
+                except OSError:
+                    pass  # File might not exist
+            
+            conn.commit()
+            flash(f'Kit "{kit["name"]}" deleted successfully', 'success')
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('kit_detail', kit_id=kit_id))
+    finally:
+        conn.close()
+    
+    return redirect(url_for('kits'))
+
+@app.route('/kit/<int:kit_id>/image/<filename>')
+def kit_image(kit_id, filename):
+    """Serve kit label images"""
+    kit_upload_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'kits')
+    return send_from_directory(kit_upload_dir, filename)
+
+@app.route('/kit/<int:kit_id>/pdf/<filename>')
+def kit_pdf(kit_id, filename):
+    """Serve kit instruction PDFs"""
+    kit_upload_dir = os.path.join(os.path.dirname(__file__), 'uploads', 'kits')
+    return send_from_directory(kit_upload_dir, filename)
+
+# ==========================================
 # EXPENSE MANAGEMENT ROUTES
 # ==========================================
 
@@ -2055,8 +2439,8 @@ def delete_expense(expense_id):
                 flash(_('You can only delete your own expenses'), 'error')
                 return redirect(url_for('expenses'))
             
-            # Prevent deletion of paid expenses (even for admins, to maintain audit trail)
-            if expense['status'] == 'Paid':
+            # Only prevent deletion of paid expenses for non-admin users
+            if expense['status'] == 'Paid' and not current_user.can_access('expenses', 'full'):
                 flash(_('Paid expenses cannot be deleted to maintain audit trail'), 'error')
                 return redirect(url_for('expenses'))
             

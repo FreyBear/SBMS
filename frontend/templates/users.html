@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Users - SBMS{% endblock %}
+{% block title %}Users - BROEN SBMS{% endblock %}
 
 {% block content %}
 <div class="users-page">
@@ -38,7 +38,9 @@
                 <td><span class="role-badge role-{{ user.role_name }}">{{ user.role_name }}</span></td>
                 <td>
                     {% if user.language == 'no' %}
-                    🇳🇴 Norsk
+                    🇳🇴 Norsk (Bokmål)
+                    {% elif user.language == 'nn' %}
+                    🇳🇴 Norsk (Nynorsk)
                     {% else %}
                     🇺🇸 English
                     {% endif %}

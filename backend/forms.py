@@ -5,6 +5,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, MultipleFileField, FileAllowed
 from wtforms import StringField, PasswordField, SelectField, BooleanField, SubmitField, TextAreaField, DecimalField, DateField, HiddenField
 from wtforms.validators import DataRequired, Email, Length, EqualTo, Optional, Regexp, NumberRange
+from flask_babel import lazy_gettext as _l
 
 class LoginForm(FlaskForm):
     username = StringField('Username', validators=[DataRequired(), Length(min=3, max=50)])
@@ -37,7 +38,7 @@ class CreateUserForm(FlaskForm):
         EqualTo('password', message='Passwords must match')
     ])
     role_id = SelectField('Role', coerce=int, validators=[DataRequired()])
-    language = SelectField('Language', choices=[('en', 'English'), ('no', 'Norsk')], default='en')
+    language = SelectField('Language', choices=[('en', 'English'), ('no', 'Norsk (Bokmål)'), ('nn', 'Norsk (Nynorsk)')], default='en')
     is_active = BooleanField('Active', default=True)
     submit = SubmitField('Create User')
 
@@ -46,7 +47,7 @@ class EditUserForm(FlaskForm):
     email = StringField('Email', validators=[DataRequired(), Email()])
     full_name = StringField('Full Name', validators=[DataRequired(), Length(max=100)])
     role_id = SelectField('Role', coerce=int, validators=[DataRequired()])
-    language = SelectField('Language', choices=[('en', 'English'), ('no', 'Norsk')], default='en')
+    language = SelectField('Language', choices=[('en', 'English'), ('no', 'Norsk (Bokmål)'), ('nn', 'Norsk (Nynorsk)')], default='en')
     is_active = BooleanField('Active')
     bank_account = StringField('Bank Account', validators=[
         Optional(),
@@ -66,20 +67,20 @@ class EditUserForm(FlaskForm):
     submit = SubmitField('Update User')
 
 class CreateExpenseForm(FlaskForm):
-    amount = DecimalField('Amount (NOK)', validators=[
+    amount = DecimalField(_l('Amount (NOK)'), validators=[
         DataRequired(),
         NumberRange(min=0.01, message='Amount must be greater than 0')
     ], places=2)
-    description = TextAreaField('Description', validators=[
+    description = TextAreaField(_l('Description'), validators=[
         DataRequired(),
         Length(min=10, max=500, message='Description must be between 10 and 500 characters')
     ])
-    purchase_date = DateField('Purchase Date', validators=[DataRequired()])
-    receipts = MultipleFileField('Receipt Images', validators=[
+    purchase_date = DateField(_l('Purchase Date'), validators=[DataRequired()])
+    receipts = MultipleFileField(_l('Receipt Images'), validators=[
         Optional(),
         FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Only JPG, PNG, and PDF files are allowed')
     ])
-    submit = SubmitField('Submit Expense')
+    submit = SubmitField(_l('Submit Expense'))
 
 class MarkPaidForm(FlaskForm):
     submit = SubmitField('Mark as Paid')
@@ -110,3 +111,72 @@ class EditExpenseForm(FlaskForm):
     ])
     remove_attachments = HiddenField('Remove Attachments')
     submit = SubmitField('Update Expense')
+
+class CreateKitForm(FlaskForm):
+    name = StringField(_l('Kit Name'), validators=[
+        DataRequired(),
+        Length(max=255, message='Kit name cannot exceed 255 characters')
+    ])
+    kit_type = SelectField(_l('Kit Type'), validators=[DataRequired()], choices=[
+        ('Fresh Wort', _l('Fresh Wort')),
+        ('Cider', _l('Cider')),
+        ('Red Wine', _l('Red Wine')),
+        ('White Wine', _l('White Wine')),
+        ('Rose Wine', _l('Rose Wine')),
+        ('Sparkling Wine', _l('Sparkling Wine')),
+        ('Mead', _l('Mead'))
+    ])
+    manufacturer = StringField(_l('Manufacturer'), validators=[Optional(), Length(max=255)])
+    style = StringField(_l('Style'), validators=[Optional(), Length(max=255)])
+    estimated_abv = DecimalField(_l('Estimated ABV (%)'), validators=[Optional(), NumberRange(min=0, max=100)], places=2)
+    volume_liters = DecimalField(_l('Volume (L)'), validators=[Optional(), NumberRange(min=0.1)], places=2)
+    cost = DecimalField(_l('Cost'), validators=[Optional(), NumberRange(min=0)], places=2)
+    supplier = StringField(_l('Supplier'), validators=[Optional(), Length(max=255)])
+    additional_ingredients_needed = TextAreaField(_l('Additional Ingredients Needed'), validators=[Optional(), Length(max=1000)])
+    description = TextAreaField(_l('Description'), validators=[Optional(), Length(max=1000)])
+    notes = TextAreaField(_l('Notes'), validators=[Optional(), Length(max=1000)])
+    label_image = FileField(_l('Label Image'), validators=[
+        Optional(),
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Only JPG and PNG files are allowed for images')
+    ])
+    instruction_pdf = FileField(_l('Instruction PDF'), validators=[
+        Optional(),
+        FileAllowed(['pdf'], 'Only PDF files are allowed')
+    ])
+    submit = SubmitField(_l('Create Kit'))
+
+class EditKitForm(FlaskForm):
+    name = StringField(_l('Kit Name'), validators=[
+        DataRequired(),
+        Length(max=255, message='Kit name cannot exceed 255 characters')
+    ])
+    kit_type = SelectField(_l('Kit Type'), validators=[DataRequired()], choices=[
+        ('Fresh Wort', _l('Fresh Wort')),
+        ('Cider', _l('Cider')),
+        ('Red Wine', _l('Red Wine')),
+        ('White Wine', _l('White Wine')),
+        ('Rose Wine', _l('Rose Wine')),
+        ('Sparkling Wine', _l('Sparkling Wine')),
+        ('Mead', _l('Mead'))
+    ])
+    manufacturer = StringField(_l('Manufacturer'), validators=[Optional(), Length(max=255)])
+    style = StringField(_l('Style'), validators=[Optional(), Length(max=255)])
+    estimated_abv = DecimalField(_l('Estimated ABV (%)'), validators=[Optional(), NumberRange(min=0, max=100)], places=2)
+    volume_liters = DecimalField(_l('Volume (L)'), validators=[Optional(), NumberRange(min=0.1)], places=2)
+    cost = DecimalField(_l('Cost'), validators=[Optional(), NumberRange(min=0)], places=2)
+    supplier = StringField(_l('Supplier'), validators=[Optional(), Length(max=255)])
+    additional_ingredients_needed = TextAreaField(_l('Additional Ingredients Needed'), validators=[Optional(), Length(max=1000)])
+    description = TextAreaField(_l('Description'), validators=[Optional(), Length(max=1000)])
+    notes = TextAreaField(_l('Notes'), validators=[Optional(), Length(max=1000)])
+    label_image = FileField(_l('Label Image'), validators=[
+        Optional(),
+        FileAllowed(['jpg', 'jpeg', 'png'], 'Only JPG and PNG files are allowed for images')
+    ])
+    instruction_pdf = FileField(_l('Instruction PDF'), validators=[
+        Optional(),
+        FileAllowed(['pdf'], 'Only PDF files are allowed')
+    ])
+    submit = SubmitField(_l('Update Kit'))
+
+class DeleteKitForm(FlaskForm):
+    submit = SubmitField('Delete Kit')

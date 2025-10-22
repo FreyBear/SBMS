@@ -9,7 +9,8 @@ class Config:
     """i18n configuration"""
     LANGUAGES = {
         'en': 'English',
-        'no': 'Norsk'
+        'no': 'Norsk (Bokmål)',
+        'nn': 'Norsk (Nynorsk)'
     }
     BABEL_DEFAULT_LOCALE = 'en'
     BABEL_DEFAULT_TIMEZONE = 'Europe/Oslo'

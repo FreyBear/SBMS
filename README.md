@@ -8,7 +8,13 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 ### 🍺 **Brewery Operations**
 - **Recipe Management**: Store and organize your brewing recipes with styles and detailed notes
-- **Brew Tracking**: Record and review logs from each brewing session with batch tracking
+- **Kit Management**: Comprehensive brewing kit tracking system including:
+  - Support for multiple kit types (Fresh Wort, Cider, Red Wine, White Wine, Rose Wine, Sparkling Wine, Mead)
+  - Kit information management (manufacturer, style, ABV, volume, cost)
+  - Supplier and ingredient tracking
+  - Label image and instruction PDF uploads
+  - Kit-based brewing for easy batch creation
+- **Brew Tracking**: Record and review logs from each brewing session with batch tracking from recipes OR kits
 - **Keg Management**: Comprehensive keg tracking system including:
   - Keg status monitoring (Full, Started, Available/Cleaned, Empty)
   - Location tracking for easy inventory management
@@ -312,6 +318,10 @@ SBMS/
 │   │   ├── create_expense.html  # Expense submission form
 │   │   ├── edit_expense.html    # Expense editing form
 │   │   ├── kegs.html        # Keg management
+│   │   ├── recipes.html     # Recipe management
+│   │   ├── create_kit.html  # Kit creation form
+│   │   ├── edit_kit.html    # Kit editing form
+│   │   ├── kit_detail.html  # Kit information display
 │   │   ├── users.html       # User management
 │   │   ├── login.html       # Authentication
 │   │   └── ...              # Additional templates
@@ -329,14 +339,46 @@ SBMS/
 └── *.py                    # Import and utility scripts
 ```
 
+## Kit Management System
+
+SBMS includes a comprehensive **Brewing Kit Management** system designed for breweries that use commercial brewing kits alongside traditional recipes:
+
+### 🎛️ **Kit Types Supported**
+- **Fresh Wort Kits**: Ready-to-ferment wort concentrates
+- **Cider Kits**: Apple and fruit cider concentrates  
+- **Wine Kits**: Red Wine, White Wine, Rose Wine varieties
+- **Sparkling Wine Kits**: Champagne and sparkling wine kits
+- **Mead Kits**: Honey wine and mead concentrates
+
+### 📋 **Kit Information Management**
+- **Supplier Details**: Track suppliers, manufacturers, and costs
+- **Technical Specifications**: ABV targets, volumes, styles, and ingredients
+- **Documentation**: Upload label images and instruction PDFs
+- **Inventory Tracking**: Monitor kit availability and usage
+- **Brew Integration**: Create brews directly from kits with full traceability
+
+### 🔗 **Kit-to-Brew Workflow**
+1. **Add Kit**: Input kit details with supplier and technical information
+2. **Upload Files**: Attach label images and instruction PDFs
+3. **Create Brew**: Use kit as the base for new brewing batches
+4. **Track Progress**: Monitor kit usage through brew history
+5. **Manage Inventory**: Track which kits are available vs. used
+
+**Perfect for breweries that:**
+- Use commercial brewing kits alongside traditional recipes
+- Need to track supplier relationships and costs
+- Want visual documentation (labels, instructions) stored with kit data
+- Require full traceability from kit purchase to finished product
+
 ## System Capabilities
 
 ### **Complete Brewery Management**
 - **Dashboard**: Real-time overview with keg status, pending expenses, and recent activity
 - **Keg Operations**: Full lifecycle management from filling to cleaning
 - **Keg History**: Detailed tracking of all keg usage and movements
-- **Brew Management**: Batch tracking with recipe integration
+- **Brew Management**: Batch tracking with recipe OR kit integration
 - **Recipe Organization**: Centralized recipe storage with style categorization
+- **Kit Management**: Complete brewing kit lifecycle from purchase to brewing with file uploads
 
 ### **Professional Expense Management**
 - **Expense Workflow**: Complete submission-to-payment process
@@ -370,9 +412,10 @@ SBMS includes a sophisticated role-based access control system with five user ty
 - **Use case**: Accountant, financial manager, brewery CFO
 
 ### 🍺 **Brewer**
-- **Full brewery operations** including recipe and brew management
+- **Full brewery operations** including recipe, kit, and brew management
 - **Keg management**: Update keg status, location, and content
 - **Recipe control**: Create, edit, and organize brewing recipes
+- **Kit management**: Add, edit, and organize brewing kits with file uploads
 - **Expense submission**: Submit expenses with receipts, edit rejected expenses
 - **User viewing**: Can see basic user information
 - **Use case**: Head brewer, brewing staff, production manager
@@ -380,14 +423,14 @@ SBMS includes a sophisticated role-based access control system with five user ty
 ### 🔧 **Operator**
 - **Keg operations specialist** with limited system access
 - **Keg updates**: Change status, location, and basic keg information
-- **View-only access**: Can view brews, recipes, and expenses
+- **View-only access**: Can view brews, recipes, kits, and expenses
 - **No user management**: Cannot see or modify user accounts
 - **Use case**: Warehouse staff, keg handling personnel, part-time staff
 
 ### 👀 **Viewer**
 - **Read-only access** to all information systems
 - **No modifications**: Cannot change any data in the system
-- **Full visibility**: Can view kegs, brews, recipes, and expenses
+- **Full visibility**: Can view kegs, brews, recipes, kits, and expenses
 - **No user access**: Cannot see user management sections
 - **Use case**: Investors, consultants, quality control, reporting staff
 
@@ -398,6 +441,7 @@ SBMS includes a sophisticated role-based access control system with five user ty
 | **Kegs** | Full | View | Edit | Edit | View |
 | **Brews** | Full | View | Full | View | View |
 | **Recipes** | Full | View | Full | View | View |
+| **Kits** | Full | View | Edit | View | View |
 | **Expenses** | Full | Full | Edit Own | View | View |
 | **Users** | Full | View | View | None | None |
 | **System** | Full | None | None | None | None |
@@ -448,7 +492,8 @@ The SBMS system uses a comprehensive PostgreSQL schema that supports all brewery
 - **`users`**: User accounts with roles, language preferences, and bank account information
 - **`user_role`**: Role definitions with JSON-based permission system
 - **`recipe`**: Brewing recipes with styles and detailed notes
-- **`brew`**: Batch tracking with recipe links and brewing dates
+- **`kit`**: Brewing kit management with file uploads and supplier tracking
+- **`brew`**: Batch tracking with recipe OR kit links and brewing dates
 - **`keg`**: Complete keg lifecycle management with status and location tracking
 - **`keg_history`**: Historical tracking of all keg changes and movements
 
@@ -469,7 +514,7 @@ The complete schema is available in `database/init.sql` and includes sample data
 
 ## Summary
 
-SBMS provides a **complete, production-ready brewery management solution** that combines traditional brewery operations (kegs, brews, recipes) with modern business features (expense management, user roles, internationalization). 
+SBMS provides a **complete, production-ready brewery management solution** that combines traditional brewery operations (kegs, brews, recipes, kits) with modern business features (expense management, user roles, internationalization). 
 
 **Perfect for:**
 - Small to medium breweries seeking operational efficiency

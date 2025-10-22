@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Expenses') }} - SBMS{% endblock %}
+{% block title %}{{ _('Expenses') }} - BROEN SBMS{% endblock %}
 
 {% block content %}
 <div class="expenses-page">
@@ -54,18 +54,18 @@
                     <td>{{ expense.purchase_date.strftime('%d-%m-%Y') }}</td>
                     <td>
                         <span class="status-badge status-{{ expense.status.lower() }}">
-                            {{ _(expense.status) }}
+                            {{ expense.status|translate_status }}
                         </span>
                         {% if expense.status == 'Paid' and expense.paid_date %}
                         <div class="paid-info">
-                            <small>{{ _('Paid') }}: {{ expense.paid_date.strftime('%d-%m-%Y') }}</small>
+                            <small>{{ 'Paid'|translate_status }}: {{ expense.paid_date.strftime('%d-%m-%Y') }}</small>
                             {% if expense.paid_by_name %}
                             <small>{{ _('by') }} {{ expense.paid_by_name }}</small>
                             {% endif %}
                         </div>
                         {% elif expense.status == 'Rejected' and expense.rejected_date %}
                         <div class="rejected-info">
-                            <small>{{ _('Rejected') }}: {{ expense.rejected_date.strftime('%d-%m-%Y') }}</small>
+                            <small>{{ 'Rejected'|translate_status }}: {{ expense.rejected_date.strftime('%d-%m-%Y') }}</small>
                             {% if expense.rejected_by_name %}
                             <small>{{ _('by') }} {{ expense.rejected_by_name }}</small>
                             {% endif %}
@@ -111,13 +111,12 @@
                             <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
                                class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
                             {% endif %}
-                            {% if expense.status != 'Paid' %}
+                            {# Admin users can delete any expense, including paid ones #}
                             <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
                                   style="display: inline-block;"
                                   onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
                                 <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
                             </form>
-                            {% endif %}
                         </div>
                         {% endif %}
                     </td>

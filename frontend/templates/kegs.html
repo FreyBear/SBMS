@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Kegs - SBMS{% endblock %}
+{% block title %}Kegs - BROEN SBMS{% endblock %}
 
 {% block content %}
 <div class="kegs-page">
@@ -69,18 +69,25 @@
                 <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
                 <td>{{ keg.volume_liters }}L</td>
                 <td>{{ keg.contents or 'Empty' }}</td>
-                <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status }}</span></td>
+                <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status|translate_status }}</span></td>
                 <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
                 <td>{{ keg.location or 'Unknown' }}</td>
                 <td>{{ keg.brew_name or 'None' }}</td>
                 <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
                 <td>
-                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-small">View</a>
-                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-small btn-secondary">Edit</a>
+                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-small">{{ _('View') }}</a>
+                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-small btn-secondary">{{ _('Edit') }}</a>
                 </td>
             </tr>
             {% endfor %}
         </tbody>
+        <tfoot>
+            <tr class="total-row">
+                <td colspan="4" style="text-align: right; font-weight: bold;">{{ _('Total Amount Left') }}:</td>
+                <td id="total-amount" style="font-weight: bold; background-color: #f8f9fa;">0.0L</td>
+                <td colspan="4"></td>
+            </tr>
+        </tfoot>
     </table>
     {% else %}
     <div class="empty-state">
@@ -219,9 +226,9 @@ document.addEventListener('DOMContentLoaded', function() {
                     
                 case 'text':
                 default:
-                    // Handle text, including empty values
-                    if (aValue.toLowerCase() === 'empty' || aValue.toLowerCase() === 'none' || aValue === '') aValue = 'zzz_empty';
-                    if (bValue.toLowerCase() === 'empty' || bValue.toLowerCase() === 'none' || bValue === '') bValue = 'zzz_empty';
+                    // Handle text, including empty values (both English and Norwegian)
+                    if (aValue.toLowerCase() === 'empty' || aValue.toLowerCase() === 'tomt' || aValue.toLowerCase() === 'none' || aValue === '') aValue = 'zzz_empty';
+                    if (bValue.toLowerCase() === 'empty' || bValue.toLowerCase() === 'tomt' || bValue.toLowerCase() === 'none' || bValue === '') bValue = 'zzz_empty';
                     aValue = aValue.toLowerCase();
                     bValue = bValue.toLowerCase();
                     break;
@@ -259,6 +266,7 @@ document.addEventListener('DOMContentLoaded', function() {
         
         const rows = document.querySelectorAll('#kegsTable tbody tr');
         let visibleCount = 0;
+        let totalAmount = 0;
         
         rows.forEach(row => {
             const statusCell = row.querySelector('td:nth-child(4)');
@@ -266,18 +274,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 const statusText = statusCell.textContent.trim();
                 let showRow = false;
                 
-                if (statusText.includes('Full') && showFull) showRow = true;
-                if (statusText.includes('Started') && showStarted) showRow = true;
-                if (statusText.includes('Available/Cleaned') && showAvailable) showRow = true;
-                if (statusText.includes('Empty') && showEmpty) showRow = true;
+                // Check for both English and Norwegian status values
+                if ((statusText.includes('Full') || statusText.includes('Fullt')) && showFull) showRow = true;
+                if ((statusText.includes('Started') || statusText.includes('Påbegynt')) && showStarted) showRow = true;
+                if ((statusText.includes('Available/Cleaned') || statusText.includes('Vasket')) && showAvailable) showRow = true;
+                if ((statusText.includes('Empty') || statusText.includes('Tomt')) && showEmpty) showRow = true;
                 
                 row.style.display = showRow ? '' : 'none';
-                if (showRow) visibleCount++;
+                if (showRow) {
+                    visibleCount++;
+                    // Calculate total amount left from visible rows (column 5 = Amount Left)
+                    const amountCell = row.querySelector('td:nth-child(5)');
+                    if (amountCell) {
+                        const amountText = amountCell.textContent.trim();
+                        // Extract number from "X.XL" format
+                        const amount = parseFloat(amountText.replace('L', '')) || 0;
+                        totalAmount += amount;
+                    }
+                }
             }
         });
         
-        // Update the total count display (if you want to show it)
-        console.log(`Showing ${visibleCount} kegs`);
+        // Update the total amount display
+        const totalElement = document.getElementById('total-amount');
+        if (totalElement) {
+            totalElement.textContent = totalAmount.toFixed(1) + 'L';
+        }
+        
+        console.log(`Showing ${visibleCount} kegs, Total: ${totalAmount.toFixed(1)}L`);
     }
     
     // Add event listeners to checkboxes
@@ -303,6 +327,9 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('filter-empty').checked = true;
         updateKegFilters();
     });
+    
+    // Calculate initial total on page load
+    updateKegFilters();
 });
 </script>
 

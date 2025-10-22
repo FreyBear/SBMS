@@ -6,13 +6,13 @@
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
-    <title>{% block title %}SBMS - Small Brewery Management System{% endblock %}</title>
+    <title>{% block title %}BROEN SBMS - Small Brewery Management System{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v=20251016-3">
 </head>
 <body>
     <nav class="navbar">
         <div class="nav-container">
-            <a href="{{ url_for('index') }}" class="nav-brand">SBMS</a>
+            <a href="{{ url_for('index') }}" class="nav-brand">BROEN SBMS</a>
             {% if current_user.is_authenticated %}
             <ul class="nav-menu">
                 <li><a href="{{ url_for('index') }}">{{ _('Dashboard') }}</a></li>
@@ -24,6 +24,9 @@
                 {% endif %}
                 {% if current_user.can_access('recipes', 'view') %}
                 <li><a href="{{ url_for('recipes') }}">{{ _('Recipes') }}</a></li>
+                {% endif %}
+                {% if current_user.can_access('recipes', 'view') %}
+                <li><a href="{{ url_for('kits') }}">{{ _('Kits') }}</a></li>
                 {% endif %}
                 {% if current_user.can_access('expenses', 'view') %}
                 <li><a href="{{ url_for('expenses') }}">{{ _('Expenses') }}</a></li>

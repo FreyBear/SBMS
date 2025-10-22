@@ -52,15 +52,15 @@ msgstr "Logg Ut"
 
 #: backend/app.py:374
 msgid "Keg updated successfully and history entry created"
-msgstr ""
+msgstr "Fat oppdatert vellykket og historikkoppføring opprettet"
 
 #: backend/app.py:421
 msgid "History entry deleted successfully"
-msgstr ""
+msgstr "Historikkoppføring slettet vellykket"
 
 #: backend/app.py:482
 msgid "History entry updated successfully"
-msgstr ""
+msgstr "Historikkoppføring oppdatert vellykket"
 
 #: backend/app.py:774 backend/app.py:785 frontend/templates/base.html:15
 msgid "Dashboard"
@@ -84,6 +84,10 @@ msgstr "Oppskrifter"
 msgid "Users"
 msgstr "Brukere"
 
+#: frontend/templates/base.html:29
+msgid "Expenses"
+msgstr "Innkjøp"
+
 #: frontend/templates/base.html:53
 msgid "Small Brewery Management System"
 msgstr "Lite Bryggeri Administrasjonssystem"
@@ -101,7 +105,6 @@ msgid "Date Brewed"
 msgstr "Bryggingsdato"
 
 #: frontend/templates/brews.html:17
-#, fuzzy
 msgid "Recipe"
 msgstr "Oppskrifter"
 
@@ -112,9 +115,8 @@ msgstr "Stil"
 #: frontend/templates/brews.html:20 frontend/templates/edit_keg_history.html:71
 #: frontend/templates/keg_detail.html:97 frontend/templates/recipes.html:18
 #: frontend/templates/update_keg.html:68
-#, fuzzy
 msgid "Notes"
-msgstr "Innhold"
+msgstr "Notater"
 
 #: frontend/templates/edit_keg_history.html:8
 msgid "Edit History Entry"
@@ -139,39 +141,39 @@ msgstr "Dato"
 #: frontend/templates/keg_detail.html:92 frontend/templates/kegs.html:46
 #: frontend/templates/update_keg.html:23
 msgid "Contents"
-msgstr "Innhold"
+msgstr "INNHOLD"
 
 #: frontend/templates/edit_keg_history.html:29
 #: frontend/templates/keg_detail.html:93 frontend/templates/kegs.html:49
 #: frontend/templates/update_keg.html:28 frontend/templates/users.html:25
 msgid "Status"
-msgstr "Status"
+msgstr "STATUS"
 
 #: frontend/templates/edit_keg_history.html:31 frontend/templates/kegs.html:18
 #: frontend/templates/update_keg.html:30
 msgid "Full"
-msgstr "Fullt"
+msgstr "Fulle"
 
 #: frontend/templates/edit_keg_history.html:32 frontend/templates/kegs.html:22
 #: frontend/templates/update_keg.html:31
 msgid "Started"
-msgstr "Startet"
+msgstr "Påbegynt"
 
 #: frontend/templates/edit_keg_history.html:33 frontend/templates/kegs.html:26
 #: frontend/templates/update_keg.html:32
 msgid "Available/Cleaned"
-msgstr "Tilgjengelig/Rengjort"
+msgstr "Vasket"
 
 #: frontend/templates/edit_keg_history.html:34 frontend/templates/kegs.html:30
 #: frontend/templates/update_keg.html:33
 msgid "Empty"
-msgstr "Tomt"
+msgstr "Tomme"
 
 #: frontend/templates/edit_keg_history.html:39
 #: frontend/templates/keg_detail.html:94 frontend/templates/kegs.html:52
 #: frontend/templates/update_keg.html:38
 msgid "Amount Left"
-msgstr "Mengde Igjen"
+msgstr "MENGDE"
 
 #: frontend/templates/edit_keg_history.html:39
 #: frontend/templates/update_keg.html:38
@@ -182,7 +184,7 @@ msgstr "Liter"
 #: frontend/templates/keg_detail.html:95 frontend/templates/kegs.html:55
 #: frontend/templates/update_keg.html:45
 msgid "Location"
-msgstr "Plassering"
+msgstr "PLASSERING"
 
 #: frontend/templates/edit_keg_history.html:48
 #: frontend/templates/update_keg.html:47
@@ -259,28 +261,29 @@ msgstr "Bryggeri Dashboard"
 msgid "Keg Status Summary"
 msgstr "Fat Status Sammendrag"
 
+#: frontend/templates/index.html:XX
+msgid "Recent Keg Activity"
+msgstr "Nylig Fat Aktivitet"
+
 #: frontend/templates/index.html:16
 msgid "kegs"
 msgstr "fat"
 
 #: frontend/templates/index.html:26
-#, fuzzy
 msgid "Quick Actions"
-msgstr "Handlinger"
+msgstr "Hurtighandlinger"
 
 #: frontend/templates/index.html:28
 msgid "View All Kegs"
 msgstr "Se Alle Fat"
 
 #: frontend/templates/index.html:29
-#, fuzzy
 msgid "View Brews"
-msgstr "Brygg"
+msgstr "Se Brygg"
 
 #: frontend/templates/index.html:30
-#, fuzzy
 msgid "View Recipes"
-msgstr "Oppskrifter"
+msgstr "Se Oppskrifter"
 
 #: frontend/templates/keg_detail.html:98 frontend/templates/kegs.html:63
 #: frontend/templates/users.html:28
@@ -309,7 +312,7 @@ msgstr "Vis Bare Tilgjengelige + Tomme"
 
 #: frontend/templates/kegs.html:40
 msgid "Keg #"
-msgstr "Fat Nr"
+msgstr "FAT#"
 
 #: frontend/templates/kegs.html:43
 msgid "Volume"
@@ -321,7 +324,7 @@ msgstr "Brygg"
 
 #: frontend/templates/kegs.html:61
 msgid "Last Measured"
-msgstr "Sist Målt"
+msgstr "SIST MÅLT"
 
 #: frontend/templates/recipes.html:8
 msgid "Recipe Management"
@@ -519,7 +522,7 @@ msgstr "11-sifret norsk bankkontonummer. Punktum og mellomrom fjernes automatisk
 msgid "Bank account must be exactly 11 digits"
 msgstr "Bankkonto må være nøyaktig 11 siffer"
 
-#: frontend/templates/base.html:XXX frontend/templates/expenses.html:XXX
+#: frontend/templates/expenses.html:XXX
 msgid "Expenses"
 msgstr "Utgifter"
 
@@ -556,6 +559,10 @@ msgid "Receipts"
 msgstr "Kvitteringer"
 
 #: frontend/templates/expenses.html:XXX
+msgid "Submitted"
+msgstr "Innsendt"
+
+#: frontend/templates/expenses.html:XXX
 msgid "Actions"
 msgstr "Handlinger"
 
@@ -568,6 +575,10 @@ msgid "Paid"
 msgstr "Betalt"
 
 #: frontend/templates/expenses.html:XXX
+msgid "by"
+msgstr "av"
+
+#: frontend/templates/expenses.html:XXX
 msgid "Rejected"
 msgstr "Avvist"
 
@@ -578,6 +589,58 @@ msgstr "Marker som Betalt"
 #: frontend/templates/expenses.html:XXX
 msgid "Completed"
 msgstr "Fullført"
+
+#: frontend/templates/expenses.html:XXX
+msgid "Mark this expense as paid?"
+msgstr "Marker denne utgiften som betalt?"
+
+#: frontend/templates/expenses.html:XXX
+msgid "No expenses found"
+msgstr "Ingen utgifter funnet"
+
+#: frontend/templates/expenses.html:XXX
+msgid "No expense requests have been submitted yet."
+msgstr "Ingen utgiftsforespørsler er sendt inn ennå."
+
+#: frontend/templates/expenses.html:XXX
+msgid "Submit Your First Expense"
+msgstr "Send Inn Din Første Utgift"
+
+#: backend/forms.py:XXX
+msgid "Amount (NOK)"
+msgstr "Beløp (NOK)"
+
+#: backend/forms.py:XXX
+msgid "Description"
+msgstr "Beskrivelse"
+
+#: backend/forms.py:XXX
+msgid "Purchase Date"
+msgstr "Kjøpsdato"
+
+#: backend/forms.py:XXX
+msgid "Receipt Images"
+msgstr "Kvitteringsbilder"
+
+#: backend/forms.py:XXX
+msgid "Submit Expense"
+msgstr "Send Inn Utgift"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "No files selected"
+msgstr "Ingen filer valgt"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "file(s) selected"
+msgstr "fil(er) valgt"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Some files exceed 5MB limit"
+msgstr "Noen filer overskrider 5MB grensen"
+
+#: frontend/templates/create_expense.html:XXX
+msgid "Describe what was purchased and why it was necessary for the brewery..."
+msgstr "Beskriv hva som ble kjøpt og hvorfor det var nødvendig for bryggeriet..."
 
 #: frontend/templates/create_expense.html:XXX
 msgid "Amount in Norwegian Kroner (NOK)"
@@ -818,4 +881,28 @@ msgstr "Nåværende passord er feil"
 #: backend/app.py:XXX
 msgid "Password changed successfully!"
 msgstr "Passord endret vellykket!"
+
+#: frontend/templates/kegs.html:XX
+msgid "Total Amount Left"
+msgstr "Total Mengde Igjen"
+
+#: frontend/templates/update_keg.html:XX
+msgid "Set Empty"
+msgstr "Sett Tom"
+
+#: frontend/templates/update_keg.html:XX
+msgid "Update Current Status"
+msgstr "Oppdater Nåværende Status"
+
+#: frontend/templates/update_keg.html:XX
+msgid "Add New History Entry"
+msgstr "Legg Til Ny Historikkoppføring"
+
+#: frontend/templates/update_keg.html:XX
+msgid "Set this keg as empty? This will fill the form with empty keg values."
+msgstr "Sett dette fatet som tomt? Dette vil fylle skjemaet med tomme fatverdier."
+
+#: frontend/templates/update_keg.html:XX
+msgid "Keg is empty"
+msgstr "Fatet er tomt"
 

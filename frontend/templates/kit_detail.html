@@ -1,0 +1,453 @@
+{% extends "base.html" %}
+
+{% block title %}{{ kit.name }} - Kit Detail - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="kit-detail-page">
+    <div class="page-header">
+        <div>
+            <h1>{{ kit.name }}</h1>
+            <div class="kit-meta">
+                <span class="kit-type-badge kit-type-{{ kit.kit_type|lower|replace(' ', '-') }}">{{ _(kit.kit_type) }}</span>
+                {% if kit.manufacturer %}
+                <span class="manufacturer">{{ _('By') }} {{ kit.manufacturer }}</span>
+                {% endif %}
+                {% if kit.created_by_name %}
+                <span class="creator">{{ _('Added by') }} {{ kit.created_by_name }}</span>
+                {% endif %}
+            </div>
+        </div>
+        <div class="actions">
+            {% if current_user.can_access('recipes', 'edit') %}
+            <a href="{{ url_for('edit_kit', kit_id=kit.id) }}" class="btn btn-warning">{{ _('Edit Kit') }}</a>
+            {% endif %}
+            
+            <!-- Admin Controls -->
+            {% if current_user.role_name == 'admin' %}
+            <div class="admin-controls">
+                <form method="POST" action="{{ url_for('delete_kit', kit_id=kit.id) }}" 
+                      style="display: inline;"
+                      onsubmit="return confirm('{{ _('Are you sure you want to delete this kit? This action cannot be undone.') }}')">
+                    <button type="submit" class="btn btn-danger btn-sm">🗑️ {{ _('Delete Kit') }}</button>
+                </form>
+            </div>
+            {% endif %}
+            
+            <a href="{{ url_for('kits') }}" class="btn btn-secondary">{{ _('Back to Kits') }}</a>
+        </div>
+    </div>
+
+    <!-- Kit Overview -->
+    <div class="kit-overview">
+        <div class="overview-grid">
+            <div class="overview-item">
+                <label>{{ _('Kit Type') }}</label>
+                <span class="value">{{ _(kit.kit_type) }}</span>
+            </div>
+            {% if kit.style %}
+            <div class="overview-item">
+                <label>{{ _('Style') }}</label>
+                <span class="value">{{ kit.style }}</span>
+            </div>
+            {% endif %}
+            {% if kit.volume_liters %}
+            <div class="overview-item">
+                <label>{{ _('Volume') }}</label>
+                <span class="value">{{ "%.2f L"|format(kit.volume_liters) }}</span>
+            </div>
+            {% endif %}
+            {% if kit.estimated_abv %}
+            <div class="overview-item">
+                <label>{{ _('Estimated ABV') }}</label>
+                <span class="value">{{ "%.2f%%"|format(kit.estimated_abv) }}</span>
+            </div>
+            {% endif %}
+            {% if kit.cost %}
+            <div class="overview-item">
+                <label>{{ _('Cost') }}</label>
+                <span class="value">{{ "%.2f NOK"|format(kit.cost) }}</span>
+            </div>
+            {% endif %}
+            {% if kit.supplier %}
+            <div class="overview-item">
+                <label>{{ _('Supplier') }}</label>
+                <span class="value">{{ kit.supplier }}</span>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Kit Contents/Instructions Section -->
+    <div class="kit-contents-section">
+        <h2>{{ _('Kit Details') }}</h2>
+        
+        {% if kit.description %}
+        <div class="kit-section">
+            <h3>{{ _('Description') }}</h3>
+            <div class="kit-content">{{ kit.description|replace('\n', '<br>')|safe }}</div>
+        </div>
+        {% endif %}
+
+        {% if kit.additional_ingredients_needed %}
+        <div class="kit-section">
+            <h3>{{ _('Additional Ingredients Needed') }}</h3>
+            <div class="kit-content">{{ kit.additional_ingredients_needed|replace('\n', '<br>')|safe }}</div>
+        </div>
+        {% endif %}
+
+        {% if kit.notes %}
+        <div class="kit-section">
+            <h3>{{ _('Notes') }}</h3>
+            <div class="kit-content">{{ kit.notes|replace('\n', '<br>')|safe }}</div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Attachments Section -->
+    {% if kit.label_image_filename or kit.instruction_pdf_filename %}
+    <div class="attachments-section">
+        <h2>{{ _('Attachments') }}</h2>
+        
+        {% if kit.label_image_filename %}
+        <div class="attachment-item">
+            <h4>{{ _('Kit Label/Image') }}</h4>
+            <div class="image-attachment">
+                <img src="{{ url_for('kit_image', kit_id=kit.id, filename=kit.label_image_filename) }}" 
+                     alt="{{ kit.name }}" 
+                     class="kit-image">
+                <div class="attachment-info">
+                    <span class="filename">{{ kit.label_image_filename }}</span>
+                    <a href="{{ url_for('kit_image', kit_id=kit.id, filename=kit.label_image_filename) }}" 
+                       download class="btn btn-sm btn-secondary">{{ _('Download') }}</a>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        {% if kit.instruction_pdf_filename %}
+        <div class="attachment-item">
+            <h4>{{ _('Instructions PDF') }}</h4>
+            <div class="pdf-attachment">
+                <div class="pdf-icon">📄</div>
+                <div class="attachment-info">
+                    <span class="filename">{{ kit.instruction_pdf_filename }}</span>
+                    <div class="attachment-actions">
+                        <a href="{{ url_for('kit_pdf', kit_id=kit.id, filename=kit.instruction_pdf_filename) }}" 
+                           target="_blank" class="btn btn-sm btn-primary">{{ _('View PDF') }}</a>
+                        <a href="{{ url_for('kit_pdf', kit_id=kit.id, filename=kit.instruction_pdf_filename) }}" 
+                           download class="btn btn-sm btn-secondary">{{ _('Download') }}</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+    {% endif %}
+
+    <!-- Associated Brews Section -->
+    {% if brews %}
+    <div class="brews-section">
+        <h2>{{ _('Brews Made with This Kit') }}</h2>
+        <div class="brews-table-container">
+            <table class="data-table">
+                <thead>
+                    <tr>
+                        <th>{{ _('Brew Name') }}</th>
+                        <th>{{ _('Brew Date') }}</th>
+                        <th>{{ _('Status') }}</th>
+                        <th>{{ _('Actions') }}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for brew in brews %}
+                    <tr>
+                        <td>
+                            <span class="brew-name">
+                                {{ brew.name }}
+                            </span>
+                        </td>
+                        <td>{{ brew.date_brewed.strftime('%d.%m.%Y') if brew.date_brewed else '-' }}</td>
+                        <td>
+                            <span class="status-badge status-{{ brew.status|lower|replace(' ', '-') if brew.status else 'unknown' }}">
+                                {{ _(brew.status) if brew.status else _('Unknown') }}
+                            </span>
+                        </td>
+                        <td>
+                            <div class="table-actions">
+                                <span class="btn btn-sm btn-secondary disabled">{{ _('View') }}</span>
+                                {% if current_user.can_access('brews', 'edit') %}
+                                <span class="btn btn-sm btn-secondary disabled">{{ _('Edit') }}</span>
+                                {% endif %}
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% else %}
+    <div class="brews-section">
+        <h2>{{ _('Brews Made with This Kit') }}</h2>
+        <div class="empty-state">
+            <p>{{ _('No brews have been made with this kit yet.') }}</p>
+            {% if current_user.can_access('brews', 'view') %}
+            <a href="{{ url_for('brews') }}" class="btn btn-primary">
+                {{ _('View All Brews') }}
+            </a>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Kit Detail Specific Styles */
+.kit-detail-page {
+    padding: 2rem 0;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.kit-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.kit-type-badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: 1rem;
+    font-size: 0.875rem;
+    font-weight: 500;
+    color: white;
+}
+
+.kit-type-fresh-wort { background-color: #28a745; }
+.kit-type-cider { background-color: #ffc107; color: #212529; }
+.kit-type-red-wine { background-color: #dc3545; }
+.kit-type-white-wine { background-color: #f8f9fa; color: #212529; border: 1px solid #dee2e6; }
+.kit-type-rose-wine { background-color: #e83e8c; }
+.kit-type-sparkling-wine { background-color: #17a2b8; }
+.kit-type-mead { background-color: #fd7e14; }
+
+.manufacturer, .creator {
+    color: #6c757d;
+    font-size: 0.875rem;
+}
+
+.actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.admin-controls {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.kit-overview {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 0.5rem;
+    margin-bottom: 2rem;
+}
+
+.overview-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1rem;
+}
+
+.overview-item {
+    display: flex;
+    flex-direction: column;
+}
+
+.overview-item label {
+    font-weight: 600;
+    color: #6c757d;
+    font-size: 0.875rem;
+    margin-bottom: 0.25rem;
+}
+
+.overview-item .value {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    font-weight: 500;
+}
+
+.section, .kit-contents-section, .attachments-section, .brews-section {
+    margin-bottom: 2rem;
+}
+
+.section h3, .kit-contents-section h2, .attachments-section h2, .brews-section h2 {
+    color: #2c3e50;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.kit-section {
+    margin-bottom: 1.5rem;
+}
+
+.kit-section h3 {
+    color: #495057;
+    margin-bottom: 0.75rem;
+    font-size: 1.1rem;
+}
+
+.kit-content {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border-left: 4px solid #007bff;
+    line-height: 1.6;
+}
+
+.attachment-item {
+    background: #f8f9fa;
+    padding: 1rem;
+    border-radius: 0.375rem;
+    border: 1px solid #e9ecef;
+    margin-bottom: 1rem;
+}
+
+.attachment-item h4 {
+    margin: 0 0 0.75rem 0;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.image-attachment {
+    text-align: center;
+}
+
+.kit-image {
+    max-width: 100%;
+    max-height: 400px;
+    height: auto;
+    border-radius: 0.375rem;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.pdf-attachment, .file-attachment {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pdf-icon, .file-icon {
+    font-size: 2rem;
+}
+
+.attachment-info {
+    flex: 1;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.attachment-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.filename {
+    font-weight: 500;
+    color: #495057;
+}
+
+.brews-table-container {
+    overflow-x: auto;
+}
+
+.brew-link {
+    color: #007bff;
+    text-decoration: none;
+    font-weight: 500;
+}
+
+.brew-link:hover {
+    text-decoration: underline;
+}
+
+.status-badge {
+    padding: 0.25rem 0.5rem;
+    border-radius: 0.25rem;
+    font-size: 0.75rem;
+    font-weight: 500;
+    text-transform: uppercase;
+}
+
+.status-planning { background-color: #ffc107; color: #212529; }
+.status-brewing { background-color: #007bff; color: white; }
+.status-fermenting { background-color: #28a745; color: white; }
+.status-conditioning { background-color: #17a2b8; color: white; }
+.status-ready { background-color: #28a745; color: white; }
+.status-finished { background-color: #6c757d; color: white; }
+.status-unknown { background-color: #e9ecef; color: #495057; }
+
+.table-actions {
+    display: flex;
+    gap: 0.25rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #6c757d;
+}
+
+.empty-state p {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+    
+    .actions {
+        justify-content: flex-start;
+    }
+    
+    .overview-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .pdf-attachment, .file-attachment {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .attachment-info {
+        width: 100%;
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+</style>
+{% endblock %}

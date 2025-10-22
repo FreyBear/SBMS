@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}{{ _('Submit New Expense') }} - SBMS{% endblock %}
+{% block title %}{{ _('Submit New Expense') }} - BROEN SBMS{% endblock %}
 
 {% block content %}
 <div class="create-expense-page">
@@ -45,7 +45,7 @@
 
             <div class="form-group">
                 {{ form.description.label(class="form-label") }}
-                {{ form.description(class="form-control", rows="4", placeholder="Describe what was purchased and why it was necessary for the brewery...") }}
+                {{ form.description(class="form-control", rows="4", placeholder=_("Describe what was purchased and why it was necessary for the brewery...")) }}
                 <small class="help-text">{{ _('Provide a detailed description of the purchase (10-500 characters)') }}</small>
                 {% if form.description.errors %}
                     <div class="field-errors">
@@ -390,7 +390,7 @@ function updateFileList(files) {
     const helpText = document.querySelector('#receipt-files').parentNode.querySelector('.help-text');
     
     if (files.length === 0) {
-        fileList.innerHTML = '<span style="color: #7f8c8d; font-style: italic;">No files selected</span>';
+        fileList.innerHTML = '<span style="color: #7f8c8d; font-style: italic;">{{ _("No files selected") }}</span>';
         if (helpText) {
             helpText.textContent = 'Upload receipt images (JPG, PNG, PDF - max 5MB each). You can select multiple files by holding Ctrl/Cmd while clicking.';
             helpText.style.color = '#7f8c8d';
@@ -426,13 +426,13 @@ function updateFileList(files) {
     // Update help text
     if (helpText) {
         const totalSizeMB = (totalSize / (1024 * 1024)).toFixed(1);
-        helpText.innerHTML = `${files.length} file(s) selected (${totalSizeMB} MB total)`;
+        helpText.innerHTML = `${files.length} {{ _("file(s) selected") }} (${totalSizeMB} MB total)`;
         helpText.style.color = '#27ae60';
         
         // Warn about large files
         const hasLargeFiles = files.some(file => file.size > 5 * 1024 * 1024);
         if (hasLargeFiles) {
-            helpText.innerHTML += ' <span style="color: #e74c3c;">⚠️ Some files exceed 5MB limit</span>';
+            helpText.innerHTML += ' <span style="color: #e74c3c;">⚠️ {{ _("Some files exceed 5MB limit") }}</span>';
         }
     }
 }

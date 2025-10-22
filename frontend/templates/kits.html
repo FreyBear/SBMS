@@ -1,0 +1,123 @@
+{% extends "base.html" %}
+
+{% block title %}Kits - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="kits-page">
+    <div class="page-header">
+        <h1>{{ _('Kit Management') }}</h1>
+        {% if current_user.can_access('kits', 'edit') %}
+        <a href="{{ url_for('create_kit') }}" class="btn btn-primary">
+            {{ _('Create New Kit') }}
+        </a>
+        {% endif %}
+    </div>
+
+    {% if kits %}
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>{{ _('Kit Name') }}</th>
+                <th>{{ _('Type') }}</th>
+                <th>{{ _('Manufacturer') }}</th>
+                <th>{{ _('Style') }}</th>
+                <th>{{ _('ABV') }}</th>
+                <th>{{ _('Volume') }}</th>
+                <th>{{ _('Cost') }}</th>
+                <th>{{ _('Brews') }}</th>
+                <th>{{ _('Actions') }}</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for kit in kits %}
+            <tr>
+                <td>
+                    <a href="{{ url_for('kit_detail', kit_id=kit.id) }}" class="kit-link">
+                        {{ kit.name }}
+                    </a>
+                </td>
+                <td>
+                    <span class="kit-type-badge kit-type-{{ kit.kit_type|lower|replace(' ', '-') }}">
+                        {{ _(kit.kit_type) }}
+                    </span>
+                </td>
+                <td>{{ kit.manufacturer or '-' }}</td>
+                <td>{{ kit.style or '-' }}</td>
+                <td>
+                    {% if kit.estimated_abv %}
+                        {{ "%.1f"|format(kit.estimated_abv) }}%
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if kit.volume_liters %}
+                        {{ "%.1f"|format(kit.volume_liters) }}L
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>
+                    {% if kit.cost %}
+                        {{ "%.0f"|format(kit.cost) }} kr
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ kit.brew_count }} {{ _('brews') }}</td>
+                <td>
+                    <a href="{{ url_for('kit_detail', kit_id=kit.id) }}" class="btn btn-info btn-sm">
+                        {{ _('View') }}
+                    </a>
+                    {% if current_user.can_access('kits', 'edit') %}
+                    <a href="{{ url_for('edit_kit', kit_id=kit.id) }}" class="btn btn-warning btn-sm">
+                        {{ _('Edit') }}
+                    </a>
+                    {% endif %}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    {% else %}
+    <div class="empty-state">
+        <p>{{ _('No kits found in the system.') }}</p>
+        {% if current_user.can_access('kits', 'edit') %}
+        <a href="{{ url_for('create_kit') }}" class="btn btn-primary">
+            {{ _('Create Your First Kit') }}
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Kit type badges */
+.kit-type-badge {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.85em;
+    font-weight: bold;
+    color: white;
+}
+
+.kit-type-fresh-wort { background-color: #2196F3; }
+.kit-type-cider { background-color: #FF9800; }
+.kit-type-red-wine { background-color: #8B0000; }
+.kit-type-white-wine { background-color: #FFD700; color: #333; }
+.kit-type-rose-wine { background-color: #FF69B4; }
+.kit-type-sparkling-wine { background-color: #9C27B0; }
+.kit-type-mead { background-color: #795548; }
+
+.kit-link {
+    font-weight: bold;
+    color: #2c3e50;
+    text-decoration: none;
+}
+
+.kit-link:hover {
+    color: #3498db;
+    text-decoration: underline;
+}
+</style>
+{% endblock %}

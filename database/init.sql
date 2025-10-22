@@ -41,14 +41,45 @@ CREATE TABLE recipe (
     created_date DATE DEFAULT CURRENT_DATE
 );
 
+-- Table for kits (fresh wort, cider, wine kits, etc.)
+CREATE TABLE kit (
+    id SERIAL PRIMARY KEY,
+    name TEXT NOT NULL,
+    kit_type TEXT NOT NULL CHECK (kit_type = ANY (ARRAY['Fresh Wort'::text, 'Cider'::text, 'Red Wine'::text, 'White Wine'::text, 'Rose Wine'::text, 'Sparkling Wine'::text, 'Mead'::text])),
+    manufacturer TEXT,
+    style TEXT,
+    estimated_abv NUMERIC(4,2),
+    volume_liters NUMERIC(6,2),
+    cost NUMERIC(10,2),
+    supplier TEXT,
+    additional_ingredients_needed TEXT,
+    description TEXT,
+    label_image_filename TEXT,
+    instruction_pdf_filename TEXT,
+    notes TEXT,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Add comments for kit table
+COMMENT ON TABLE kit IS 'Stores information about brewing kits (fresh wort, cider, wine kits, etc.)';
+COMMENT ON COLUMN kit.kit_type IS 'Type of kit: Fresh Wort, Cider, Red Wine, White Wine, Rose Wine, Sparkling Wine, Mead';
+COMMENT ON COLUMN kit.label_image_filename IS 'Filename of uploaded label/package image (stored in uploads/kits/)';
+COMMENT ON COLUMN kit.instruction_pdf_filename IS 'Filename of uploaded instruction PDF (stored in uploads/kits/)';
+
 -- Table for brew batches
 CREATE TABLE brew (
     id SERIAL PRIMARY KEY,
     name TEXT NOT NULL,
     date_brewed DATE NOT NULL,
     recipe_id INTEGER REFERENCES recipe(id),
+    kit_id INTEGER REFERENCES kit(id),
     notes TEXT,
-    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT brew_source_check CHECK (
+        (recipe_id IS NOT NULL AND kit_id IS NULL) OR 
+        (recipe_id IS NULL AND kit_id IS NOT NULL)
+    )
 );
 
 -- Table for kegs
@@ -75,10 +106,18 @@ INSERT INTO recipe (name, style, notes) VALUES
 ('Cider Recipe', 'Cider', 'Fruit cider base'),
 ('Christmas Bock', 'Bock', 'Seasonal winter beer');
 
+-- Insert sample kits
+INSERT INTO kit (name, kit_type, manufacturer, style, estimated_abv, volume_liters, cost, supplier, description) VALUES 
+('Bringebær og Lime Cider', 'Cider', 'Unknown', 'Fruit Cider', 4.50, 23.00, 350.00, 'Local Supplier', 'Refreshing raspberry and lime cider kit'),
+('Jordbær og pære Cider', 'Cider', 'Premium Kits', 'Fruit Cider', 5.00, 23.00, 375.00, 'Brew Store', 'Settet inneholder flytende konsentrat fra pærer og jordbær, og Premium Cider gjær.');
+
 INSERT INTO brew (name, date_brewed, recipe_id, notes) VALUES
 ('Batch 001 IPA', '2025-07-01', 1, 'First IPA batch'),
-('Batch 002 Strawberry Pear Cider', '2025-07-05', 2, 'Summer fruit cider'),
 ('Batch 003 Christmas Bock', '2025-07-10', 3, 'Winter seasonal');
+
+-- Example of kit-based brew (using kit instead of recipe)
+-- INSERT INTO brew (name, date_brewed, kit_id, notes) VALUES
+-- ('Batch 004 Strawberry Pear Cider', '2025-08-01', 2, 'Made from kit #2');
 
 -- Create default admin user (password: admin123)
 -- IMPORTANT: Change this password immediately after first login!
@@ -131,10 +170,13 @@ CREATE TABLE expense_images (
 );
 
 -- Create indexes for better performance
+CREATE INDEX idx_kit_name ON kit(name);
+CREATE INDEX idx_kit_type ON kit(kit_type);
 CREATE INDEX idx_keg_number ON keg(keg_number);
 CREATE INDEX idx_keg_status ON keg(status);
 CREATE INDEX idx_keg_location ON keg(location);
 CREATE INDEX idx_brew_date ON brew(date_brewed);
+CREATE INDEX idx_brew_kit_id ON brew(kit_id);
 CREATE INDEX idx_keg_history_keg_id ON keg_history(keg_id);
 CREATE INDEX idx_keg_history_date ON keg_history(recorded_date);
 CREATE INDEX idx_expenses_user_id ON expenses(user_id);

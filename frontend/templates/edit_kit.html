@@ -1,0 +1,666 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Kit') }} - {{ kit.name }} - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="edit-kit-page">
+    <div class="page-header">
+        <h1>{{ _('Edit Kit') }}: {{ kit.name }}</h1>
+        <div class="actions">
+            <a href="{{ url_for('kit_detail', kit_id=kit.id) }}" class="btn btn-secondary">{{ _('Back to Kit') }}</a>
+        </div>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" enctype="multipart/form-data" class="kit-form">
+            {{ form.hidden_tag() }}
+            
+            <!-- Basic Information -->
+            <div class="form-section">
+                <h3>{{ _('Basic Information') }}</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        {{ form.name.label(class="form-label required") }}
+                        {{ form.name(class="form-control", placeholder=_("Enter kit name...")) }}
+                        <small class="help-text">{{ _('A descriptive name for the kit') }}</small>
+                        {% if form.name.errors %}
+                            <div class="field-errors">
+                                {% for error in form.name.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.kit_type.label(class="form-label required") }}
+                        {{ form.kit_type(class="form-control") }}
+                        <small class="help-text">{{ _('Select the type of kit') }}</small>
+                        {% if form.kit_type.errors %}
+                            <div class="field-errors">
+                                {% for error in form.kit_type.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    {{ form.manufacturer.label(class="form-label") }}
+                    {{ form.manufacturer(class="form-control", placeholder=_("Enter manufacturer name...")) }}
+                    <small class="help-text">{{ _('The company or brand that produces this kit') }}</small>
+                    {% if form.manufacturer.errors %}
+                        <div class="field-errors">
+                            {% for error in form.manufacturer.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.style.label(class="form-label") }}
+                    {{ form.style(class="form-control", placeholder=_("Enter style (e.g., IPA, Stout, Chardonnay...)")) }}
+                    <small class="help-text">{{ _('Optional style or variety of the kit') }}</small>
+                    {% if form.style.errors %}
+                        <div class="field-errors">
+                            {% for error in form.style.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Technical Specifications -->
+            <div class="form-section">
+                <h3>{{ _('Technical Specifications') }}</h3>
+                <div class="form-grid">
+                    <div class="form-group">
+                        {{ form.volume_liters.label(class="form-label") }}
+                        {{ form.volume_liters(class="form-control", step="0.01", placeholder="20.00") }}
+                        <small class="help-text">{{ _('Expected batch size in liters') }}</small>
+                        {% if form.volume_liters.errors %}
+                            <div class="field-errors">
+                                {% for error in form.volume_liters.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.estimated_abv.label(class="form-label") }}
+                        {{ form.estimated_abv(class="form-control", step="0.01", placeholder="5.00") }}
+                        <small class="help-text">{{ _('Expected alcohol by volume percentage') }}</small>
+                        {% if form.estimated_abv.errors %}
+                            <div class="field-errors">
+                                {% for error in form.estimated_abv.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-grid">
+                    <div class="form-group">
+                        {{ form.cost.label(class="form-label") }}
+                        {{ form.cost(class="form-control", step="0.01", placeholder="150.00") }}
+                        <small class="help-text">{{ _('Cost of the kit') }}</small>
+                        {% if form.cost.errors %}
+                            <div class="field-errors">
+                                {% for error in form.cost.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {{ form.supplier.label(class="form-label") }}
+                        {{ form.supplier(class="form-control", placeholder=_("Where to buy this kit...")) }}
+                        <small class="help-text">{{ _('Supplier or store where this kit can be purchased') }}</small>
+                        {% if form.supplier.errors %}
+                            <div class="field-errors">
+                                {% for error in form.supplier.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Kit Details -->
+            <div class="form-section">
+                <h3>{{ _('Kit Details') }}</h3>
+                <div class="form-group">
+                    {{ form.description.label(class="form-label") }}
+                    {{ form.description(class="form-control", rows="4", placeholder=_("Describe the kit, its contents, and any special characteristics...")) }}
+                    <small class="help-text">{{ _('General description of the kit') }}</small>
+                    {% if form.description.errors %}
+                        <div class="field-errors">
+                            {% for error in form.description.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.additional_ingredients_needed.label(class="form-label") }}
+                    {{ form.additional_ingredients_needed(class="form-control", rows="4", placeholder=_("List any additional ingredients needed (sugar, yeast, etc.)...")) }}
+                    <small class="help-text">{{ _('Describe what additional ingredients are needed beyond the kit') }}</small>
+                    {% if form.additional_ingredients_needed.errors %}
+                        <div class="field-errors">
+                            {% for error in form.additional_ingredients_needed.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.notes.label(class="form-label") }}
+                    {{ form.notes(class="form-control", rows="3", placeholder=_("Any additional notes, tips, or special considerations...")) }}
+                    <small class="help-text">{{ _('Optional additional notes or tips') }}</small>
+                    {% if form.notes.errors %}
+                        <div class="field-errors">
+                            {% for error in form.notes.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- File Attachments -->
+            <div class="form-section">
+                <h3>{{ _('Kit Documentation') }}</h3>
+                
+                <div class="form-grid">
+                    <div class="form-group">
+                        {% if kit.label_image_filename %}
+                        <label class="form-label">{{ _('Current Label Image') }}</label>
+                        <div class="current-attachment">
+                            <img src="{{ url_for('kit_image', kit_id=kit.id, filename=kit.label_image_filename) }}" 
+                                 alt="{{ kit.name }}" class="current-image" style="max-width: 200px; max-height: 200px;">
+                            <div>{{ kit.label_image_filename }}</div>
+                        </div>
+                        {% endif %}
+                        
+                        {{ form.label_image.label(class="form-label") }}
+                        {{ form.label_image(class="form-control", accept=".jpg,.jpeg,.png", id="label-image") }}
+                        <small class="help-text">{{ _('Upload kit label image (JPG, PNG - max 5MB)') }}</small>
+                        {% if form.label_image.errors %}
+                            <div class="field-errors">
+                                {% for error in form.label_image.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="form-group">
+                        {% if kit.instruction_pdf_filename %}
+                        <label class="form-label">{{ _('Current Instruction PDF') }}</label>
+                        <div class="current-attachment">
+                            <div class="pdf-item">
+                                <span>📄 {{ kit.instruction_pdf_filename }}</span>
+                                <a href="{{ url_for('kit_pdf', kit_id=kit.id, filename=kit.instruction_pdf_filename) }}" 
+                                   target="_blank" class="btn btn-sm btn-secondary">{{ _('View') }}</a>
+                            </div>
+                        </div>
+                        {% endif %}
+                        
+                        {{ form.instruction_pdf.label(class="form-label") }}
+                        {{ form.instruction_pdf(class="form-control", accept=".pdf", id="instruction-pdf") }}
+                        <small class="help-text">{{ _('Upload instruction PDF (PDF only - max 5MB)') }}</small>
+                        {% if form.instruction_pdf.errors %}
+                            <div class="field-errors">
+                                {% for error in form.instruction_pdf.errors %}
+                                    <span class="error">{{ error }}</span>
+                                {% endfor %}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Hidden field for tracking attachment removal -->
+            <input type="hidden" name="remove_attachment" id="remove-attachment-field" value="false">
+
+            <div class="form-actions">
+                {{ form.submit(class="btn btn-primary btn-large") }}
+                <a href="{{ url_for('kit_detail', kit_id=kit.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.edit-kit-page {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #e9ecef;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.form-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 0.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.kit-form {
+    max-width: 100%;
+}
+
+.form-section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 1.5rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #2c3e50;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-label {
+    display: block;
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+    color: #2c3e50;
+}
+
+.form-label.required::after {
+    content: ' *';
+    color: #dc3545;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 0.375rem;
+    font-size: 1rem;
+    transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+}
+
+.help-text {
+    display: block;
+    font-size: 0.875rem;
+    color: #6c757d;
+    margin-top: 0.25rem;
+}
+
+.field-errors {
+    margin-top: 0.5rem;
+}
+
+.field-errors .error {
+    display: block;
+    color: #dc3545;
+    font-size: 0.875rem;
+    margin-top: 0.25rem;
+}
+
+.current-attachment {
+    background-color: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 0.375rem;
+    padding: 1rem;
+    margin-bottom: 1rem;
+}
+
+.attachment-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.attachment-info {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.attachment-icon {
+    font-size: 1.25rem;
+}
+
+.attachment-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.attachment-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.file-preview {
+    margin-top: 0.75rem;
+    padding: 0.75rem;
+    background-color: #f8f9fa;
+    border-radius: 0.375rem;
+    border: 1px dashed #ced4da;
+    min-height: 2rem;
+    display: none;
+}
+
+.file-preview.has-file {
+    display: block;
+}
+
+.file-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.5rem 0;
+}
+
+.file-name {
+    font-weight: 500;
+    color: #2c3e50;
+}
+
+.file-size {
+    font-size: 0.875rem;
+    color: #6c757d;
+}
+
+.file-type-icon {
+    margin-right: 0.5rem;
+    font-size: 1.25rem;
+}
+
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-start;
+    margin-top: 2rem;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.75rem 1.5rem;
+    border: 1px solid transparent;
+    border-radius: 0.375rem;
+    text-decoration: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    line-height: 1.5;
+    text-align: center;
+    transition: all 0.15s ease-in-out;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    border-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    border-color: #004085;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    border-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+    border-color: #4e555b;
+    color: white;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    border-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+    border-color: #bd2130;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-large {
+    padding: 0.875rem 1.75rem;
+    font-size: 1.125rem;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+    .edit-kit-page {
+        padding: 1rem 0.5rem;
+    }
+    
+    .form-container {
+        padding: 1.5rem;
+    }
+    
+    .form-grid {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn {
+        width: 100%;
+    }
+    
+    .attachment-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .attachment-actions {
+        align-self: stretch;
+        justify-content: flex-start;
+    }
+}
+
+/* Drag and drop styling */
+.form-group.dragover {
+    background-color: #f0f8ff;
+    border: 2px dashed #007bff;
+    border-radius: 0.375rem;
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // File preview functionality
+    const fileInput = document.getElementById('kit-attachment');
+    const filePreview = document.getElementById('file-preview');
+    const helpText = fileInput?.parentNode.querySelector('.help-text');
+    
+    if (fileInput && filePreview) {
+        fileInput.addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            updateFilePreview(file);
+        });
+    }
+    
+    function updateFilePreview(file) {
+        if (!file) {
+            filePreview.classList.remove('has-file');
+            filePreview.innerHTML = '';
+            return;
+        }
+        
+        const sizeKB = (file.size / 1024).toFixed(1);
+        const sizeMB = (file.size / (1024 * 1024)).toFixed(1);
+        const sizeDisplay = file.size > 1024 * 1024 ? `${sizeMB} MB` : `${sizeKB} KB`;
+        
+        const isLarge = file.size > 5 * 1024 * 1024; // 5MB limit
+        const sizeClass = isLarge ? 'style="color: #dc3545; font-weight: bold;"' : '';
+        
+        // Get file type icon
+        const extension = file.name.split('.').pop().toLowerCase();
+        let icon = '📎';
+        if (['jpg', 'jpeg', 'png'].includes(extension)) {
+            icon = '🖼️';
+        } else if (extension === 'pdf') {
+            icon = '📄';
+        }
+        
+        filePreview.innerHTML = `
+            <div class="file-item">
+                <div>
+                    <span class="file-type-icon">${icon}</span>
+                    <span class="file-name">${file.name}</span>
+                </div>
+                <span class="file-size" ${sizeClass}>${sizeDisplay}</span>
+            </div>
+        `;
+        
+        filePreview.classList.add('has-file');
+        
+        // Update help text
+        if (helpText) {
+            helpText.innerHTML = `{{ _('New file selected') }}: ${file.name} (${sizeDisplay})`;
+            helpText.style.color = '#28a745';
+            
+            // Warn about large files
+            if (isLarge) {
+                helpText.innerHTML += ' <span style="color: #dc3545;">⚠️ {{ _("File exceeds 5MB limit") }}</span>';
+            }
+        }
+    }
+    
+    // Remove attachment functionality
+    const removeBtn = document.getElementById('remove-attachment');
+    const removeField = document.getElementById('remove-attachment-field');
+    const currentAttachment = document.querySelector('.current-attachment');
+    
+    if (removeBtn && removeField && currentAttachment) {
+        removeBtn.addEventListener('click', function(e) {
+            e.preventDefault();
+            if (confirm('{{ _("Are you sure you want to remove this attachment?") }}')) {
+                removeField.value = 'true';
+                currentAttachment.style.opacity = '0.5';
+                currentAttachment.style.textDecoration = 'line-through';
+                removeBtn.textContent = '{{ _("Removed") }}';
+                removeBtn.disabled = true;
+                
+                // Update help text for new file
+                if (helpText) {
+                    helpText.textContent = '{{ _("Upload a new attachment (JPG, PNG, PDF - max 5MB)") }}';
+                    helpText.style.color = '#6c757d';
+                }
+            }
+        });
+    }
+    
+    // Add drag and drop functionality
+    const formGroup = fileInput?.parentNode;
+    
+    if (!formGroup) return;
+    
+    ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+        formGroup.addEventListener(eventName, preventDefaults, false);
+    });
+    
+    ['dragenter', 'dragover'].forEach(eventName => {
+        formGroup.addEventListener(eventName, highlight, false);
+    });
+    
+    ['dragleave', 'drop'].forEach(eventName => {
+        formGroup.addEventListener(eventName, unhighlight, false);
+    });
+    
+    formGroup.addEventListener('drop', handleDrop, false);
+    
+    function preventDefaults(e) {
+        e.preventDefault();
+        e.stopPropagation();
+    }
+    
+    function highlight(e) {
+        formGroup.classList.add('dragover');
+    }
+    
+    function unhighlight(e) {
+        formGroup.classList.remove('dragover');
+    }
+    
+    function handleDrop(e) {
+        const dt = e.dataTransfer;
+        const files = dt.files;
+        
+        if (files.length > 0) {
+            fileInput.files = dt.files;
+            updateFilePreview(files[0]);
+        }
+    }
+});
+</script>
+{% endblock %}

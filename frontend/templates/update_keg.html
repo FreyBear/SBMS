@@ -1,6 +1,6 @@
 {% extends "base.html" %}
 
-{% block title %}Update Keg {{ keg.keg_number }} - SBMS{% endblock %}
+{% block title %}Update Keg {{ keg.keg_number }} - BROEN SBMS{% endblock %}
 
 {% block content %}
 <div class="update-keg">
@@ -84,14 +84,14 @@
 
 <script>
 function setEmpty() {
-    if (confirm('Set this keg as empty? This will fill the form with empty keg values.')) {
+    if (confirm('{{ _("Set this keg as empty? This will fill the form with empty keg values.") }}')) {
         // Set all fields to empty keg values
         document.getElementById('contents').value = 'Empty';
         document.getElementById('status').value = 'Empty';
         document.getElementById('amount_left_liters').value = '0';
         document.getElementById('location').value = 'Storage';
         document.getElementById('arrangement').value = 'Normal operation';
-        document.getElementById('notes').value = 'Fatet er tomt';
+        document.getElementById('notes').value = '{{ _("Keg is empty") }}';
         
         // Set update date to today if not already set
         const today = new Date().toISOString().split('T')[0];

@@ -15,9 +15,9 @@
                 <div class="bar-chart-row">
                     <div class="bar-label">
                         {% if stat.status == 'Available/Cleaned' %}
-                        Available<br>Cleaned
+                        {{ _('Available/Cleaned') }}
                         {% else %}
-                        {{ stat.status }}
+                        {{ _(stat.status) }}
                         {% endif %}
                     </div>
                     <div class="bar-wrapper">
@@ -122,28 +122,28 @@
     </div>
 
     <div class="recent-kegs">
-        <h2>Recent Keg Activity</h2>
+        <h2>{{ _('Recent Keg Activity') }}</h2>
         {% if recent_kegs %}
         <table class="data-table">
             <thead>
                 <tr>
-                    <th>Keg #</th>
-                    <th>Contents</th>
-                    <th>Status</th>
-                    <th>Amount Left</th>
-                    <th>Location</th>
-                    <th>Last Measured</th>
+                    <th>{{ _('Keg #') }}</th>
+                    <th>{{ _('Contents') }}</th>
+                    <th>{{ _('Status') }}</th>
+                    <th>{{ _('Amount Left') }}</th>
+                    <th>{{ _('Location') }}</th>
+                    <th>{{ _('Last Measured') }}</th>
                 </tr>
             </thead>
             <tbody>
                 {% for keg in recent_kegs %}
                 <tr>
                     <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
-                    <td>{{ keg.contents or 'Empty' }}</td>
-                    <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status }}</span></td>
+                    <td>{{ keg.contents or 'Empty'|translate_status }}</td>
+                    <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status|translate_status }}</span></td>
                     <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
-                    <td>{{ keg.location or 'Unknown' }}</td>
-                    <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
+                    <td>{{ keg.location or 'Unknown'|translate_status }}</td>
+                    <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never'|translate_status }}</td>
                 </tr>
                 {% endfor %}
             </tbody>
