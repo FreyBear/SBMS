@@ -43,7 +43,7 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 - **Password Management**: Secure password changes and user account management
 
 ### 🌐 **Internationalization**
-- **Multi-language Support**: English and Norwegian (Norsk) language options
+- **Multi-language Support**: English, Norwegian (Norsk), and Nynorsk language options
 - **Localized Interface**: All text elements translated for international use
 - **User Language Preferences**: Individual language settings per user
 
@@ -225,8 +225,8 @@ docker exec -it sbms_db psql -U sbms_user -d sbms
 # Create backup
 ./backup_sbms.sh
 
-# Import keg data from CSV
-python3 import_kegs.py keg_import_template.csv
+# Create backup
+./backup_sbms.sh
 ```
 
 ## Configuration & Environment Variables
@@ -330,13 +330,13 @@ SBMS/
 │           └── style.css    # Application styles with expense UI
 ├── translations/            # Multi-language support
 │   ├── en/LC_MESSAGES/      # English translations
-│   └── no/LC_MESSAGES/      # Norwegian translations
-├── keg_import_template.csv  # Sample keg data
+│   ├── no/LC_MESSAGES/      # Norwegian (Bokmål) translations  
+│   └── nn/LC_MESSAGES/      # Norwegian (Nynorsk) translations
 ├── backup_sbms.sh          # Complete backup script
 ├── restore_sbms.sh         # One-click restore script
 ├── setup_auto_backup.sh    # Automated backup setup
 ├── security_check.sh       # Security validation tool
-└── *.py                    # Import and utility scripts
+└── test_restore.sh         # Backup restore testing
 ```
 
 ## Kit Management System
@@ -448,7 +448,7 @@ SBMS includes a sophisticated role-based access control system with five user ty
 
 ## Data Migration
 
-The system includes sample data based on `keg_import_template.csv`. The database will be initialized with basic recipes, brews, and keg structure when first started.
+The system includes sample data for recipes, brews, and kegs. The database will be initialized with basic data structure when first started, and you can add your own kits and recipes through the web interface.
 
 ## Extensibility
 
