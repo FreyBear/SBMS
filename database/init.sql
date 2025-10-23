@@ -91,6 +91,89 @@ CREATE TABLE brew (
     )
 );
 
+-- Table for brew tasks (fermentation schedule tracking)
+CREATE TABLE brew_task (
+    id SERIAL PRIMARY KEY,
+    brew_id INTEGER NOT NULL REFERENCES brew(id) ON DELETE CASCADE,
+    scheduled_date DATE NOT NULL,
+    completed_date DATE,
+    action TEXT NOT NULL,
+    notes TEXT,
+    is_completed BOOLEAN DEFAULT false,
+    google_calendar_event_id TEXT,
+    created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+-- Function to update brew_task updated_date
+CREATE OR REPLACE FUNCTION update_brew_task_updated_date()
+RETURNS TRIGGER AS $$
+BEGIN
+    NEW.updated_date = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ LANGUAGE plpgsql;
+
+-- Trigger for brew_task updated_date
+CREATE TRIGGER trigger_update_brew_task_updated_date
+    BEFORE UPDATE ON brew_task
+    FOR EACH ROW
+    EXECUTE FUNCTION update_brew_task_updated_date();
+
+-- Table for recipe malts
+CREATE TABLE recipe_malts (
+    id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    malt_name VARCHAR(255) NOT NULL,
+    amount_kg NUMERIC(6,3) NOT NULL,
+    malt_type VARCHAR(100),
+    lovibond NUMERIC(4,1),
+    percentage NUMERIC(5,2),
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0
+);
+
+-- Table for recipe hops
+CREATE TABLE recipe_hops (
+    id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    hop_name VARCHAR(255) NOT NULL,
+    amount_grams NUMERIC(7,2) NOT NULL,
+    alpha_acid NUMERIC(4,2),
+    time_minutes INTEGER NOT NULL,
+    hop_type VARCHAR(50),
+    hop_form VARCHAR(50),
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0
+);
+
+-- Table for recipe yeast
+CREATE TABLE recipe_yeast (
+    id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    yeast_name VARCHAR(255) NOT NULL,
+    yeast_type VARCHAR(100),
+    manufacturer VARCHAR(100),
+    product_code VARCHAR(50),
+    amount VARCHAR(100),
+    attenuation NUMERIC(4,1),
+    temperature_range VARCHAR(50),
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0
+);
+
+-- Table for recipe adjuncts
+CREATE TABLE recipe_adjuncts (
+    id SERIAL PRIMARY KEY,
+    recipe_id INTEGER NOT NULL REFERENCES recipe(id) ON DELETE CASCADE,
+    ingredient_name VARCHAR(255) NOT NULL,
+    amount VARCHAR(100),
+    ingredient_type VARCHAR(100),
+    time_added VARCHAR(100),
+    notes TEXT,
+    sort_order INTEGER DEFAULT 0
+);
+
 -- Table for kegs
 CREATE TABLE keg (
     id SERIAL PRIMARY KEY,
@@ -188,6 +271,13 @@ CREATE INDEX idx_keg_status ON keg(status);
 CREATE INDEX idx_keg_location ON keg(location);
 CREATE INDEX idx_brew_date ON brew(date_brewed);
 CREATE INDEX idx_brew_kit_id ON brew(kit_id);
+CREATE INDEX idx_brew_task_brew_id ON brew_task(brew_id);
+CREATE INDEX idx_brew_task_scheduled_date ON brew_task(scheduled_date);
+CREATE INDEX idx_brew_task_is_completed ON brew_task(is_completed);
+CREATE INDEX idx_recipe_malts_recipe ON recipe_malts(recipe_id);
+CREATE INDEX idx_recipe_hops_recipe ON recipe_hops(recipe_id);
+CREATE INDEX idx_recipe_yeast_recipe ON recipe_yeast(recipe_id);
+CREATE INDEX idx_recipe_adjuncts_recipe ON recipe_adjuncts(recipe_id);
 CREATE INDEX idx_keg_history_keg_id ON keg_history(keg_id);
 CREATE INDEX idx_keg_history_date ON keg_history(recorded_date);
 CREATE INDEX idx_expenses_user_id ON expenses(user_id);
