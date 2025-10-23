@@ -35,7 +35,7 @@ class User(UserMixin):
         
         if resource_perm == "full":
             return True
-        elif resource_perm == "edit" and action in ["view", "edit", "update"]:
+        elif resource_perm == "edit" and action in ["view", "edit", "update", "delete"]:
             return True
         elif resource_perm == "view" and action == "view":
             return True

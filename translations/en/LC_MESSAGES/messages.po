@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-09-25 21:29+0000\n"
+"POT-Creation-Date: 2025-10-22 23:10+0000\n"
 "PO-Revision-Date: 2025-09-25 19:29+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: en\n"
@@ -18,142 +18,1329 @@ msgstr ""
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.17.0\n"
 
-#: backend/app.py:25
+#: backend/app.py:39
 msgid "Please log in to access this page."
 msgstr "Please log in to access this page."
 
-#: backend/app.py:138
+#: backend/app.py:242
 #, python-format
 msgid "Welcome back, %(name)s!"
 msgstr "Welcome back, %(name)s!"
 
-#: backend/app.py:141
+#: backend/app.py:245
 msgid "Invalid username or password"
 msgstr "Invalid username or password"
 
-#: backend/app.py:143
+#: backend/app.py:247
 #, python-format
 msgid "Database error: %(error)s"
 msgstr "Database error: %(error)s"
 
-#: backend/app.py:154
+#: backend/app.py:258
 msgid "You have been logged out successfully."
 msgstr "You have been logged out successfully."
 
-#: backend/app.py:169 backend/app.py:779 backend/app.py:790
-#: frontend/templates/base.html:31
+#: backend/app.py:273 backend/app.py:2350 backend/app.py:2361
+#: frontend/templates/edit_user.html:133
 msgid "Change Password"
 msgstr "Change Password"
 
-#: backend/app.py:170 backend/app.py:780 backend/app.py:791
-#: frontend/templates/base.html:32
+#: backend/app.py:274 backend/app.py:2351 backend/app.py:2362
+#: frontend/templates/base.html:41
 msgid "Logout"
 msgstr "Logout"
 
-#: backend/app.py:374
+#: backend/app.py:517
 msgid "Keg updated successfully and history entry created"
-msgstr ""
+msgstr "Keg updated successfully and history entry created"
 
-#: backend/app.py:421
+#: backend/app.py:536
+msgid "New history entry created without updating current keg status"
+msgstr "New history entry created without updating current keg status"
+
+#: backend/app.py:585
 msgid "History entry deleted successfully"
-msgstr ""
+msgstr "History entry deleted successfully"
 
-#: backend/app.py:482
+#: backend/app.py:646
 msgid "History entry updated successfully"
-msgstr ""
+msgstr "History entry updated successfully"
 
-#: backend/app.py:774 backend/app.py:785 frontend/templates/base.html:15
+#: backend/app.py:2098
+msgid "You can only edit your own profile"
+msgstr "You can only edit your own profile"
+
+#: backend/app.py:2145
+msgid "Current password is required to change password"
+msgstr "Current password is required to change password"
+
+#: backend/app.py:2154
+msgid "Current password is incorrect"
+msgstr "Current password is incorrect"
+
+#: backend/app.py:2168
+msgid "Bank account must be exactly 11 digits"
+msgstr "Bank account must be exactly 11 digits"
+
+#: backend/app.py:2207
+msgid "Profile updated successfully!"
+msgstr "Profile updated successfully!"
+
+#: backend/app.py:2209 backend/app.py:2216
+#, fuzzy
+msgid "Password changed successfully!"
+msgstr "You have been logged out successfully."
+
+#: backend/app.py:2210
+msgid "Please log in again to see language change."
+msgstr "Please log in again to see language change."
+
+#: backend/app.py:2214
+#, python-brace-format
+msgid "User {} updated successfully!"
+msgstr "User {} updated successfully!"
+
+#: backend/app.py:2234
+msgid "You cannot delete your own account"
+msgstr "You cannot delete your own account"
+
+#: backend/app.py:2249 backend/app.py:2282
+msgid "User not found"
+msgstr "User not found"
+
+#: backend/app.py:2256
+#, python-brace-format
+msgid "User {} ({}) deleted successfully"
+msgstr "User {} ({}) deleted successfully"
+
+#: backend/app.py:2294
+msgid "New password is required"
+msgstr "New password is required"
+
+#: backend/app.py:2298 frontend/templates/reset_password.html:20
+msgid "Password must be at least 6 characters long"
+msgstr "Password must be at least 6 characters long"
+
+#: backend/app.py:2302
+msgid "Passwords do not match"
+msgstr "Passwords do not match"
+
+#: backend/app.py:2310
+#, python-brace-format
+msgid "Password reset successfully for user {}"
+msgstr "Password reset successfully for user {}"
+
+#: backend/app.py:2345 backend/app.py:2356 frontend/templates/base.html:18
 msgid "Dashboard"
 msgstr "Dashboard"
 
-#: backend/app.py:775 backend/app.py:786 frontend/templates/base.html:17
-#: frontend/templates/brews.html:19
+#: backend/app.py:2346 backend/app.py:2357 frontend/templates/base.html:20
+#: frontend/templates/brews.html:25
 msgid "Kegs"
 msgstr "Kegs"
 
-#: backend/app.py:776 backend/app.py:787 frontend/templates/base.html:20
-#: frontend/templates/recipes.html:17
+#: backend/app.py:2347 backend/app.py:2358 frontend/templates/base.html:23
+#: frontend/templates/kits.html:27 frontend/templates/recipes.html:26
 msgid "Brews"
 msgstr "Brews"
 
-#: backend/app.py:777 backend/app.py:788 frontend/templates/base.html:23
+#: backend/app.py:2348 backend/app.py:2359 frontend/templates/base.html:26
 msgid "Recipes"
 msgstr "Recipes"
 
-#: backend/app.py:778 backend/app.py:789 frontend/templates/base.html:26
+#: backend/app.py:2349 backend/app.py:2360 frontend/templates/base.html:35
 msgid "Users"
 msgstr "Users"
 
-#: frontend/templates/base.html:53
+#: backend/app.py:2845
+#, python-brace-format
+msgid "Expense submitted successfully with {} receipt(s): {}"
+msgstr "Expense submitted successfully with {} receipt(s): {}"
+
+#: backend/app.py:2848
+msgid "Expense submitted successfully"
+msgstr "Expense submitted successfully"
+
+#: backend/app.py:2881 backend/app.py:2929 backend/app.py:2971
+#: backend/app.py:2997 backend/app.py:3074 backend/app.py:3243
+msgid "Expense not found"
+msgstr "Expense not found"
+
+#: backend/app.py:2885
+msgid "Expense is not pending"
+msgstr "Expense is not pending"
+
+#: backend/app.py:2896
+msgid "Expense marked as paid successfully"
+msgstr "Expense marked as paid successfully"
+
+#: backend/app.py:2933
+msgid "Only pending expenses can be rejected"
+msgstr "Only pending expenses can be rejected"
+
+#: backend/app.py:2944
+msgid "Expense rejected successfully"
+msgstr "Expense rejected successfully"
+
+#: backend/app.py:3002
+msgid "You can only delete your own expenses"
+msgstr "You can only delete your own expenses"
+
+#: backend/app.py:3007
+msgid "Paid expenses cannot be deleted to maintain audit trail"
+msgstr "Paid expenses cannot be deleted to maintain audit trail"
+
+#: backend/app.py:3030
+msgid "Expense deleted successfully"
+msgstr "Expense deleted successfully"
+
+#: backend/app.py:3079
+msgid "You can only edit your own expenses"
+msgstr "You can only edit your own expenses"
+
+#: backend/app.py:3083
+msgid "Only rejected expenses can be edited"
+msgstr "Only rejected expenses can be edited"
+
+#: backend/app.py:3183
+#, python-brace-format
+msgid "Added {} new receipt(s): {}"
+msgstr "Added {} new receipt(s): {}"
+
+#: backend/app.py:3186
+#, python-brace-format
+msgid "Removed {} receipt(s): {}"
+msgstr "Removed {} receipt(s): {}"
+
+#: backend/app.py:3190
+#, python-brace-format
+msgid "Expense updated and resubmitted successfully. {}"
+msgstr "Expense updated and resubmitted successfully. {}"
+
+#: backend/app.py:3193
+msgid "Expense updated and resubmitted successfully"
+msgstr "Expense updated and resubmitted successfully"
+
+#: backend/app.py:3295
+msgid "Image not found"
+msgstr "Image not found"
+
+#: backend/forms.py:70
+#, fuzzy
+msgid "Amount (NOK)"
+msgstr "Amount Left"
+
+#: backend/forms.py:74 backend/forms.py:136 backend/forms.py:169
+#: frontend/templates/create_recipe.html:62 frontend/templates/expenses.html:27
+#: frontend/templates/index.html:233 frontend/templates/kit_detail.html:86
+#: frontend/templates/recipe_detail.html:98
+#: frontend/templates/recipe_detail.html:365
+#: frontend/templates/reject_expense.html:30
+msgid "Description"
+msgstr "Description"
+
+#: backend/forms.py:78 frontend/templates/expenses.html:28
+#: frontend/templates/reject_expense.html:26
+msgid "Purchase Date"
+msgstr "Purchase Date"
+
+#: backend/forms.py:79
+#, fuzzy
+msgid "Receipt Images"
+msgstr "Recipes"
+
+#: backend/forms.py:83
+msgid "Submit Expense"
+msgstr "Submit Expense"
+
+#: backend/forms.py:116 backend/forms.py:149 frontend/templates/kits.html:20
+#, fuzzy
+msgid "Kit Name"
+msgstr "Recipes"
+
+#: backend/forms.py:120 backend/forms.py:153
+#: frontend/templates/kit_detail.html:44
+msgid "Kit Type"
+msgstr "Kit Type"
+
+#: backend/forms.py:121 backend/forms.py:154
+msgid "Fresh Wort"
+msgstr "Fresh Wort"
+
+#: backend/forms.py:122 backend/forms.py:155
+msgid "Cider"
+msgstr "Cider"
+
+#: backend/forms.py:123 backend/forms.py:156
+msgid "Red Wine"
+msgstr "Red Wine"
+
+#: backend/forms.py:124 backend/forms.py:157
+msgid "White Wine"
+msgstr "White Wine"
+
+#: backend/forms.py:125 backend/forms.py:158
+msgid "Rose Wine"
+msgstr "Rose Wine"
+
+#: backend/forms.py:126 backend/forms.py:159
+msgid "Sparkling Wine"
+msgstr "Sparkling Wine"
+
+#: backend/forms.py:127 backend/forms.py:160
+msgid "Mead"
+msgstr "Mead"
+
+#: backend/forms.py:129 backend/forms.py:162 frontend/templates/kits.html:22
+#: frontend/templates/recipe_detail.html:180
+msgid "Manufacturer"
+msgstr "Manufacturer"
+
+#: backend/forms.py:130 backend/forms.py:163 backend/forms.py:196
+#: backend/forms.py:217 frontend/templates/brew_detail.html:43
+#: frontend/templates/brews.html:21 frontend/templates/kit_detail.html:49
+#: frontend/templates/kits.html:23 frontend/templates/recipe_detail.html:331
+#: frontend/templates/recipes.html:21
+msgid "Style"
+msgstr "Style"
+
+#: backend/forms.py:131 backend/forms.py:164 backend/forms.py:197
+#: backend/forms.py:218
+msgid "Estimated ABV (%)"
+msgstr "Estimated ABV (%)"
+
+#: backend/forms.py:132 backend/forms.py:165
+#, fuzzy
+msgid "Volume (L)"
+msgstr "Volume"
+
+#: backend/forms.py:133 backend/forms.py:166
+#: frontend/templates/kit_detail.html:67 frontend/templates/kits.html:26
+msgid "Cost"
+msgstr "Cost"
+
+#: backend/forms.py:134 backend/forms.py:167
+#: frontend/templates/kit_detail.html:73
+msgid "Supplier"
+msgstr "Supplier"
+
+#: backend/forms.py:135 backend/forms.py:168
+#: frontend/templates/kit_detail.html:93
+msgid "Additional Ingredients Needed"
+msgstr "Additional Ingredients Needed"
+
+#: backend/forms.py:137 backend/forms.py:170 backend/forms.py:206
+#: backend/forms.py:227 backend/forms.py:235 backend/forms.py:245
+#: frontend/templates/brew_detail.html:173
+#: frontend/templates/create_brew.html:120
+#: frontend/templates/create_recipe.html:138
+#: frontend/templates/edit_brew.html:105 frontend/templates/edit_brew.html:151
+#: frontend/templates/edit_brew.html:226
+#: frontend/templates/edit_dry_hop.html:84
+#: frontend/templates/edit_keg_history.html:71
+#: frontend/templates/keg_detail.html:97 frontend/templates/kit_detail.html:100
+#: frontend/templates/recipe_detail.html:119
+#: frontend/templates/recipe_detail.html:151
+#: frontend/templates/recipe_detail.html:184
+#: frontend/templates/recipe_detail.html:215
+#: frontend/templates/recipe_detail.html:254
+#: frontend/templates/recipe_detail.html:269
+#: frontend/templates/update_keg.html:68
+#, fuzzy
+msgid "Notes"
+msgstr "Contents"
+
+#: backend/forms.py:138 backend/forms.py:171
+msgid "Label Image"
+msgstr "Label Image"
+
+#: backend/forms.py:142 backend/forms.py:175
+msgid "Instruction PDF"
+msgstr "Instruction PDF"
+
+#: backend/forms.py:146
+msgid "Create Kit"
+msgstr "Create Kit"
+
+#: backend/forms.py:179
+msgid "Update Kit"
+msgstr "Update Kit"
+
+#: backend/forms.py:185 backend/forms.py:210 frontend/templates/brews.html:18
+#: frontend/templates/kit_detail.html:155
+#, fuzzy
+msgid "Brew Name"
+msgstr "Brew"
+
+#: backend/forms.py:186 backend/forms.py:211
+#: frontend/templates/brew_detail.html:27 frontend/templates/brews.html:19
+msgid "Date Brewed"
+msgstr "Date Brewed"
+
+#: backend/forms.py:189 backend/forms.py:214
+#: frontend/templates/create_brew.html:44
+#, fuzzy
+msgid "Brew Source"
+msgstr "Brews"
+
+#: backend/forms.py:190 frontend/templates/brew_detail.html:34
+#: frontend/templates/brews.html:36
+#, fuzzy
+msgid "Recipe"
+msgstr "Recipes"
+
+#: backend/forms.py:190 frontend/templates/brew_detail.html:36
+#: frontend/templates/brews.html:38
+msgid "Kit"
+msgstr "Kit"
+
+#: backend/forms.py:192
+#, fuzzy
+msgid "Select Recipe"
+msgstr "Recipes"
+
+#: backend/forms.py:193
+msgid "Select Kit"
+msgstr "Select Kit"
+
+#: backend/forms.py:198 backend/forms.py:219
+msgid "Expected OG"
+msgstr "Expected OG"
+
+#: backend/forms.py:199 backend/forms.py:220
+msgid "Expected FG"
+msgstr "Expected FG"
+
+#: backend/forms.py:200 backend/forms.py:221
+#: frontend/templates/recipe_detail.html:335
+msgid "Batch Size (L)"
+msgstr "Batch Size (L)"
+
+#: backend/forms.py:203 backend/forms.py:224
+msgid "Actual OG"
+msgstr "Actual OG"
+
+#: backend/forms.py:204 backend/forms.py:225
+msgid "Actual FG"
+msgstr "Actual FG"
+
+#: backend/forms.py:207
+msgid "Create Brew"
+msgstr "Create Brew"
+
+#: backend/forms.py:228
+msgid "Update Brew"
+msgstr "Update Brew"
+
+#: backend/forms.py:231 backend/forms.py:239
+#: frontend/templates/edit_brew.html:133 frontend/templates/edit_brew.html:208
+msgid "Scheduled Date"
+msgstr "Scheduled Date"
+
+#: backend/forms.py:232 backend/forms.py:241
+msgid "Hop Variety/Ingredient"
+msgstr "Hop Variety/Ingredient"
+
+#: backend/forms.py:233 backend/forms.py:242
+#: frontend/templates/edit_brew.html:141 frontend/templates/edit_brew.html:216
+msgid "Amount (grams)"
+msgstr "Amount (grams)"
+
+#: backend/forms.py:234 backend/forms.py:243
+#: frontend/templates/edit_brew.html:147 frontend/templates/edit_brew.html:222
+#: frontend/templates/recipe_detail.html:145
+#: frontend/templates/recipe_shopping_cart.html:64
+msgid "Hop Variety"
+msgstr "Hop Variety"
+
+#: backend/forms.py:236 frontend/templates/add_dry_hop.html:8
+#: frontend/templates/brew_detail.html:164
+msgid "Add Dry Hop Schedule"
+msgstr "Add Dry Hop Schedule"
+
+#: backend/forms.py:240
+msgid "Completed Date"
+msgstr "Completed Date"
+
+#: backend/forms.py:244
+msgid "Mark as Completed"
+msgstr "Mark as Completed"
+
+#: backend/forms.py:246
+msgid "Update Dry Hop"
+msgstr "Update Dry Hop"
+
+#: frontend/templates/add_dry_hop.html:3 frontend/templates/brew_detail.html:12
+#: frontend/templates/edit_brew.html:123 frontend/templates/edit_brew.html:156
+msgid "Add Dry Hop"
+msgstr "Add Dry Hop"
+
+#: frontend/templates/add_dry_hop.html:9 frontend/templates/edit_dry_hop.html:9
+#: frontend/templates/kegs.html:58
+msgid "Brew"
+msgstr "Brew"
+
+#: frontend/templates/add_dry_hop.html:10 frontend/templates/edit_brew.html:9
+#: frontend/templates/edit_dry_hop.html:10
+msgid "Back to Brew"
+msgstr "Back to Brew"
+
+#: frontend/templates/add_dry_hop.html:17
+#: frontend/templates/edit_dry_hop.html:17
+msgid "Dry Hop Details"
+msgstr "Dry Hop Details"
+
+#: frontend/templates/add_dry_hop.html:47
+msgid "e.g., Cascade, Centennial, Mosaic"
+msgstr "e.g., Cascade, Centennial, Mosaic"
+
+#: frontend/templates/add_dry_hop.html:48
+msgid "Main ingredient or hop name for this dry hop addition."
+msgstr "Main ingredient or hop name for this dry hop addition."
+
+#: frontend/templates/add_dry_hop.html:60
+#: frontend/templates/edit_dry_hop.html:59
+msgid "Optional: specific variety or blend"
+msgstr "Optional: specific variety or blend"
+
+#: frontend/templates/add_dry_hop.html:61
+msgid ""
+"Optional: More specific hop variety information if different from "
+"ingredient name."
+msgstr ""
+
+#: frontend/templates/add_dry_hop.html:66
+msgid "Optional: Any special instructions, temperatures, or notes..."
+msgstr "Optional: Any special instructions, temperatures, or notes..."
+
+#: frontend/templates/add_dry_hop.html:72
+#: frontend/templates/create_brew.html:130
+#: frontend/templates/create_expense.html:101
+#: frontend/templates/create_kit.html:213
+#: frontend/templates/create_recipe.html:148
+#: frontend/templates/edit_brew.html:115 frontend/templates/edit_brew.html:157
+#: frontend/templates/edit_brew.html:232
+#: frontend/templates/edit_dry_hop.html:94
+#: frontend/templates/edit_expense.html:121
+#: frontend/templates/edit_keg_history.html:10
+#: frontend/templates/edit_keg_history.html:77
+#: frontend/templates/edit_kit.html:237 frontend/templates/edit_user.html:193
+#: frontend/templates/edit_user.html:195
+#: frontend/templates/recipe_detail.html:453
+#: frontend/templates/reject_expense.html:59
+#: frontend/templates/reset_password.html:30
+#: frontend/templates/update_keg.html:80
+msgid "Cancel"
+msgstr "Cancel"
+
+#: frontend/templates/add_dry_hop.html:77
+msgid "Tips for Dry Hopping"
+msgstr "Tips for Dry Hopping"
+
+#: frontend/templates/add_dry_hop.html:79
+msgid "Typical dry hop amounts: 1-4g per liter of beer"
+msgstr "Typical dry hop amounts: 1-4g per liter of beer"
+
+#: frontend/templates/add_dry_hop.html:80
+msgid "Schedule 2-4 days before kegging for best aroma"
+msgstr "Schedule 2-4 days before kegging for best aroma"
+
+#: frontend/templates/add_dry_hop.html:81
+msgid "Consider multiple additions for complex hop profiles"
+msgstr "Consider multiple additions for complex hop profiles"
+
+#: frontend/templates/add_dry_hop.html:82
+msgid "Keep hops at fermentation temperature"
+msgstr "Keep hops at fermentation temperature"
+
+#: frontend/templates/base.html:29
+msgid "Kits"
+msgstr "Kits"
+
+#: frontend/templates/base.html:32 frontend/templates/expenses.html:3
+msgid "Expenses"
+msgstr "Expenses"
+
+#: frontend/templates/base.html:40 frontend/templates/edit_user.html:4
+#: frontend/templates/edit_user.html:12 frontend/templates/users.html:77
+msgid "My Profile"
+msgstr "My Profile"
+
+#: frontend/templates/base.html:62
 msgid "Small Brewery Management System"
 msgstr "Small Brewery Management System"
+
+#: frontend/templates/brew_detail.html:11 frontend/templates/edit_brew.html:3
+#: frontend/templates/edit_brew.html:8
+#, fuzzy
+msgid "Edit Brew"
+msgstr "Brews"
+
+#: frontend/templates/brew_detail.html:15
+msgid "Delete Brew"
+msgstr "Delete Brew"
+
+#: frontend/templates/brew_detail.html:17 frontend/templates/create_brew.html:9
+msgid "Back to Brews"
+msgstr "Back to Brews"
+
+#: frontend/templates/brew_detail.html:24
+#: frontend/templates/create_brew.html:16 frontend/templates/create_kit.html:20
+#: frontend/templates/create_recipe.html:14
+#: frontend/templates/edit_brew.html:16 frontend/templates/edit_kit.html:20
+msgid "Basic Information"
+msgstr "Basic Information"
+
+#: frontend/templates/brew_detail.html:28 frontend/templates/brews.html:40
+#: frontend/templates/kit_detail.html:172
+msgid "Unknown"
+msgstr "Unknown"
+
+#: frontend/templates/brew_detail.html:31 frontend/templates/brews.html:20
+msgid "Source"
+msgstr "Source"
+
+#: frontend/templates/brew_detail.html:38
+msgid "Unknown source"
+msgstr "Unknown source"
+
+#: frontend/templates/brew_detail.html:47 frontend/templates/brews.html:23
+#: frontend/templates/recipe_detail.html:66 frontend/templates/recipes.html:25
+msgid "Batch Size"
+msgstr "Batch Size"
+
+#: frontend/templates/brew_detail.html:55
+msgid "Gravity & ABV"
+msgstr "Gravity & ABV"
+
+#: frontend/templates/brew_detail.html:61
+#: frontend/templates/create_recipe.html:47
+msgid "Original Gravity (OG)"
+msgstr "Original Gravity (OG)"
+
+#: frontend/templates/brew_detail.html:62
+#: frontend/templates/create_recipe.html:51
+msgid "Final Gravity (FG)"
+msgstr "Final Gravity (FG)"
+
+#: frontend/templates/brew_detail.html:63 frontend/templates/brews.html:22
+#: frontend/templates/kits.html:24 frontend/templates/recipes.html:23
+msgid "ABV"
+msgstr "ABV"
+
+#: frontend/templates/brew_detail.html:68
+msgid "Expected"
+msgstr "Expected"
+
+#: frontend/templates/brew_detail.html:74 frontend/templates/brews.html:46
+msgid "Actual"
+msgstr "Actual"
+
+#: frontend/templates/brew_detail.html:87
+msgid "Difference"
+msgstr "Difference"
+
+#: frontend/templates/brew_detail.html:91
+#: frontend/templates/brew_detail.html:98
+msgid "points"
+msgstr "points"
+
+#: frontend/templates/brew_detail.html:123
+#: frontend/templates/edit_brew.html:122
+msgid "Dry Hopping Schedule"
+msgstr "Dry Hopping Schedule"
+
+#: frontend/templates/brew_detail.html:138
+msgid "Scheduled"
+msgstr "Scheduled"
+
+#: frontend/templates/brew_detail.html:142
+#: frontend/templates/edit_brew.html:185
+msgid "Completed"
+msgstr "Completed"
+
+#: frontend/templates/brew_detail.html:153 frontend/templates/brews.html:65
+#: frontend/templates/edit_brew.html:194 frontend/templates/keg_detail.html:113
+#: frontend/templates/kegs.html:79 frontend/templates/kit_detail.html:179
+#: frontend/templates/kits.html:74 frontend/templates/recipes.html:73
+#: frontend/templates/users.html:67
+msgid "Edit"
+msgstr "Edit"
+
+#: frontend/templates/brew_detail.html:153
+#: frontend/templates/edit_brew.html:196
+msgid "Complete"
+msgstr "Complete"
+
+#: frontend/templates/brew_detail.html:162
+msgid "No dry hopping schedule for this brew."
+msgstr "No dry hopping schedule for this brew."
 
 #: frontend/templates/brews.html:8
 #, fuzzy
 msgid "Brew Management"
 msgstr "Keg Management"
 
-#: frontend/templates/brews.html:15
-#, fuzzy
-msgid "Brew Name"
-msgstr "Brew"
+#: frontend/templates/brews.html:10 frontend/templates/create_brew.html:3
+#: frontend/templates/create_brew.html:8
+msgid "Create New Brew"
+msgstr "Create New Brew"
 
-#: frontend/templates/brews.html:16
-msgid "Date Brewed"
+#: frontend/templates/brews.html:24
+msgid "Dry Hops"
+msgstr "Dry Hops"
+
+#: frontend/templates/brews.html:26 frontend/templates/expenses.html:32
+#: frontend/templates/index.html:234 frontend/templates/keg_detail.html:98
+#: frontend/templates/kegs.html:63 frontend/templates/kit_detail.html:158
+#: frontend/templates/kits.html:28 frontend/templates/recipe_detail.html:270
+#: frontend/templates/recipes.html:27 frontend/templates/users.html:29
+msgid "Actions"
+msgstr "Actions"
+
+#: frontend/templates/brews.html:48
+msgid "Est."
+msgstr "Est."
+
+#: frontend/templates/brews.html:56
+msgid "completed"
+msgstr "completed"
+
+#: frontend/templates/brews.html:58
+#, fuzzy
+msgid "None"
+msgstr "Contents"
+
+#: frontend/templates/brews.html:61
+#, fuzzy
+msgid "kegs"
+msgstr "Kegs"
+
+#: frontend/templates/brews.html:63 frontend/templates/edit_expense.html:94
+#: frontend/templates/edit_kit.html:213
+#: frontend/templates/expense_receipts.html:63 frontend/templates/kegs.html:78
+#: frontend/templates/kit_detail.html:177 frontend/templates/kits.html:70
+#: frontend/templates/recipe_detail.html:294 frontend/templates/recipes.html:69
+msgid "View"
+msgstr "View"
+
+#: frontend/templates/brews.html:68 frontend/templates/edit_brew.html:198
+#: frontend/templates/expenses.html:105 frontend/templates/expenses.html:118
+#: frontend/templates/expenses.html:133 frontend/templates/expenses.html:143
+#: frontend/templates/expenses.html:161
+#: frontend/templates/recipe_detail.html:306
+#: frontend/templates/recipe_detail.html:510 frontend/templates/users.html:72
+msgid "Delete"
+msgstr "Delete"
+
+#: frontend/templates/brews.html:77
+msgid "No brews found in the system."
+msgstr "No brews found in the system."
+
+#: frontend/templates/brews.html:79
+msgid "Create Your First Brew"
+msgstr "Create Your First Brew"
+
+#: frontend/templates/create_brew.html:45
+msgid ""
+"Select a recipe or kit as the base for this brew. Values will be "
+"automatically filled but can be overridden."
 msgstr ""
 
-#: frontend/templates/brews.html:17
+#: frontend/templates/create_brew.html:64 frontend/templates/edit_brew.html:50
+msgid "Brew Details"
+msgstr "Brew Details"
+
+#: frontend/templates/create_brew.html:65
+msgid ""
+"These fields are auto-filled from your selected recipe/kit but can be "
+"modified."
+msgstr ""
+
+#: frontend/templates/create_brew.html:98 frontend/templates/edit_brew.html:83
+msgid "Actual Measurements"
+msgstr "Actual Measurements"
+
+#: frontend/templates/create_brew.html:99 frontend/templates/edit_brew.html:84
+msgid "Enter actual gravity readings. ABV will be calculated automatically."
+msgstr "Enter actual gravity readings. ABV will be calculated automatically."
+
+#: frontend/templates/create_brew.html:113 frontend/templates/edit_brew.html:98
+msgid "Calculated ABV"
+msgstr "Calculated ABV"
+
+#: frontend/templates/create_brew.html:114 frontend/templates/edit_brew.html:99
+msgid "Auto-calculated"
+msgstr "Auto-calculated"
+
+#: frontend/templates/create_brew.html:124
+#: frontend/templates/edit_brew.html:109
+msgid "Add any brewing notes, observations, or modifications..."
+msgstr "Add any brewing notes, observations, or modifications..."
+
+#: frontend/templates/create_expense.html:3
+#: frontend/templates/create_expense.html:8 frontend/templates/expenses.html:11
+msgid "Submit New Expense"
+msgstr "Submit New Expense"
+
+#: frontend/templates/create_expense.html:10
+#: frontend/templates/edit_expense.html:10
+#: frontend/templates/expense_receipts.html:14
+#: frontend/templates/reject_expense.html:10
+msgid "Back to Expenses"
+msgstr "Back to Expenses"
+
+#: frontend/templates/create_expense.html:22
+#: frontend/templates/edit_expense.html:30
+msgid "Amount in Norwegian Kroner (NOK)"
+msgstr "Amount in Norwegian Kroner (NOK)"
+
+#: frontend/templates/create_expense.html:35
+#: frontend/templates/edit_expense.html:43
+msgid "When did you make this purchase?"
+msgstr "When did you make this purchase?"
+
+#: frontend/templates/create_expense.html:48
+msgid "Describe what was purchased and why it was necessary for the brewery..."
+msgstr "Describe what was purchased and why it was necessary for the brewery..."
+
+#: frontend/templates/create_expense.html:49
+#: frontend/templates/edit_expense.html:57
+msgid "Provide a detailed description of the purchase (10-500 characters)"
+msgstr "Provide a detailed description of the purchase (10-500 characters)"
+
+#: frontend/templates/create_expense.html:62
+msgid ""
+"Upload receipt images (JPG, PNG, PDF - max 5MB each). You can select "
+"multiple files by holding Ctrl/Cmd while clicking."
+msgstr ""
+
+#: frontend/templates/create_expense.html:74
+msgid "Reimbursement Information"
+msgstr "Reimbursement Information"
+
+#: frontend/templates/create_expense.html:77
 #, fuzzy
-msgid "Recipe"
+msgid "Your Name"
+msgstr "Users"
+
+#: frontend/templates/create_expense.html:81
+#: frontend/templates/expenses.html:24 frontend/templates/users.html:25
+msgid "Bank Account"
+msgstr "Bank Account"
+
+#: frontend/templates/create_expense.html:86
+#: frontend/templates/expenses.html:46
+#: frontend/templates/reset_password.html:11
+#: frontend/templates/reset_password.html:12
+#, fuzzy
+msgid "Not set"
+msgstr "Contents"
+
+#: frontend/templates/create_expense.html:87
+msgid "Add bank account"
+msgstr "Add bank account"
+
+#: frontend/templates/create_expense.html:94
+#: frontend/templates/reject_expense.html:54
+#: frontend/templates/reset_password.html:34
+msgid "Warning"
+msgstr "Warning"
+
+#: frontend/templates/create_expense.html:94
+msgid ""
+"You have not set your bank account number. Please add it in your profile "
+"for faster reimbursement."
+msgstr ""
+
+#: frontend/templates/create_expense.html:393
+msgid "No files selected"
+msgstr "No files selected"
+
+#: frontend/templates/create_expense.html:429
+msgid "file(s) selected"
+msgstr "file(s) selected"
+
+#: frontend/templates/create_expense.html:435
+msgid "Some files exceed 5MB limit"
+msgstr "Some files exceed 5MB limit"
+
+#: frontend/templates/create_kit.html:3 frontend/templates/kits.html:11
+msgid "Create New Kit"
+msgstr "Create New Kit"
+
+#: frontend/templates/create_kit.html:8
+msgid "Add New Kit"
+msgstr "Add New Kit"
+
+#: frontend/templates/create_kit.html:10 frontend/templates/kit_detail.html:36
+msgid "Back to Kits"
+msgstr "Back to Kits"
+
+#: frontend/templates/create_kit.html:24 frontend/templates/edit_kit.html:24
+msgid "Enter kit name..."
+msgstr "Enter kit name..."
+
+#: frontend/templates/create_kit.html:25 frontend/templates/edit_kit.html:25
+msgid "A descriptive name for the kit"
+msgstr "A descriptive name for the kit"
+
+#: frontend/templates/create_kit.html:38 frontend/templates/edit_kit.html:38
+msgid "Select the type of kit"
+msgstr "Select the type of kit"
+
+#: frontend/templates/create_kit.html:51 frontend/templates/edit_kit.html:51
+msgid "Enter manufacturer name..."
+msgstr "Enter manufacturer name..."
+
+#: frontend/templates/create_kit.html:52 frontend/templates/edit_kit.html:52
+msgid "The company or brand that produces this kit"
+msgstr "The company or brand that produces this kit"
+
+#: frontend/templates/create_kit.html:64 frontend/templates/edit_kit.html:64
+msgid "Enter style (e.g., IPA, Stout, Chardonnay...)"
+msgstr "Enter style (e.g., IPA, Stout, Chardonnay...)"
+
+#: frontend/templates/create_kit.html:65 frontend/templates/edit_kit.html:65
+msgid "Optional style or variety of the kit"
+msgstr "Optional style or variety of the kit"
+
+#: frontend/templates/create_kit.html:78 frontend/templates/edit_kit.html:78
+msgid "Technical Specifications"
+msgstr "Technical Specifications"
+
+#: frontend/templates/create_kit.html:83 frontend/templates/edit_kit.html:83
+msgid "Expected batch size in liters"
+msgstr "Expected batch size in liters"
+
+#: frontend/templates/create_kit.html:96 frontend/templates/edit_kit.html:96
+msgid "Expected alcohol by volume percentage"
+msgstr "Expected alcohol by volume percentage"
+
+#: frontend/templates/create_kit.html:111 frontend/templates/edit_kit.html:111
+msgid "Cost of the kit"
+msgstr "Cost of the kit"
+
+#: frontend/templates/create_kit.html:123 frontend/templates/edit_kit.html:123
+msgid "Where to buy this kit..."
+msgstr "Where to buy this kit..."
+
+#: frontend/templates/create_kit.html:124 frontend/templates/edit_kit.html:124
+msgid "Supplier or store where this kit can be purchased"
+msgstr "Supplier or store where this kit can be purchased"
+
+#: frontend/templates/create_kit.html:138 frontend/templates/edit_kit.html:138
+#: frontend/templates/kit_detail.html:82
+msgid "Kit Details"
+msgstr "Kit Details"
+
+#: frontend/templates/create_kit.html:141 frontend/templates/edit_kit.html:154
+msgid "List any additional ingredients needed (sugar, yeast, etc.)..."
+msgstr "List any additional ingredients needed (sugar, yeast, etc.)..."
+
+#: frontend/templates/create_kit.html:142 frontend/templates/edit_kit.html:155
+msgid "Describe what additional ingredients are needed beyond the kit"
+msgstr "Describe what additional ingredients are needed beyond the kit"
+
+#: frontend/templates/create_kit.html:154 frontend/templates/edit_kit.html:141
+msgid "Describe the kit, its contents, and any special characteristics..."
+msgstr "Describe the kit, its contents, and any special characteristics..."
+
+#: frontend/templates/create_kit.html:155 frontend/templates/edit_kit.html:142
+msgid "General description of the kit"
+msgstr "General description of the kit"
+
+#: frontend/templates/create_kit.html:167 frontend/templates/edit_kit.html:167
+msgid "Any additional notes, tips, or special considerations..."
+msgstr "Any additional notes, tips, or special considerations..."
+
+#: frontend/templates/create_kit.html:168 frontend/templates/edit_kit.html:168
+msgid "Optional additional notes or tips"
+msgstr "Optional additional notes or tips"
+
+#: frontend/templates/create_kit.html:181 frontend/templates/edit_kit.html:181
+msgid "Kit Documentation"
+msgstr "Kit Documentation"
+
+#: frontend/templates/create_kit.html:186 frontend/templates/edit_kit.html:196
+msgid "Upload kit label image (JPG, PNG - max 5MB)"
+msgstr "Upload kit label image (JPG, PNG - max 5MB)"
+
+#: frontend/templates/create_kit.html:199 frontend/templates/edit_kit.html:220
+msgid "Upload instruction PDF (PDF only - max 5MB)"
+msgstr "Upload instruction PDF (PDF only - max 5MB)"
+
+#: frontend/templates/create_kit.html:496
+msgid "File selected"
+msgstr "File selected"
+
+#: frontend/templates/create_kit.html:501 frontend/templates/edit_kit.html:594
+msgid "File exceeds 5MB limit"
+msgstr "File exceeds 5MB limit"
+
+#: frontend/templates/create_recipe.html:8 frontend/templates/recipes.html:11
+#, fuzzy
+msgid "Create New Recipe"
 msgstr "Recipes"
 
-#: frontend/templates/brews.html:18 frontend/templates/recipes.html:16
-msgid "Style"
+#: frontend/templates/create_recipe.html:9
+#: frontend/templates/recipe_detail.html:58
+#, fuzzy
+msgid "Back to Recipes"
+msgstr "Recipes"
+
+#: frontend/templates/create_recipe.html:17
+#: frontend/templates/recipe_detail.html:327 frontend/templates/recipes.html:20
+#, fuzzy
+msgid "Recipe Name"
+msgstr "Recipes"
+
+#: frontend/templates/create_recipe.html:21
+msgid "Beer Style"
+msgstr "Beer Style"
+
+#: frontend/templates/create_recipe.html:25
+msgid "Batch Size (Liters)"
+msgstr "Batch Size (Liters)"
+
+#: frontend/templates/create_recipe.html:29
+msgid "Boil Time (Minutes)"
+msgstr "Boil Time (Minutes)"
+
+#: frontend/templates/create_recipe.html:36
+msgid "Target Specifications"
+msgstr "Target Specifications"
+
+#: frontend/templates/create_recipe.html:39
+#: frontend/templates/recipe_detail.html:343
+msgid "Target ABV (%)"
+msgstr "Target ABV (%)"
+
+#: frontend/templates/create_recipe.html:43
+msgid "IBU (International Bitterness Units)"
+msgstr "IBU (International Bitterness Units)"
+
+#: frontend/templates/create_recipe.html:55
+msgid "Mash Efficiency (%)"
+msgstr "Mash Efficiency (%)"
+
+#: frontend/templates/create_recipe.html:64
+msgid "Recipe Description"
+msgstr "Recipe Description"
+
+#: frontend/templates/create_recipe.html:66
+msgid "Describe the beer, its characteristics, and what makes it special..."
+msgstr "Describe the beer, its characteristics, and what makes it special..."
+
+#: frontend/templates/create_recipe.html:71
+#: frontend/templates/recipe_detail.html:236
+msgid "Brewing Process"
+msgstr "Brewing Process"
+
+#: frontend/templates/create_recipe.html:73
+#: frontend/templates/recipe_detail.html:240
+#: frontend/templates/recipe_detail.html:370
+msgid "Mash Schedule"
+msgstr "Mash Schedule"
+
+#: frontend/templates/create_recipe.html:75
+msgid "e.g., Mash at 66°C for 60 minutes, mash out at 76°C for 10 minutes"
+msgstr "e.g., Mash at 66°C for 60 minutes, mash out at 76°C for 10 minutes"
+
+#: frontend/templates/create_recipe.html:79
+#: frontend/templates/recipe_detail.html:247
+#: frontend/templates/recipe_detail.html:375
+msgid "Brewing Instructions"
+msgstr "Brewing Instructions"
+
+#: frontend/templates/create_recipe.html:81
+msgid ""
+"Step-by-step brewing process:\n"
+"1. Heat strike water to...\n"
+"2. Mash in at...\n"
+"3. Boil for... adding hops at...\n"
+"4. Cool to...\n"
+"5. Ferment for..."
 msgstr ""
 
-#: frontend/templates/brews.html:20 frontend/templates/edit_keg_history.html:71
-#: frontend/templates/keg_detail.html:97 frontend/templates/recipes.html:18
-#: frontend/templates/update_keg.html:68
+#: frontend/templates/create_recipe.html:87
+#: frontend/templates/recipe_detail.html:105
+#: frontend/templates/recipe_detail.html:386
+msgid "Ingredients"
+msgstr "Ingredients"
+
+#: frontend/templates/create_recipe.html:91
+msgid "Malts"
+msgstr "Malts"
+
+#: frontend/templates/create_recipe.html:94
+msgid "Malt name (e.g., Pilsner Malt)"
+msgstr "Malt name (e.g., Pilsner Malt)"
+
+#: frontend/templates/create_recipe.html:95
 #, fuzzy
-msgid "Notes"
-msgstr "Contents"
+msgid "Amount (kg)"
+msgstr "Amount Left"
+
+#: frontend/templates/create_recipe.html:96
+msgid "Type (e.g., Base, Crystal)"
+msgstr "Type (e.g., Base, Crystal)"
+
+#: frontend/templates/create_recipe.html:97
+#, fuzzy
+msgid "Lovibond"
+msgstr "Location"
+
+#: frontend/templates/create_recipe.html:101
+msgid "Add Malt"
+msgstr "Add Malt"
+
+#: frontend/templates/create_recipe.html:106
+#: frontend/templates/recipe_detail.html:141
+#: frontend/templates/recipe_detail.html:407
+#: frontend/templates/recipe_shopping_cart.html:60
+msgid "Hops"
+msgstr "Hops"
+
+#: frontend/templates/create_recipe.html:109
+msgid "Hop variety (e.g., Cascade)"
+msgstr "Hop variety (e.g., Cascade)"
+
+#: frontend/templates/create_recipe.html:110
+#: frontend/templates/create_recipe.html:127
+#, fuzzy
+msgid "Amount (g)"
+msgstr "Amount Left"
+
+#: frontend/templates/create_recipe.html:111
+msgid "Time (min)"
+msgstr "Time (min)"
+
+#: frontend/templates/create_recipe.html:112
+msgid "Form (e.g., Pellets)"
+msgstr "Form (e.g., Pellets)"
+
+#: frontend/templates/create_recipe.html:113
+msgid "Alpha %"
+msgstr "Alpha %"
+
+#: frontend/templates/create_recipe.html:117
+msgid "Add Hop"
+msgstr "Add Hop"
+
+#: frontend/templates/create_recipe.html:122
+#: frontend/templates/recipe_detail.html:174
+#: frontend/templates/recipe_detail.html:430
+#: frontend/templates/recipe_shopping_cart.html:96
+msgid "Yeast"
+msgstr "Yeast"
+
+#: frontend/templates/create_recipe.html:125
+msgid "Yeast strain (e.g., SafAle US-05)"
+msgstr "Yeast strain (e.g., SafAle US-05)"
+
+#: frontend/templates/create_recipe.html:126
+msgid "Type (e.g., Ale, Lager)"
+msgstr "Type (e.g., Ale, Lager)"
+
+#: frontend/templates/create_recipe.html:128
+msgid "Temp Low (°C)"
+msgstr "Temp Low (°C)"
+
+#: frontend/templates/create_recipe.html:129
+msgid "Temp High (°C)"
+msgstr "Temp High (°C)"
+
+#: frontend/templates/create_recipe.html:133
+msgid "Add Yeast"
+msgstr "Add Yeast"
+
+#: frontend/templates/create_recipe.html:140
+#, fuzzy
+msgid "Recipe Notes"
+msgstr "Recipes"
+
+#: frontend/templates/create_recipe.html:142
+msgid "Any additional notes about this recipe..."
+msgstr "Any additional notes about this recipe..."
+
+#: frontend/templates/create_recipe.html:147
+#, fuzzy
+msgid "Create Recipe"
+msgstr "Recipes"
+
+#: frontend/templates/create_recipe.html:153
+msgid "Tips for Recipe Creation"
+msgstr "Tips for Recipe Creation"
+
+#: frontend/templates/create_recipe.html:155
+msgid "Add as many ingredients as you need using the + buttons"
+msgstr "Add as many ingredients as you need using the + buttons"
+
+#: frontend/templates/create_recipe.html:156
+msgid "Empty ingredient rows will be ignored"
+msgstr "Empty ingredient rows will be ignored"
+
+#: frontend/templates/create_recipe.html:157
+msgid "You can edit and add more ingredients after creation"
+msgstr "You can edit and add more ingredients after creation"
+
+#: frontend/templates/create_recipe.html:158
+msgid "Create versions as you refine the recipe"
+msgstr "Create versions as you refine the recipe"
+
+#: frontend/templates/create_recipe.html:159
+msgid "Generate shopping carts for ingredient purchases"
+msgstr "Generate shopping carts for ingredient purchases"
+
+#: frontend/templates/edit_brew.html:45
+msgid "The brew source (recipe or kit) cannot be changed after creation."
+msgstr "The brew source (recipe or kit) cannot be changed after creation."
+
+#: frontend/templates/edit_brew.html:128
+msgid "Add New Dry Hop"
+msgstr "Add New Dry Hop"
+
+#: frontend/templates/edit_brew.html:137 frontend/templates/edit_brew.html:212
+#: frontend/templates/recipe_detail.html:211
+msgid "Ingredient"
+msgstr "Ingredient"
+
+#: frontend/templates/edit_brew.html:190
+#: frontend/templates/edit_expense.html:110
+msgid "Pending"
+msgstr "Pending"
+
+#: frontend/templates/edit_brew.html:231
+msgid "Save Changes"
+msgstr "Save Changes"
+
+#: frontend/templates/edit_brew.html:240
+msgid "No dry hopping schedule created yet."
+msgstr "No dry hopping schedule created yet."
+
+#: frontend/templates/edit_dry_hop.html:3
+msgid "Edit Dry Hop"
+msgstr "Edit Dry Hop"
+
+#: frontend/templates/edit_dry_hop.html:8
+msgid "Edit Dry Hop Schedule"
+msgstr "Edit Dry Hop Schedule"
+
+#: frontend/templates/edit_dry_hop.html:64
+msgid "Completion Status"
+msgstr "Completion Status"
+
+#: frontend/templates/edit_dry_hop.html:70
+msgid ""
+"Leave empty if not completed yet. Will be auto-filled when marking as "
+"completed."
+msgstr ""
+
+#: frontend/templates/edit_dry_hop.html:78
+msgid "Check this to mark the dry hop addition as completed."
+msgstr "Check this to mark the dry hop addition as completed."
+
+#: frontend/templates/edit_dry_hop.html:88
+msgid "Any notes about the dry hop addition..."
+msgstr "Any notes about the dry hop addition..."
+
+#: frontend/templates/edit_expense.html:8
+msgid "Edit Rejected Expense"
+msgstr "Edit Rejected Expense"
+
+#: frontend/templates/edit_expense.html:16
+msgid "Rejection Reason"
+msgstr "Rejection Reason"
+
+#: frontend/templates/edit_expense.html:70
+msgid ""
+"Upload additional receipt images (JPG, PNG, PDF - max 5MB each). Existing"
+" receipts will be kept."
+msgstr ""
+
+#: frontend/templates/edit_expense.html:83
+msgid "Current Attachments"
+msgstr "Current Attachments"
+
+#: frontend/templates/edit_expense.html:96
+#, fuzzy
+msgid "Remove"
+msgstr "Volume"
+
+#: frontend/templates/edit_expense.html:101
+msgid ""
+"Click \"Remove\" to delete unwanted attachments. This action will be "
+"permanent when you submit the form."
+msgstr ""
+
+#: frontend/templates/edit_expense.html:106
+msgid "Important Information"
+msgstr "Important Information"
+
+#: frontend/templates/edit_expense.html:109
+#: frontend/templates/edit_keg_history.html:29
+#: frontend/templates/expenses.html:29 frontend/templates/index.html:200
+#: frontend/templates/keg_detail.html:93 frontend/templates/kegs.html:49
+#: frontend/templates/kit_detail.html:157 frontend/templates/update_keg.html:28
+#: frontend/templates/users.html:26
+msgid "Status"
+msgstr "Status"
+
+#: frontend/templates/edit_expense.html:110
+msgid "Will change from"
+msgstr "Will change from"
+
+#: frontend/templates/edit_expense.html:110
+msgid "Rejected"
+msgstr "Rejected"
+
+#: frontend/templates/edit_expense.html:110
+msgid "to"
+msgstr "to"
+
+#: frontend/templates/edit_expense.html:113
+msgid "Submission Date"
+msgstr "Submission Date"
+
+#: frontend/templates/edit_expense.html:114
+msgid "Will be updated to current time"
+msgstr "Will be updated to current time"
+
+#: frontend/templates/edit_expense.html:427
+msgid ""
+"Are you sure you want to remove this attachment? This action cannot be "
+"undone."
+msgstr ""
+
+#: frontend/templates/edit_expense.html:440
+msgid "Removing..."
+msgstr "Removing..."
 
 #: frontend/templates/edit_keg_history.html:8
 msgid "Edit History Entry"
-msgstr ""
+msgstr "Edit History Entry"
 
 #: frontend/templates/edit_keg_history.html:8
 #, fuzzy
 msgid "Keg"
 msgstr "Kegs"
 
-#: frontend/templates/edit_keg_history.html:10
-#: frontend/templates/edit_keg_history.html:77
-#: frontend/templates/update_keg.html:74
-msgid "Cancel"
-msgstr ""
-
 #: frontend/templates/edit_keg_history.html:17
 #: frontend/templates/keg_detail.html:91
 msgid "Date"
-msgstr ""
+msgstr "Date"
 
 #: frontend/templates/edit_keg_history.html:23
-#: frontend/templates/keg_detail.html:92 frontend/templates/kegs.html:46
-#: frontend/templates/update_keg.html:23
+#: frontend/templates/index.html:199 frontend/templates/keg_detail.html:92
+#: frontend/templates/kegs.html:46 frontend/templates/update_keg.html:23
 msgid "Contents"
 msgstr "Contents"
-
-#: frontend/templates/edit_keg_history.html:29
-#: frontend/templates/keg_detail.html:93 frontend/templates/kegs.html:49
-#: frontend/templates/update_keg.html:28 frontend/templates/users.html:25
-msgid "Status"
-msgstr "Status"
 
 #: frontend/templates/edit_keg_history.html:31 frontend/templates/kegs.html:18
 #: frontend/templates/update_keg.html:30
 msgid "Full"
-msgstr ""
+msgstr "Full"
 
 #: frontend/templates/edit_keg_history.html:32 frontend/templates/kegs.html:22
 #: frontend/templates/update_keg.html:31
@@ -161,30 +1348,30 @@ msgstr ""
 msgid "Started"
 msgstr "Status"
 
-#: frontend/templates/edit_keg_history.html:33 frontend/templates/kegs.html:26
-#: frontend/templates/update_keg.html:32
+#: frontend/templates/edit_keg_history.html:33 frontend/templates/index.html:18
+#: frontend/templates/kegs.html:26 frontend/templates/update_keg.html:32
 msgid "Available/Cleaned"
-msgstr ""
+msgstr "Available/Cleaned"
 
 #: frontend/templates/edit_keg_history.html:34 frontend/templates/kegs.html:30
 #: frontend/templates/update_keg.html:33
 msgid "Empty"
-msgstr ""
+msgstr "Empty"
 
 #: frontend/templates/edit_keg_history.html:39
-#: frontend/templates/keg_detail.html:94 frontend/templates/kegs.html:52
-#: frontend/templates/update_keg.html:38
+#: frontend/templates/index.html:201 frontend/templates/keg_detail.html:94
+#: frontend/templates/kegs.html:52 frontend/templates/update_keg.html:38
 msgid "Amount Left"
 msgstr "Amount Left"
 
 #: frontend/templates/edit_keg_history.html:39
 #: frontend/templates/update_keg.html:38
 msgid "Liters"
-msgstr ""
+msgstr "Liters"
 
 #: frontend/templates/edit_keg_history.html:46
-#: frontend/templates/keg_detail.html:95 frontend/templates/kegs.html:55
-#: frontend/templates/update_keg.html:45
+#: frontend/templates/index.html:202 frontend/templates/keg_detail.html:95
+#: frontend/templates/kegs.html:55 frontend/templates/update_keg.html:45
 msgid "Location"
 msgstr "Location"
 
@@ -203,59 +1390,279 @@ msgstr "Brew"
 #: frontend/templates/edit_keg_history.html:50
 #: frontend/templates/update_keg.html:49
 msgid "Cellar"
-msgstr ""
+msgstr "Cellar"
 
 #: frontend/templates/edit_keg_history.html:51
 #: frontend/templates/edit_keg_history.html:63
 #: frontend/templates/update_keg.html:50 frontend/templates/update_keg.html:62
 msgid "Storage"
-msgstr ""
+msgstr "Storage"
 
 #: frontend/templates/edit_keg_history.html:52
 #: frontend/templates/update_keg.html:51
 msgid "Bar"
-msgstr ""
+msgstr "Bar"
 
 #: frontend/templates/edit_keg_history.html:53
 #: frontend/templates/edit_keg_history.html:62
 #: frontend/templates/update_keg.html:52 frontend/templates/update_keg.html:61
 msgid "Cleaning"
-msgstr ""
+msgstr "Cleaning"
 
 #: frontend/templates/edit_keg_history.html:58
 #: frontend/templates/keg_detail.html:96
 msgid "Event/Occasion"
-msgstr ""
+msgstr "Event/Occasion"
 
 #: frontend/templates/edit_keg_history.html:60
 #: frontend/templates/update_keg.html:59
 msgid "Normal operation"
-msgstr ""
+msgstr "Normal operation"
 
 #: frontend/templates/edit_keg_history.html:61
 #: frontend/templates/update_keg.html:60
 msgid "Maintenance"
-msgstr ""
+msgstr "Maintenance"
 
 #: frontend/templates/edit_keg_history.html:64
 msgid "Filling"
-msgstr ""
+msgstr "Filling"
 
 #: frontend/templates/edit_keg_history.html:65
 msgid "Event"
-msgstr ""
+msgstr "Event"
 
 #: frontend/templates/edit_keg_history.html:72
 msgid "Any additional notes about this entry..."
-msgstr ""
+msgstr "Any additional notes about this entry..."
 
 #: frontend/templates/edit_keg_history.html:76
 msgid "Update Entry"
-msgstr ""
+msgstr "Update Entry"
 
 #: frontend/templates/edit_keg_history.html:79
 msgid "Delete Entry"
+msgstr "Delete Entry"
+
+#: frontend/templates/edit_kit.html:3 frontend/templates/edit_kit.html:8
+#: frontend/templates/kit_detail.html:22
+msgid "Edit Kit"
+msgstr "Edit Kit"
+
+#: frontend/templates/edit_kit.html:10
+msgid "Back to Kit"
+msgstr "Back to Kit"
+
+#: frontend/templates/edit_kit.html:186
+msgid "Current Label Image"
+msgstr "Current Label Image"
+
+#: frontend/templates/edit_kit.html:208
+msgid "Current Instruction PDF"
+msgstr "Current Instruction PDF"
+
+#: frontend/templates/edit_kit.html:589
+msgid "New file selected"
+msgstr "New file selected"
+
+#: frontend/templates/edit_kit.html:607
+msgid "Are you sure you want to remove this attachment?"
+msgstr "Are you sure you want to remove this attachment?"
+
+#: frontend/templates/edit_kit.html:611
+msgid "Removed"
+msgstr "Removed"
+
+#: frontend/templates/edit_kit.html:616
+msgid "Upload a new attachment (JPG, PNG, PDF - max 5MB)"
+msgstr "Upload a new attachment (JPG, PNG, PDF - max 5MB)"
+
+#: frontend/templates/edit_user.html:4 frontend/templates/edit_user.html:14
+msgid "Edit User"
+msgstr "Edit User"
+
+#: frontend/templates/edit_user.html:19
+msgid "Back to Users"
+msgstr "Back to Users"
+
+#: frontend/templates/edit_user.html:21
+#, fuzzy
+msgid "Back to Dashboard"
+msgstr "Dashboard"
+
+#: frontend/templates/edit_user.html:40
+#: frontend/templates/reset_password.html:10 frontend/templates/users.html:20
+#, fuzzy
+msgid "Username"
+msgstr "Users"
+
+#: frontend/templates/edit_user.html:42
+msgid "Username cannot be changed"
+msgstr "Username cannot be changed"
+
+#: frontend/templates/edit_user.html:86
+msgid ""
+"11-digit Norwegian bank account number. Dots and spaces will be removed "
+"automatically."
 msgstr ""
+
+#: frontend/templates/edit_user.html:112 frontend/templates/users.html:23
+#, fuzzy
+msgid "Role"
+msgstr "Volume"
+
+#: frontend/templates/edit_user.html:114
+msgid "Role cannot be changed"
+msgstr "Role cannot be changed"
+
+#: frontend/templates/edit_user.html:133
+#, fuzzy
+msgid "Optional"
+msgstr "Location"
+
+#: frontend/templates/edit_user.html:134
+msgid "Leave password fields empty if you do not want to change your password."
+msgstr "Leave password fields empty if you do not want to change your password."
+
+#: frontend/templates/edit_user.html:138
+msgid "Enter your current password"
+msgstr "Enter your current password"
+
+#: frontend/templates/edit_user.html:150
+msgid "Enter your new password"
+msgstr "Enter your new password"
+
+#: frontend/templates/edit_user.html:162
+#, fuzzy
+msgid "Confirm your new password"
+msgstr "Change Password"
+
+#: frontend/templates/edit_user.html:191
+msgid "Update Profile"
+msgstr "Update Profile"
+
+#: frontend/templates/edit_user.html:191
+msgid "Update User"
+msgstr "Update User"
+
+#: frontend/templates/expense_receipts.html:8
+msgid "Expense Receipts"
+msgstr "Expense Receipts"
+
+#: frontend/templates/expense_receipts.html:38
+msgid "Click to view full size"
+msgstr "Click to view full size"
+
+#: frontend/templates/expense_receipts.html:44
+msgid "PDF Document"
+msgstr "PDF Document"
+
+#: frontend/templates/expense_receipts.html:58
+#: frontend/templates/kit_detail.html:121
+#: frontend/templates/kit_detail.html:138
+msgid "Download"
+msgstr "Download"
+
+#: frontend/templates/expense_receipts.html:72
+msgid "No receipts found"
+msgstr "No receipts found"
+
+#: frontend/templates/expense_receipts.html:73
+msgid "No receipt images have been uploaded for this expense."
+msgstr "No receipt images have been uploaded for this expense."
+
+#: frontend/templates/expenses.html:8
+#, fuzzy
+msgid "Expense Management"
+msgstr "Keg Management"
+
+#: frontend/templates/expenses.html:21 frontend/templates/index.html:230
+#, fuzzy
+msgid "Submitted"
+msgstr "Status"
+
+#: frontend/templates/expenses.html:23 frontend/templates/index.html:231
+#: frontend/templates/reject_expense.html:18
+#, fuzzy
+msgid "User"
+msgstr "Users"
+
+#: frontend/templates/expenses.html:26 frontend/templates/index.html:232
+#: frontend/templates/recipe_detail.html:115
+#: frontend/templates/recipe_detail.html:146
+#: frontend/templates/recipe_detail.html:181
+#: frontend/templates/recipe_detail.html:212
+#: frontend/templates/recipe_shopping_cart.html:29
+#: frontend/templates/recipe_shopping_cart.html:101
+#: frontend/templates/recipe_shopping_cart.html:134
+#: frontend/templates/reject_expense.html:22
+#, fuzzy
+msgid "Amount"
+msgstr "Amount Left"
+
+#: frontend/templates/expenses.html:30
+#, fuzzy
+msgid "Receipts"
+msgstr "Recipes"
+
+#: frontend/templates/expenses.html:63 frontend/templates/expenses.html:70
+msgid "by"
+msgstr "by"
+
+#: frontend/templates/expenses.html:74
+msgid "Reason"
+msgstr "Reason"
+
+#: frontend/templates/expenses.html:84
+#, fuzzy
+msgid "receipt(s)"
+msgstr "Recipes"
+
+#: frontend/templates/expenses.html:87
+#, fuzzy
+msgid "No receipts"
+msgstr "Recipes"
+
+#: frontend/templates/expenses.html:97
+msgid "Mark this expense as paid?"
+msgstr "Mark this expense as paid?"
+
+#: frontend/templates/expenses.html:98
+msgid "Mark Paid"
+msgstr "Mark Paid"
+
+#: frontend/templates/expenses.html:101
+msgid "Reject"
+msgstr "Reject"
+
+#: frontend/templates/expenses.html:104 frontend/templates/expenses.html:117
+#: frontend/templates/expenses.html:132 frontend/templates/expenses.html:142
+#: frontend/templates/expenses.html:160
+msgid ""
+"Are you sure you want to delete this expense? This action cannot be "
+"undone."
+msgstr ""
+
+#: frontend/templates/expenses.html:112 frontend/templates/expenses.html:128
+#: frontend/templates/expenses.html:156
+msgid "Edit & Resubmit"
+msgstr "Edit & Resubmit"
+
+#: frontend/templates/expenses.html:148 frontend/templates/expenses.html:166
+msgid "No actions available"
+msgstr "No actions available"
+
+#: frontend/templates/expenses.html:177
+msgid "No expenses found"
+msgstr "No expenses found"
+
+#: frontend/templates/expenses.html:178
+msgid "No expense requests have been submitted yet."
+msgstr "No expense requests have been submitted yet."
+
+#: frontend/templates/expenses.html:180
+msgid "Submit Your First Expense"
+msgstr "Submit Your First Expense"
 
 #: frontend/templates/index.html:5
 #, fuzzy
@@ -264,40 +1671,93 @@ msgstr "Dashboard"
 
 #: frontend/templates/index.html:9
 msgid "Keg Status Summary"
-msgstr ""
+msgstr "Keg Status Summary"
 
-#: frontend/templates/index.html:16
-#, fuzzy
-msgid "kegs"
-msgstr "Kegs"
-
-#: frontend/templates/index.html:26
+#: frontend/templates/index.html:115
 #, fuzzy
 msgid "Quick Actions"
 msgstr "Actions"
 
-#: frontend/templates/index.html:28
+#: frontend/templates/index.html:117
 msgid "View All Kegs"
-msgstr ""
+msgstr "View All Kegs"
 
-#: frontend/templates/index.html:29
+#: frontend/templates/index.html:118
 #, fuzzy
 msgid "View Brews"
 msgstr "Brews"
 
-#: frontend/templates/index.html:30
+#: frontend/templates/index.html:119
 #, fuzzy
 msgid "View Recipes"
 msgstr "Recipes"
 
-#: frontend/templates/keg_detail.html:98 frontend/templates/kegs.html:63
-#: frontend/templates/users.html:28
-msgid "Actions"
-msgstr "Actions"
+#: frontend/templates/index.html:127 frontend/templates/index.html:184
+msgid "Pending Dry Hoppings"
+msgstr "Pending Dry Hoppings"
 
-#: frontend/templates/keg_detail.html:113
-msgid "Edit"
-msgstr ""
+#: frontend/templates/index.html:150
+msgid "Today"
+msgstr "Today"
+
+#: frontend/templates/index.html:152
+msgid "Tomorrow"
+msgstr "Tomorrow"
+
+#: frontend/templates/index.html:154
+msgid "in"
+msgstr "in"
+
+#: frontend/templates/index.html:154
+msgid "days"
+msgstr "days"
+
+#: frontend/templates/index.html:156
+msgid "overdue"
+msgstr "overdue"
+
+#: frontend/templates/index.html:159
+#, fuzzy
+msgid "No date set"
+msgstr "Contents"
+
+#: frontend/templates/index.html:171
+msgid "Complete Now"
+msgstr "Complete Now"
+
+#: frontend/templates/index.html:174
+#, fuzzy
+msgid "View Brew"
+msgstr "Brews"
+
+#: frontend/templates/index.html:186
+msgid "No pending dry hoppings scheduled."
+msgstr "No pending dry hoppings scheduled."
+
+#: frontend/templates/index.html:187
+#, fuzzy
+msgid "View Your Brews"
+msgstr "Brews"
+
+#: frontend/templates/index.html:193
+msgid "Recent Keg Activity"
+msgstr "Recent Keg Activity"
+
+#: frontend/templates/index.html:198 frontend/templates/kegs.html:40
+msgid "Keg #"
+msgstr "Keg #"
+
+#: frontend/templates/index.html:203 frontend/templates/kegs.html:61
+msgid "Last Measured"
+msgstr "Last Measured"
+
+#: frontend/templates/index.html:226
+msgid "Pending Expense Requests"
+msgstr "Pending Expense Requests"
+
+#: frontend/templates/index.html:245
+msgid "View All"
+msgstr "View All"
 
 #: frontend/templates/kegs.html:8
 msgid "Keg Management"
@@ -315,43 +1775,416 @@ msgstr "Toggle All"
 msgid "Show Only Available + Empty"
 msgstr "Show Only Available + Empty"
 
-#: frontend/templates/kegs.html:40
-msgid "Keg #"
-msgstr "Keg #"
-
-#: frontend/templates/kegs.html:43
+#: frontend/templates/kegs.html:43 frontend/templates/kit_detail.html:55
+#: frontend/templates/kits.html:25
 msgid "Volume"
 msgstr "Volume"
 
-#: frontend/templates/kegs.html:58
-msgid "Brew"
+#: frontend/templates/kegs.html:86
+#, fuzzy
+msgid "Total Amount Left"
+msgstr "Amount Left"
+
+#: frontend/templates/kit_detail.html:13
+msgid "By"
+msgstr "By"
+
+#: frontend/templates/kit_detail.html:16
+msgid "Added by"
+msgstr "Added by"
+
+#: frontend/templates/kit_detail.html:30
+msgid "Are you sure you want to delete this kit? This action cannot be undone."
+msgstr "Are you sure you want to delete this kit? This action cannot be undone."
+
+#: frontend/templates/kit_detail.html:31
+msgid "Delete Kit"
+msgstr "Delete Kit"
+
+#: frontend/templates/kit_detail.html:61
+#, fuzzy
+msgid "Estimated ABV"
+msgstr "Status"
+
+#: frontend/templates/kit_detail.html:109
+msgid "Attachments"
+msgstr "Attachments"
+
+#: frontend/templates/kit_detail.html:113
+msgid "Kit Label/Image"
+msgstr "Kit Label/Image"
+
+#: frontend/templates/kit_detail.html:129
+msgid "Instructions PDF"
+msgstr "Instructions PDF"
+
+#: frontend/templates/kit_detail.html:136
+#, fuzzy
+msgid "View PDF"
+msgstr "Recipes"
+
+#: frontend/templates/kit_detail.html:150
+#: frontend/templates/kit_detail.html:191
+msgid "Brews Made with This Kit"
+msgstr "Brews Made with This Kit"
+
+#: frontend/templates/kit_detail.html:156
+#, fuzzy
+msgid "Brew Date"
 msgstr "Brew"
 
-#: frontend/templates/kegs.html:61
-msgid "Last Measured"
+#: frontend/templates/kit_detail.html:193
+msgid "No brews have been made with this kit yet."
+msgstr "No brews have been made with this kit yet."
+
+#: frontend/templates/kit_detail.html:196
+#, fuzzy
+msgid "View All Brews"
+msgstr "Brews"
+
+#: frontend/templates/kits.html:8
+#, fuzzy
+msgid "Kit Management"
+msgstr "Keg Management"
+
+#: frontend/templates/kits.html:21 frontend/templates/recipe_detail.html:116
+#: frontend/templates/recipe_detail.html:149
+#: frontend/templates/recipe_detail.html:179
+#: frontend/templates/recipe_detail.html:213
+#: frontend/templates/recipe_shopping_cart.html:30
+#: frontend/templates/recipe_shopping_cart.html:67
+#: frontend/templates/recipe_shopping_cart.html:102
+#: frontend/templates/recipe_shopping_cart.html:135
+msgid "Type"
+msgstr "Type"
+
+#: frontend/templates/kits.html:67 frontend/templates/recipes.html:66
+#, fuzzy
+msgid "brews"
+msgstr "Brews"
+
+#: frontend/templates/kits.html:84
+msgid "No kits found in the system."
+msgstr "No kits found in the system."
+
+#: frontend/templates/kits.html:87
+msgid "Create Your First Kit"
+msgstr "Create Your First Kit"
+
+#: frontend/templates/recipe_detail.html:37
+#: frontend/templates/recipe_shopping_cart.html:8
+msgid "Shopping Cart"
+msgstr "Shopping Cart"
+
+#: frontend/templates/recipe_detail.html:40
+#: frontend/templates/recipe_detail.html:323
+#, fuzzy
+msgid "Edit Recipe"
+msgstr "Recipes"
+
+#: frontend/templates/recipe_detail.html:46
+msgid "Manage Versions"
+msgstr "Manage Versions"
+
+#: frontend/templates/recipe_detail.html:51
+msgid "Delete Current Version"
+msgstr "Delete Current Version"
+
+#: frontend/templates/recipe_detail.html:54
+#, fuzzy
+msgid "Delete Recipe"
+msgstr "Recipes"
+
+#: frontend/templates/recipe_detail.html:70
+msgid "Boil Time"
+msgstr "Boil Time"
+
+#: frontend/templates/recipe_detail.html:74
+msgid "Target ABV"
+msgstr "Target ABV"
+
+#: frontend/templates/recipe_detail.html:78
+#: frontend/templates/recipe_detail.html:347 frontend/templates/recipes.html:24
+msgid "IBU"
+msgstr "IBU"
+
+#: frontend/templates/recipe_detail.html:82
+#: frontend/templates/recipe_detail.html:351
+msgid "Original Gravity"
+msgstr "Original Gravity"
+
+#: frontend/templates/recipe_detail.html:86
+#: frontend/templates/recipe_detail.html:355
+msgid "Final Gravity"
+msgstr "Final Gravity"
+
+#: frontend/templates/recipe_detail.html:90
+msgid "Efficiency"
+msgstr "Efficiency"
+
+#: frontend/templates/recipe_detail.html:110
+#: frontend/templates/recipe_detail.html:390
+#: frontend/templates/recipe_shopping_cart.html:24
+msgid "Malts & Grains"
+msgstr "Malts & Grains"
+
+#: frontend/templates/recipe_detail.html:114
+msgid "Malt"
+msgstr "Malt"
+
+#: frontend/templates/recipe_detail.html:117
+msgid "Percentage"
+msgstr "Percentage"
+
+#: frontend/templates/recipe_detail.html:118
+msgid "Color (°L)"
+msgstr "Color (°L)"
+
+#: frontend/templates/recipe_detail.html:147
+msgid "Time"
+msgstr "Time"
+
+#: frontend/templates/recipe_detail.html:148
+#: frontend/templates/recipe_shopping_cart.html:66
+msgid "Alpha Acid"
+msgstr "Alpha Acid"
+
+#: frontend/templates/recipe_detail.html:150
+msgid "Form"
+msgstr "Form"
+
+#: frontend/templates/recipe_detail.html:178
+#: frontend/templates/recipe_shopping_cart.html:100
+msgid "Yeast Strain"
+msgstr "Yeast Strain"
+
+#: frontend/templates/recipe_detail.html:182
+msgid "Attenuation"
+msgstr "Attenuation"
+
+#: frontend/templates/recipe_detail.html:183
+msgid "Temperature"
+msgstr "Temperature"
+
+#: frontend/templates/recipe_detail.html:207
+msgid "Other Ingredients"
+msgstr "Other Ingredients"
+
+#: frontend/templates/recipe_detail.html:214
+msgid "When Added"
+msgstr "When Added"
+
+#: frontend/templates/recipe_detail.html:263
+msgid "Version History"
+msgstr "Version History"
+
+#: frontend/templates/recipe_detail.html:267 frontend/templates/recipes.html:22
+msgid "Version"
+msgstr "Version"
+
+#: frontend/templates/recipe_detail.html:268
+#, fuzzy
+msgid "Last Modified"
 msgstr "Last Measured"
+
+#: frontend/templates/recipe_detail.html:299
+#: frontend/templates/recipe_detail.html:490
+#, fuzzy
+msgid "Active"
+msgstr "Actions"
+
+#: frontend/templates/recipe_detail.html:339
+msgid "Boil Time (min)"
+msgstr "Boil Time (min)"
+
+#: frontend/templates/recipe_detail.html:359
+msgid "Efficiency (%)"
+msgstr "Efficiency (%)"
+
+#: frontend/templates/recipe_detail.html:380
+msgid "Version Notes"
+msgstr "Version Notes"
+
+#: frontend/templates/recipe_detail.html:381
+msgid "What changed in this version?"
+msgstr "What changed in this version?"
+
+#: frontend/templates/recipe_detail.html:448
+msgid "Update Current Recipe"
+msgstr "Update Current Recipe"
+
+#: frontend/templates/recipe_detail.html:451
+msgid "Create New Version"
+msgstr "Create New Version"
+
+#: frontend/templates/recipe_detail.html:464
+#, fuzzy
+msgid "Version Manager"
+msgstr "Keg Management"
+
+#: frontend/templates/recipe_detail.html:467
+msgid "All Versions of"
+msgstr "All Versions of"
+
+#: frontend/templates/recipe_detail.html:474
+msgid "Version:"
+msgstr "Version:"
+
+#: frontend/templates/recipe_detail.html:476
+msgid "Update"
+msgstr "Update"
+
+#: frontend/templates/recipe_detail.html:493
+msgid "Viewing"
+msgstr "Viewing"
+
+#: frontend/templates/recipe_detail.html:502
+msgid "Set Active"
+msgstr "Set Active"
+
+#: frontend/templates/recipe_detail.html:520
+msgid "Danger Zone"
+msgstr "Danger Zone"
+
+#: frontend/templates/recipe_detail.html:522
+msgid "DANGER: Delete ALL versions of"
+msgstr "DANGER: Delete ALL versions of"
+
+#: frontend/templates/recipe_detail.html:522
+msgid "This will permanently delete the entire recipe and cannot be undone!"
+msgstr "This will permanently delete the entire recipe and cannot be undone!"
+
+#: frontend/templates/recipe_detail.html:524
+msgid "Delete Entire Recipe"
+msgstr "Delete Entire Recipe"
+
+#: frontend/templates/recipe_shopping_cart.html:28
+msgid "Malt/Grain"
+msgstr "Malt/Grain"
+
+#: frontend/templates/recipe_shopping_cart.html:31
+msgid "Color"
+msgstr "Color"
+
+#: frontend/templates/recipe_shopping_cart.html:48
+msgid "Total Malt"
+msgstr "Total Malt"
+
+#: frontend/templates/recipe_shopping_cart.html:65
+msgid "Total Amount"
+msgstr "Total Amount"
+
+#: frontend/templates/recipe_shopping_cart.html:84
+msgid "Total Hops"
+msgstr "Total Hops"
+
+#: frontend/templates/recipe_shopping_cart.html:103
+msgid "Temperature Range"
+msgstr "Temperature Range"
+
+#: frontend/templates/recipe_shopping_cart.html:129
+msgid "Adjuncts & Additives"
+msgstr "Adjuncts & Additives"
+
+#: frontend/templates/recipe_shopping_cart.html:133
+#, fuzzy
+msgid "Name"
+msgstr "Users"
+
+#: frontend/templates/recipe_shopping_cart.html:136
+msgid "Addition Time"
+msgstr "Addition Time"
+
+#: frontend/templates/recipe_shopping_cart.html:156
+msgid "Print Shopping List"
+msgstr "Print Shopping List"
+
+#: frontend/templates/recipe_shopping_cart.html:159
+#, fuzzy
+msgid "Back to Recipe"
+msgstr "Recipes"
+
+#: frontend/templates/recipe_shopping_cart.html:162
+#, fuzzy
+msgid "All Recipes"
+msgstr "Recipes"
 
 #: frontend/templates/recipes.html:8
 #, fuzzy
 msgid "Recipe Management"
 msgstr "Keg Management"
 
-#: frontend/templates/recipes.html:15
-#, fuzzy
-msgid "Recipe Name"
-msgstr "Recipes"
+#: frontend/templates/recipes.html:77
+msgid "Cart"
+msgstr "Cart"
 
-#: frontend/templates/recipes.html:19 frontend/templates/users.html:26
-msgid "Created"
+#: frontend/templates/recipes.html:86
+msgid "No recipes found in the system."
+msgstr "No recipes found in the system."
+
+#: frontend/templates/recipes.html:89
+msgid "Create Your First Recipe"
+msgstr "Create Your First Recipe"
+
+#: frontend/templates/reject_expense.html:8
+msgid "Reject Expense"
+msgstr "Reject Expense"
+
+#: frontend/templates/reject_expense.html:15
+msgid "Expense Details"
+msgstr "Expense Details"
+
+#: frontend/templates/reject_expense.html:43
+msgid ""
+"Explain why this expense is being rejected so the user can understand and"
+" potentially resubmit."
+msgstr ""
+
+#: frontend/templates/reject_expense.html:54
+msgid "The user will be able to edit and resubmit this expense after rejection."
+msgstr "The user will be able to edit and resubmit this expense after rejection."
+
+#: frontend/templates/reset_password.html:8
+#, fuzzy
+msgid "Reset Password for"
+msgstr "Change Password"
+
+#: frontend/templates/reset_password.html:11 frontend/templates/users.html:21
+msgid "Full Name"
+msgstr "Full Name"
+
+#: frontend/templates/reset_password.html:12 frontend/templates/users.html:22
+msgid "Email"
+msgstr "Email"
+
+#: frontend/templates/reset_password.html:18
+#, fuzzy
+msgid "New Password"
+msgstr "Change Password"
+
+#: frontend/templates/reset_password.html:24
+#, fuzzy
+msgid "Confirm New Password"
+msgstr "Change Password"
+
+#: frontend/templates/reset_password.html:29 frontend/templates/users.html:68
+#, fuzzy
+msgid "Reset Password"
+msgstr "Change Password"
+
+#: frontend/templates/reset_password.html:34
+msgid ""
+"This will immediately change the user's password. They will need to use "
+"the new password to log in."
 msgstr ""
 
 #: frontend/templates/update_keg.html:17
 msgid "Update Date"
-msgstr ""
+msgstr "Update Date"
 
 #: frontend/templates/update_keg.html:19
 msgid "Date when this update occurred"
-msgstr ""
+msgstr "Date when this update occurred"
 
 #: frontend/templates/update_keg.html:57
 #, fuzzy
@@ -360,11 +2193,27 @@ msgstr "Keg Management"
 
 #: frontend/templates/update_keg.html:69
 msgid "Any additional notes about this update..."
-msgstr ""
+msgstr "Any additional notes about this update..."
 
 #: frontend/templates/update_keg.html:73
-msgid "Update Keg"
-msgstr ""
+msgid "Set Empty"
+msgstr "Set Empty"
+
+#: frontend/templates/update_keg.html:75
+msgid "Update Current Status"
+msgstr "Update Current Status"
+
+#: frontend/templates/update_keg.html:78
+msgid "Add New History Entry"
+msgstr "Add New History Entry"
+
+#: frontend/templates/update_keg.html:87
+msgid "Set this keg as empty? This will fill the form with empty keg values."
+msgstr "Set this keg as empty? This will fill the form with empty keg values."
+
+#: frontend/templates/update_keg.html:94
+msgid "Keg is empty"
+msgstr "Keg is empty"
 
 #: frontend/templates/users.html:8
 #, fuzzy
@@ -373,31 +2222,20 @@ msgstr "Keg Management"
 
 #: frontend/templates/users.html:11
 msgid "Create User"
-msgstr ""
-
-#: frontend/templates/users.html:20
-#, fuzzy
-msgid "Username"
-msgstr "Users"
-
-#: frontend/templates/users.html:21
-msgid "Full Name"
-msgstr ""
-
-#: frontend/templates/users.html:22
-msgid "Email"
-msgstr ""
-
-#: frontend/templates/users.html:23
-#, fuzzy
-msgid "Role"
-msgstr "Volume"
+msgstr "Create User"
 
 #: frontend/templates/users.html:24
 msgid "Language"
-msgstr ""
+msgstr "Language"
 
 #: frontend/templates/users.html:27
+msgid "Created"
+msgstr "Created"
+
+#: frontend/templates/users.html:28
 msgid "Last Login"
-msgstr ""
+msgstr "Last Login"
+
+#~ msgid "Update Keg"
+#~ msgstr ""
 

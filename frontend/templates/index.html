@@ -121,6 +121,74 @@
         </div>
     </div>
 
+    <!-- Pending Dry Hoppings Section -->
+    {% if current_user.can_access('brews', 'view') and pending_dry_hops %}
+    <div class="pending-dry-hops">
+        <h2>{{ _('Pending Dry Hoppings') }}</h2>
+        <div class="dry-hop-cards">
+            {% for hop in pending_dry_hops %}
+            <div class="dry-hop-card" data-hop-id="{{ hop.id }}">
+                <div class="hop-info">
+                    <div class="hop-header">
+                        <strong class="hop-ingredient">{{ hop.ingredient }}</strong>
+                        {% if hop.hop_variety and hop.hop_variety != hop.ingredient %}
+                            <span class="hop-variety">({{ hop.hop_variety }})</span>
+                        {% endif %}
+                        <span class="hop-amount">{{ hop.amount_grams }}g</span>
+                    </div>
+                    <div class="hop-details">
+                        <div class="brew-info">
+                            <a href="{{ url_for('brew_detail', brew_id=hop.brew_id) }}" class="brew-link">
+                                {{ hop.brew_name }}
+                            </a>
+                        </div>
+                        <div class="scheduled-info">
+                            <span class="scheduled-date">
+                                {% if hop.scheduled_date %}
+                                    {% set days_diff = (hop.scheduled_date - today_date).days %}
+                                    {% if days_diff == 0 %}
+                                        <span class="today">{{ _('Today') }}</span>
+                                    {% elif days_diff == 1 %}
+                                        <span class="tomorrow">{{ _('Tomorrow') }}</span>
+                                    {% elif days_diff > 0 %}
+                                        <span class="future">{{ hop.scheduled_date.strftime('%Y-%m-%d') }} ({{ _('in') }} {{ days_diff }} {{ _('days') }})</span>
+                                    {% else %}
+                                        <span class="overdue">{{ hop.scheduled_date.strftime('%Y-%m-%d') }} ({{ _('overdue') }})</span>
+                                    {% endif %}
+                                {% else %}
+                                    <span class="no-date">{{ _('No date set') }}</span>
+                                {% endif %}
+                            </span>
+                        </div>
+                        {% if hop.notes %}
+                            <div class="hop-notes">{{ hop.notes }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+                <div class="hop-actions">
+                    {% if current_user.can_access('brews', 'edit') %}
+                    <button type="button" class="btn btn-sm btn-success" onclick="completeDryHopDashboard({{ hop.id }})">
+                        {{ _('Complete Now') }}
+                    </button>
+                    <a href="{{ url_for('brew_detail', brew_id=hop.brew_id) }}" class="btn btn-sm btn-secondary">
+                        {{ _('View Brew') }}
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% elif current_user.can_access('brews', 'view') %}
+    <div class="pending-dry-hops">
+        <h2>{{ _('Pending Dry Hoppings') }}</h2>
+        <div class="empty-dry-hops">
+            <p>{{ _('No pending dry hoppings scheduled.') }}</p>
+            <a href="{{ url_for('brews') }}" class="btn btn-primary">{{ _('View Your Brews') }}</a>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="recent-kegs">
         <h2>{{ _('Recent Keg Activity') }}</h2>
         {% if recent_kegs %}
@@ -183,4 +251,232 @@
     </div>
     {% endif %}
 </div>
+
+<script>
+// Dashboard Dry Hopping Completion Function
+function completeDryHopDashboard(hopId) {
+    if (confirm('Mark this dry hopping as completed today?')) {
+        fetch('/api/dry-hop/' + hopId + '/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Remove the card from the dashboard
+                const card = document.querySelector('[data-hop-id="' + hopId + '"]');
+                if (card) {
+                    card.style.transition = 'opacity 0.3s ease';
+                    card.style.opacity = '0';
+                    setTimeout(() => {
+                        card.remove();
+                        // Check if any cards left
+                        const remainingCards = document.querySelectorAll('.dry-hop-card');
+                        if (remainingCards.length === 0) {
+                            location.reload(); // Refresh to show empty state
+                        }
+                    }, 300);
+                }
+                showDashboardMessage(data.message, 'success');
+            } else {
+                showDashboardMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showDashboardMessage('Error completing dry hop entry', 'error');
+        });
+    }
+}
+
+function showDashboardMessage(message, type) {
+    // Create a simple message display for dashboard
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'dashboard-message dashboard-' + type;
+    messageDiv.textContent = message;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.zIndex = '1000';
+    messageDiv.style.padding = '1rem 1.5rem';
+    messageDiv.style.borderRadius = '8px';
+    messageDiv.style.fontSize = '14px';
+    messageDiv.style.fontWeight = 'bold';
+    messageDiv.style.boxShadow = '0 4px 12px rgba(0,0,0,0.15)';
+    messageDiv.style.backgroundColor = type === 'success' ? '#d4edda' : '#f8d7da';
+    messageDiv.style.border = '1px solid ' + (type === 'success' ? '#c3e6cb' : '#f5c6cb');
+    messageDiv.style.color = type === 'success' ? '#155724' : '#721c24';
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.style.transition = 'opacity 0.3s ease';
+        messageDiv.style.opacity = '0';
+        setTimeout(() => messageDiv.remove(), 300);
+    }, 3000);
+}
+</script>
+
+<style>
+/* Pending Dry Hoppings Dashboard Styles */
+.pending-dry-hops {
+    margin: 2rem 0;
+}
+
+.pending-dry-hops h2 {
+    margin-bottom: 1rem;
+    color: #2c3e50;
+    font-size: 1.5rem;
+}
+
+.dry-hop-cards {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+    gap: 1rem;
+}
+
+.dry-hop-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.dry-hop-card:hover {
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+    transform: translateY(-2px);
+}
+
+.hop-info {
+    margin-bottom: 1rem;
+}
+
+.hop-header {
+    margin-bottom: 0.75rem;
+}
+
+.hop-ingredient {
+    font-size: 1.1rem;
+    color: #2c3e50;
+    margin-right: 0.5rem;
+}
+
+.hop-variety {
+    color: #666;
+    font-style: italic;
+    margin-right: 0.5rem;
+}
+
+.hop-amount {
+    background: linear-gradient(135deg, #27ae60, #2ecc71);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: bold;
+}
+
+.brew-info {
+    margin-bottom: 0.5rem;
+}
+
+.scheduled-info {
+    margin-bottom: 0.5rem;
+}
+
+.today {
+    background: linear-gradient(135deg, #e74c3c, #c0392b);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.tomorrow {
+    background: linear-gradient(135deg, #f39c12, #e67e22);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.future {
+    background: linear-gradient(135deg, #3498db, #2980b9);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+}
+
+.overdue {
+    background: linear-gradient(135deg, #8e44ad, #9b59b6);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; }
+    50% { opacity: 0.7; }
+    100% { opacity: 1; }
+}
+
+.no-date {
+    color: #95a5a6;
+    font-style: italic;
+}
+
+.hop-notes {
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+    margin-top: 0.5rem;
+}
+
+.hop-actions {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.empty-dry-hops {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 12px;
+    border: 2px dashed #ddd;
+}
+
+.empty-dry-hops p {
+    margin-bottom: 1rem;
+    font-size: 1.1rem;
+}
+
+@media (max-width: 768px) {
+    .dry-hop-cards {
+        grid-template-columns: 1fr;
+    }
+    
+    .hop-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .hop-actions .btn {
+        text-align: center;
+    }
+}
+</style>
+
 {% endblock %}

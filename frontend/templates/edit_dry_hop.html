@@ -1,0 +1,200 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Dry Hop') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="edit-dry-hop-page">
+    <div class="page-header">
+        <h1>{{ _('Edit Dry Hop Schedule') }}</h1>
+        <h2>{{ _('Brew') }}: {{ dry_hop.brew_name }}</h2>
+        <a href="{{ url_for('brew_detail', brew_id=dry_hop.brew_id) }}" class="btn btn-secondary">{{ _('Back to Brew') }}</a>
+    </div>
+
+    <form method="POST" class="dry-hop-form">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-section">
+            <h3>{{ _('Dry Hop Details') }}</h3>
+            
+            <div class="form-row">
+                <div class="form-group half-width">
+                    {{ form.scheduled_date.label(class="form-label") }}
+                    {{ form.scheduled_date(class="form-control") }}
+                    {% if form.scheduled_date.errors %}
+                        <div class="form-errors">
+                            {% for error in form.scheduled_date.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group half-width">
+                    {{ form.amount_grams.label(class="form-label") }}
+                    {{ form.amount_grams(class="form-control", placeholder="30.0") }}
+                    {% if form.amount_grams.errors %}
+                        <div class="form-errors">
+                            {% for error in form.amount_grams.errors %}
+                                <span class="error">{{ error }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.ingredient.label(class="form-label") }}
+                {{ form.ingredient(class="form-control") }}
+                {% if form.ingredient.errors %}
+                    <div class="form-errors">
+                        {% for error in form.ingredient.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.hop_variety.label(class="form-label") }}
+                {{ form.hop_variety(class="form-control", placeholder=_("Optional: specific variety or blend")) }}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Completion Status') }}</h3>
+            
+            <div class="form-row">
+                <div class="form-group half-width">
+                    {{ form.completed_date.label(class="form-label") }}
+                    {{ form.completed_date(class="form-control", id="completed_date") }}
+                    <small class="form-help">{{ _('Leave empty if not completed yet. Will be auto-filled when marking as completed.') }}</small>
+                </div>
+
+                <div class="form-group half-width">
+                    <div class="checkbox-group">
+                        {{ form.is_completed(class="form-checkbox", id="is_completed") }}
+                        {{ form.is_completed.label(class="form-label checkbox-label") }}
+                    </div>
+                    <small class="form-help">{{ _('Check this to mark the dry hop addition as completed.') }}</small>
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Notes') }}</h3>
+            
+            <div class="form-group">
+                {{ form.notes.label(class="form-label") }}
+                {{ form.notes(class="form-control", rows="3", placeholder=_("Any notes about the dry hop addition...")) }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('brew_detail', brew_id=dry_hop.brew_id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isCompletedCheckbox = document.getElementById('is_completed');
+    const completedDateField = document.getElementById('completed_date');
+    
+    // Auto-fill completion date when marking as completed
+    isCompletedCheckbox.addEventListener('change', function() {
+        if (this.checked && !completedDateField.value) {
+            // Set today's date
+            const today = new Date();
+            const year = today.getFullYear();
+            const month = String(today.getMonth() + 1).padStart(2, '0');
+            const day = String(today.getDate()).padStart(2, '0');
+            completedDateField.value = `${year}-${month}-${day}`;
+        }
+    });
+    
+    // If completion date is cleared, uncheck the completed checkbox
+    completedDateField.addEventListener('change', function() {
+        if (!this.value) {
+            isCompletedCheckbox.checked = false;
+        }
+    });
+});
+</script>
+
+<style>
+.dry-hop-form {
+    max-width: 600px;
+}
+
+.page-header h2 {
+    color: #666;
+    font-size: 1.1em;
+    margin: 0.5rem 0;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.half-width {
+    flex: 1;
+}
+
+.form-help {
+    color: #666;
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-checkbox {
+    width: auto;
+}
+
+.checkbox-label {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .half-width {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

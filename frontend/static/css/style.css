@@ -115,14 +115,16 @@ a[href*="reject"] {
 .btn-primary,
 input[type="submit"],
 a[href*="view"],
-a[href*="detail"] {
+a[href*="detail"],
+a[href*="brew/"]:not([href*="edit"]):not([href*="delete"]) {
     background: linear-gradient(135deg, #3498db, #2980b9);
 }
 
 .btn-primary:hover,
 input[type="submit"]:hover,
 a[href*="view"]:hover,
-a[href*="detail"]:hover {
+a[href*="detail"]:hover,
+a[href*="brew/"]:not([href*="edit"]):not([href*="delete"]):hover {
     background: linear-gradient(135deg, #2980b9, #1f639a);
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
@@ -407,6 +409,42 @@ select:focus {
 
 .recipe-link:hover {
     text-decoration: underline;
+}
+
+/* Brew links - SINGLE SOURCE OF TRUTH - consistent styling across all pages */
+a.brew-link {
+    font-weight: 600 !important;
+    color: #3498db !important;
+    text-decoration: none !important;
+    background: transparent !important;
+    display: inline !important;
+}
+
+a.brew-link:hover {
+    color: #2980b9 !important;
+    text-decoration: underline !important;
+}
+
+/* Maximum specificity to override any conflicting styles */
+table td a.brew-link,
+.data-table td a.brew-link,
+.dry-hop-card a.brew-link,
+.brew-info a.brew-link,
+.hop-actions a.brew-link,
+div a.brew-link {
+    font-weight: 600 !important;
+    color: #3498db !important;
+    text-decoration: none !important;
+    background: transparent !important;
+}
+
+table td a.brew-link:hover,
+.data-table td a.brew-link:hover,
+.dry-hop-card a.brew-link:hover,
+.brew-info a.brew-link:hover,
+div a.brew-link:hover {
+    color: #2980b9 !important;
+    text-decoration: underline !important;
 }
 
 .empty-state {

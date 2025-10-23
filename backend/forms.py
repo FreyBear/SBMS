@@ -180,3 +180,67 @@ class EditKitForm(FlaskForm):
 
 class DeleteKitForm(FlaskForm):
     submit = SubmitField('Delete Kit')
+
+class CreateBrewForm(FlaskForm):
+    name = StringField(_l('Brew Name'), validators=[DataRequired(), Length(max=200)])
+    date_brewed = DateField(_l('Date Brewed'), validators=[DataRequired()])
+    
+    # Source selection - either recipe OR kit
+    source_type = SelectField(_l('Brew Source'), 
+                             choices=[('recipe', _l('Recipe')), ('kit', _l('Kit'))], 
+                             validators=[DataRequired()])
+    recipe_id = SelectField(_l('Select Recipe'), coerce=lambda x: int(x) if x and x != '0' else None, validators=[Optional()])
+    kit_id = SelectField(_l('Select Kit'), coerce=lambda x: int(x) if x and x != '0' else None, validators=[Optional()])
+    
+    # Auto-populated but editable fields
+    style = StringField(_l('Style'), validators=[Optional(), Length(max=100)])
+    estimated_abv = DecimalField(_l('Estimated ABV (%)'), validators=[Optional(), NumberRange(min=0, max=20)], places=1)
+    expected_og = DecimalField(_l('Expected OG'), validators=[Optional(), NumberRange(min=1.000, max=1.200)], places=4)
+    expected_fg = DecimalField(_l('Expected FG'), validators=[Optional(), NumberRange(min=0.990, max=1.050)], places=4)
+    batch_size_liters = DecimalField(_l('Batch Size (L)'), validators=[Optional(), NumberRange(min=0, max=1000)], places=2)
+    
+    # Actual measurements
+    actual_og = DecimalField(_l('Actual OG'), validators=[Optional(), NumberRange(min=1.000, max=1.200)], places=4)
+    actual_fg = DecimalField(_l('Actual FG'), validators=[Optional(), NumberRange(min=0.990, max=1.050)], places=4)
+    
+    notes = TextAreaField(_l('Notes'), validators=[Optional()])
+    submit = SubmitField(_l('Create Brew'))
+
+class EditBrewForm(FlaskForm):
+    name = StringField(_l('Brew Name'), validators=[DataRequired(), Length(max=200)])
+    date_brewed = DateField(_l('Date Brewed'), validators=[DataRequired()])
+    
+    # Show current source but don't allow changing
+    source_info = StringField(_l('Brew Source'), render_kw={'readonly': True})
+    
+    # Editable fields
+    style = StringField(_l('Style'), validators=[Optional(), Length(max=100)])
+    estimated_abv = DecimalField(_l('Estimated ABV (%)'), validators=[Optional(), NumberRange(min=0, max=20)], places=1)
+    expected_og = DecimalField(_l('Expected OG'), validators=[Optional(), NumberRange(min=1.000, max=1.200)], places=4)
+    expected_fg = DecimalField(_l('Expected FG'), validators=[Optional(), NumberRange(min=0.990, max=1.050)], places=4)
+    batch_size_liters = DecimalField(_l('Batch Size (L)'), validators=[Optional(), NumberRange(min=0, max=1000)], places=2)
+    
+    # Actual measurements
+    actual_og = DecimalField(_l('Actual OG'), validators=[Optional(), NumberRange(min=1.000, max=1.200)], places=4)
+    actual_fg = DecimalField(_l('Actual FG'), validators=[Optional(), NumberRange(min=0.990, max=1.050)], places=4)
+    
+    notes = TextAreaField(_l('Notes'), validators=[Optional()])
+    submit = SubmitField(_l('Update Brew'))
+
+class AddDryHopForm(FlaskForm):
+    scheduled_date = DateField(_l('Scheduled Date'), validators=[DataRequired()])
+    ingredient = StringField(_l('Hop Variety/Ingredient'), validators=[DataRequired(), Length(max=200)])
+    amount_grams = DecimalField(_l('Amount (grams)'), validators=[DataRequired(), NumberRange(min=0.1, max=10000)], places=2)
+    hop_variety = StringField(_l('Hop Variety'), validators=[Optional(), Length(max=100)])
+    notes = TextAreaField(_l('Notes'), validators=[Optional()])
+    submit = SubmitField(_l('Add Dry Hop Schedule'))
+
+class EditDryHopForm(FlaskForm):
+    scheduled_date = DateField(_l('Scheduled Date'), validators=[DataRequired()])
+    completed_date = DateField(_l('Completed Date'), validators=[Optional()])
+    ingredient = StringField(_l('Hop Variety/Ingredient'), validators=[DataRequired(), Length(max=200)])
+    amount_grams = DecimalField(_l('Amount (grams)'), validators=[DataRequired(), NumberRange(min=0.1, max=10000)], places=2)
+    hop_variety = StringField(_l('Hop Variety'), validators=[Optional(), Length(max=100)])
+    is_completed = BooleanField(_l('Mark as Completed'))
+    notes = TextAreaField(_l('Notes'), validators=[Optional()])
+    submit = SubmitField(_l('Update Dry Hop'))

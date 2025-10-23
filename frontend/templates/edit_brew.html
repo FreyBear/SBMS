@@ -1,0 +1,606 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Brew') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="edit-brew-page">
+    <div class="page-header">
+        <h1>{{ _('Edit Brew') }}: {{ brew.name }}</h1>
+        <a href="{{ url_for('brew_detail', brew_id=brew.id) }}" class="btn btn-secondary">{{ _('Back to Brew') }}</a>
+    </div>
+
+    <form method="POST" class="brew-form">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-section">
+            <h3>{{ _('Basic Information') }}</h3>
+            
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control") }}
+                {% if form.name.errors %}
+                    <div class="form-errors">
+                        {% for error in form.name.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.date_brewed.label(class="form-label") }}
+                {{ form.date_brewed(class="form-control") }}
+                {% if form.date_brewed.errors %}
+                    <div class="form-errors">
+                        {% for error in form.date_brewed.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.source_info.label(class="form-label") }}
+                {{ form.source_info(class="form-control readonly") }}
+                <small class="form-help">{{ _('The brew source (recipe or kit) cannot be changed after creation.') }}</small>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Brew Details') }}</h3>
+            
+            <div class="form-row">
+                <div class="form-group half-width">
+                    {{ form.style.label(class="form-label") }}
+                    {{ form.style(class="form-control") }}
+                </div>
+
+                <div class="form-group half-width">
+                    {{ form.batch_size_liters.label(class="form-label") }}
+                    {{ form.batch_size_liters(class="form-control") }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group third-width">
+                    {{ form.estimated_abv.label(class="form-label") }}
+                    {{ form.estimated_abv(class="form-control") }}
+                </div>
+
+                <div class="form-group third-width">
+                    {{ form.expected_og.label(class="form-label") }}
+                    {{ form.expected_og(class="form-control", placeholder="1.0500") }}
+                </div>
+
+                <div class="form-group third-width">
+                    {{ form.expected_fg.label(class="form-label") }}
+                    {{ form.expected_fg(class="form-control", placeholder="1.0100") }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Actual Measurements') }}</h3>
+            <p class="form-help">{{ _('Enter actual gravity readings. ABV will be calculated automatically.') }}</p>
+            
+            <div class="form-row">
+                <div class="form-group third-width">
+                    {{ form.actual_og.label(class="form-label") }}
+                    {{ form.actual_og(class="form-control", id="actual_og", placeholder="1.0500") }}
+                </div>
+
+                <div class="form-group third-width">
+                    {{ form.actual_fg.label(class="form-label") }}
+                    {{ form.actual_fg(class="form-control", id="actual_fg", placeholder="1.0100") }}
+                </div>
+
+                <div class="form-group third-width">
+                    <label class="form-label">{{ _('Calculated ABV') }}</label>
+                    <input type="text" class="form-control" id="calculated_abv" readonly placeholder="{{ _('Auto-calculated') }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Notes') }}</h3>
+            
+            <div class="form-group">
+                {{ form.notes.label(class="form-label") }}
+                {{ form.notes(class="form-control", rows="4", placeholder=_("Add any brewing notes, observations, or modifications...")) }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('brew_detail', brew_id=brew.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+    
+    <!-- Dry Hopping Schedule Management -->
+    <div class="dry-hopping-management">
+        <div class="section-header">
+            <h3>{{ _('Dry Hopping Schedule') }}</h3>
+            <button type="button" class="btn btn-primary btn-sm" onclick="showAddDryHopForm()">{{ _('Add Dry Hop') }}</button>
+        </div>
+        
+        <!-- Add New Dry Hop Form (hidden by default) -->
+        <div id="add-dry-hop-form" class="dry-hop-form" style="display: none;">
+            <h4>{{ _('Add New Dry Hop') }}</h4>
+            <form id="new-dry-hop-form">
+                <input type="hidden" name="brew_id" value="{{ brew.id }}">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ _('Scheduled Date') }}</label>
+                        <input type="date" name="scheduled_date" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ _('Ingredient') }}</label>
+                        <input type="text" name="ingredient" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>{{ _('Amount (grams)') }}</label>
+                        <input type="number" name="amount_grams" class="form-control" step="0.1" min="0" required>
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>{{ _('Hop Variety') }}</label>
+                        <input type="text" name="hop_variety" class="form-control">
+                    </div>
+                    <div class="form-group">
+                        <label>{{ _('Notes') }}</label>
+                        <input type="text" name="notes" class="form-control">
+                    </div>
+                </div>
+                <div class="form-actions">
+                    <button type="submit" class="btn btn-success btn-sm">{{ _('Add Dry Hop') }}</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="hideAddDryHopForm()">{{ _('Cancel') }}</button>
+                </div>
+            </form>
+        </div>
+        
+        <!-- Existing Dry Hops List -->
+        <div id="dry-hops-list">
+            {% if dry_hops %}
+            {% for hop in dry_hops %}
+            <div class="dry-hop-item" data-hop-id="{{ hop.id }}">
+                <div class="hop-display" id="hop-display-{{ hop.id }}">
+                    <div class="hop-info">
+                        <div class="hop-main">
+                            <strong>{{ hop.ingredient }}</strong>
+                            {% if hop.hop_variety and hop.hop_variety != hop.ingredient %}
+                                <span class="hop-variety">({{ hop.hop_variety }})</span>
+                            {% endif %}
+                            <span class="hop-amount">{{ hop.amount_grams }}g</span>
+                        </div>
+                        <div class="hop-details">
+                            <span class="hop-date">{{ hop.scheduled_date.strftime('%Y-%m-%d') if hop.scheduled_date else 'No date' }}</span>
+                            {% if hop.notes %}
+                                <span class="hop-notes">{{ hop.notes }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    <div class="hop-status">
+                        {% if hop.is_completed %}
+                            <span class="status-completed">{{ _('Completed') }}</span>
+                            {% if hop.completed_date %}
+                                <span class="completed-date">{{ hop.completed_date.strftime('%Y-%m-%d') }}</span>
+                            {% endif %}
+                        {% else %}
+                            <span class="status-pending">{{ _('Pending') }}</span>
+                        {% endif %}
+                    </div>
+                    <div class="hop-actions">
+                        <button type="button" class="btn btn-sm btn-secondary" onclick="editDryHop({{ hop.id }})">{{ _('Edit') }}</button>
+                        {% if not hop.is_completed %}
+                        <button type="button" class="btn btn-sm btn-success" onclick="completeDryHop({{ hop.id }})">{{ _('Complete') }}</button>
+                        {% endif %}
+                        <button type="button" class="btn btn-sm btn-danger" onclick="deleteDryHop({{ hop.id }})">{{ _('Delete') }}</button>
+                    </div>
+                </div>
+                
+                <!-- Edit form (hidden by default) -->
+                <div class="hop-edit-form" id="hop-edit-{{ hop.id }}" style="display: none;">
+                    <form class="edit-dry-hop-form">
+                        <input type="hidden" name="hop_id" value="{{ hop.id }}">
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ _('Scheduled Date') }}</label>
+                                <input type="date" name="scheduled_date" class="form-control" value="{{ hop.scheduled_date.strftime('%Y-%m-%d') if hop.scheduled_date else '' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ _('Ingredient') }}</label>
+                                <input type="text" name="ingredient" class="form-control" value="{{ hop.ingredient }}">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ _('Amount (grams)') }}</label>
+                                <input type="number" name="amount_grams" class="form-control" step="0.1" min="0" value="{{ hop.amount_grams }}">
+                            </div>
+                        </div>
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>{{ _('Hop Variety') }}</label>
+                                <input type="text" name="hop_variety" class="form-control" value="{{ hop.hop_variety or '' }}">
+                            </div>
+                            <div class="form-group">
+                                <label>{{ _('Notes') }}</label>
+                                <input type="text" name="notes" class="form-control" value="{{ hop.notes or '' }}">
+                            </div>
+                        </div>
+                        <div class="form-actions">
+                            <button type="submit" class="btn btn-primary btn-sm">{{ _('Save Changes') }}</button>
+                            <button type="button" class="btn btn-secondary btn-sm" onclick="cancelEditDryHop({{ hop.id }})">{{ _('Cancel') }}</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="empty-dry-hops">
+                <p>{{ _('No dry hopping schedule created yet.') }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // ABV calculation fields
+    const actualOgField = document.getElementById('actual_og');
+    const actualFgField = document.getElementById('actual_fg');
+    const calculatedAbvField = document.getElementById('calculated_abv');
+    
+    // Calculate ABV from OG and FG
+    function calculateAbv() {
+        const og = parseFloat(actualOgField.value);
+        const fg = parseFloat(actualFgField.value);
+        
+        if (og && fg && og > fg) {
+            const abv = ((og - fg) * 131.25).toFixed(1);
+            calculatedAbvField.value = abv + '%';
+        } else {
+            calculatedAbvField.value = '';
+        }
+    }
+    
+    // Event listeners for ABV calculation
+    actualOgField.addEventListener('input', calculateAbv);
+    actualFgField.addEventListener('input', calculateAbv);
+    
+    // Initial calculation if values are already present
+    calculateAbv();
+});
+
+// Dry Hopping Management Functions
+function showAddDryHopForm() {
+    document.getElementById('add-dry-hop-form').style.display = 'block';
+}
+
+function hideAddDryHopForm() {
+    document.getElementById('add-dry-hop-form').style.display = 'none';
+    document.getElementById('new-dry-hop-form').reset();
+}
+
+function editDryHop(hopId) {
+    document.getElementById('hop-display-' + hopId).style.display = 'none';
+    document.getElementById('hop-edit-' + hopId).style.display = 'block';
+}
+
+function cancelEditDryHop(hopId) {
+    document.getElementById('hop-display-' + hopId).style.display = 'block';
+    document.getElementById('hop-edit-' + hopId).style.display = 'none';
+}
+
+function deleteDryHop(hopId) {
+    if (confirm('Are you sure you want to delete this dry hopping entry?')) {
+        fetch('/api/dry-hop/' + hopId + '/delete', {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                document.querySelector('[data-hop-id="' + hopId + '"]').remove();
+                showMessage(data.message, 'success');
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showMessage('Error deleting dry hop entry', 'error');
+        });
+    }
+}
+
+function completeDryHop(hopId) {
+    if (confirm('Mark this dry hopping as completed?')) {
+        fetch('/api/dry-hop/' + hopId + '/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload(); // Refresh to show updated status
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showMessage('Error completing dry hop entry', 'error');
+        });
+    }
+}
+
+function showMessage(message, type) {
+    // Create a simple message display
+    const messageDiv = document.createElement('div');
+    messageDiv.className = 'alert alert-' + type;
+    messageDiv.textContent = message;
+    messageDiv.style.position = 'fixed';
+    messageDiv.style.top = '20px';
+    messageDiv.style.right = '20px';
+    messageDiv.style.zIndex = '1000';
+    messageDiv.style.padding = '1rem';
+    messageDiv.style.borderRadius = '4px';
+    messageDiv.style.backgroundColor = type === 'success' ? '#d4edda' : '#f8d7da';
+    messageDiv.style.border = '1px solid ' + (type === 'success' ? '#c3e6cb' : '#f5c6cb');
+    messageDiv.style.color = type === 'success' ? '#155724' : '#721c24';
+    
+    document.body.appendChild(messageDiv);
+    
+    setTimeout(() => {
+        messageDiv.remove();
+    }, 3000);
+}
+
+// Handle form submissions
+document.addEventListener('DOMContentLoaded', function() {
+    // Add new dry hop form submission
+    document.getElementById('new-dry-hop-form').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        const data = Object.fromEntries(formData);
+        
+        fetch('/api/dry-hop/add', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(data)
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload(); // Refresh to show new entry
+            } else {
+                showMessage(data.message, 'error');
+            }
+        })
+        .catch(error => {
+            showMessage('Error adding dry hop entry', 'error');
+        });
+    });
+    
+    // Edit dry hop form submissions
+    document.querySelectorAll('.edit-dry-hop-form').forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const formData = new FormData(this);
+            const data = Object.fromEntries(formData);
+            const hopId = data.hop_id;
+            
+            fetch('/api/dry-hop/' + hopId + '/edit', {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload(); // Refresh to show updated entry
+                } else {
+                    showMessage(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showMessage('Error updating dry hop entry', 'error');
+            });
+        });
+    });
+});
+</script>
+
+<style>
+.brew-form {
+    max-width: 800px;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.form-help {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.half-width {
+    flex: 1;
+}
+
+.third-width {
+    flex: 1;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+#calculated_abv {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #495057;
+}
+
+.readonly {
+    background-color: #e9ecef;
+    color: #495057;
+}
+
+/* Dry Hopping Management Styles */
+.dry-hopping-management {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #333;
+}
+
+.dry-hop-form {
+    margin-bottom: 1.5rem;
+    padding: 1rem;
+    border: 1px solid #ccc;
+    border-radius: 6px;
+    background: white;
+}
+
+.dry-hop-item {
+    margin-bottom: 1rem;
+    padding: 1rem;
+    border: 1px solid #ddd;
+    border-radius: 6px;
+    background: white;
+}
+
+.hop-display, .hop-edit-form {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+}
+
+.hop-info {
+    flex: 1;
+}
+
+.hop-main {
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.hop-variety {
+    font-style: italic;
+    color: #666;
+    margin-left: 0.5rem;
+}
+
+.hop-amount {
+    background: #e9ecef;
+    padding: 0.2rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9em;
+    margin-left: 0.5rem;
+}
+
+.hop-details {
+    font-size: 0.9em;
+    color: #666;
+}
+
+.hop-date, .hop-notes {
+    margin-right: 1rem;
+}
+
+.hop-status {
+    text-align: center;
+}
+
+.status-completed {
+    color: #28a745;
+    font-weight: bold;
+}
+
+.status-pending {
+    color: #ffc107;
+    font-weight: bold;
+}
+
+.completed-date {
+    display: block;
+    font-size: 0.8em;
+    color: #666;
+}
+
+.hop-actions {
+    display: flex;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.empty-dry-hops {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    font-style: italic;
+}
+
+@media (max-width: 768px) {
+    .hop-display {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .hop-actions {
+        justify-content: center;
+        margin-top: 1rem;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        gap: 1rem;
+        align-items: stretch;
+    }
+}
+</style>
+{% endblock %}

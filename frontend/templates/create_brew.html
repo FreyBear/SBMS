@@ -1,0 +1,280 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Create New Brew') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="create-brew-page">
+    <div class="page-header">
+        <h1>{{ _('Create New Brew') }}</h1>
+        <a href="{{ url_for('brews') }}" class="btn btn-secondary">{{ _('Back to Brews') }}</a>
+    </div>
+
+    <form method="POST" class="brew-form">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-section">
+            <h3>{{ _('Basic Information') }}</h3>
+            
+            <div class="form-group">
+                {{ form.name.label(class="form-label") }}
+                {{ form.name(class="form-control") }}
+                {% if form.name.errors %}
+                    <div class="form-errors">
+                        {% for error in form.name.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.date_brewed.label(class="form-label") }}
+                {{ form.date_brewed(class="form-control") }}
+                {% if form.date_brewed.errors %}
+                    <div class="form-errors">
+                        {% for error in form.date_brewed.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Brew Source') }}</h3>
+            <p class="form-help">{{ _('Select a recipe or kit as the base for this brew. Values will be automatically filled but can be overridden.') }}</p>
+            
+            <div class="form-group">
+                {{ form.source_type.label(class="form-label") }}
+                {{ form.source_type(class="form-control", id="source_type") }}
+            </div>
+
+            <div class="form-group" id="recipe_selection" style="display: none;">
+                {{ form.recipe_id.label(class="form-label") }}
+                {{ form.recipe_id(class="form-control", id="recipe_select") }}
+            </div>
+
+            <div class="form-group" id="kit_selection" style="display: none;">
+                {{ form.kit_id.label(class="form-label") }}
+                {{ form.kit_id(class="form-control", id="kit_select") }}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Brew Details') }}</h3>
+            <p class="form-help">{{ _('These fields are auto-filled from your selected recipe/kit but can be modified.') }}</p>
+            
+            <div class="form-row">
+                <div class="form-group half-width">
+                    {{ form.style.label(class="form-label") }}
+                    {{ form.style(class="form-control", id="style") }}
+                </div>
+
+                <div class="form-group half-width">
+                    {{ form.batch_size_liters.label(class="form-label") }}
+                    {{ form.batch_size_liters(class="form-control", id="batch_size") }}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group third-width">
+                    {{ form.estimated_abv.label(class="form-label") }}
+                    {{ form.estimated_abv(class="form-control", id="estimated_abv") }}
+                </div>
+
+                <div class="form-group third-width">
+                    {{ form.expected_og.label(class="form-label") }}
+                    {{ form.expected_og(class="form-control", id="expected_og", placeholder="1.0500") }}
+                </div>
+
+                <div class="form-group third-width">
+                    {{ form.expected_fg.label(class="form-label") }}
+                    {{ form.expected_fg(class="form-control", id="expected_fg", placeholder="1.0100") }}
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Actual Measurements') }}</h3>
+            <p class="form-help">{{ _('Enter actual gravity readings. ABV will be calculated automatically.') }}</p>
+            
+            <div class="form-row">
+                <div class="form-group third-width">
+                    {{ form.actual_og.label(class="form-label") }}
+                    {{ form.actual_og(class="form-control", id="actual_og", placeholder="1.0500") }}
+                </div>
+
+                <div class="form-group third-width">
+                    {{ form.actual_fg.label(class="form-label") }}
+                    {{ form.actual_fg(class="form-control", id="actual_fg", placeholder="1.0100") }}
+                </div>
+
+                <div class="form-group third-width">
+                    <label class="form-label">{{ _('Calculated ABV') }}</label>
+                    <input type="text" class="form-control" id="calculated_abv" readonly placeholder="{{ _('Auto-calculated') }}">
+                </div>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Notes') }}</h3>
+            
+            <div class="form-group">
+                {{ form.notes.label(class="form-label") }}
+                {{ form.notes(class="form-control", rows="4", placeholder=_("Add any brewing notes, observations, or modifications...")) }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('brews') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const sourceType = document.getElementById('source_type');
+    const recipeSelection = document.getElementById('recipe_selection');
+    const kitSelection = document.getElementById('kit_selection');
+    const recipeSelect = document.getElementById('recipe_select');
+    const kitSelect = document.getElementById('kit_select');
+    
+    // Form fields for auto-population
+    const nameField = document.getElementById('{{ form.name.id }}');
+    const styleField = document.getElementById('style');
+    const estimatedAbvField = document.getElementById('estimated_abv');
+    const expectedOgField = document.getElementById('expected_og');
+    const expectedFgField = document.getElementById('expected_fg');
+    const batchSizeField = document.getElementById('batch_size');
+    
+    // ABV calculation fields
+    const actualOgField = document.getElementById('actual_og');
+    const actualFgField = document.getElementById('actual_fg');
+    const calculatedAbvField = document.getElementById('calculated_abv');
+    
+    // Show/hide source selections
+    function toggleSourceSelection() {
+        if (sourceType.value === 'recipe') {
+            recipeSelection.style.display = 'block';
+            kitSelection.style.display = 'none';
+            kitSelect.value = '';
+        } else if (sourceType.value === 'kit') {
+            recipeSelection.style.display = 'none';
+            kitSelection.style.display = 'block';
+            recipeSelect.value = '';
+        }
+    }
+    
+    // Auto-populate from recipe
+    function populateFromRecipe(recipeId) {
+        if (!recipeId) return;
+        
+        fetch(`/api/recipe/${recipeId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    if (!nameField.value) nameField.value = data.name || '';
+                    styleField.value = data.style || '';
+                    estimatedAbvField.value = data.target_abv || '';
+                    expectedOgField.value = data.target_og || '';
+                    expectedFgField.value = data.target_fg || '';
+                    batchSizeField.value = data.batch_size_liters || '';
+                }
+            });
+    }
+    
+    // Auto-populate from kit
+    function populateFromKit(kitId) {
+        if (!kitId) return;
+        
+        fetch(`/api/kit/${kitId}`)
+            .then(response => response.json())
+            .then(data => {
+                if (!data.error) {
+                    if (!nameField.value) nameField.value = data.name || '';
+                    styleField.value = data.style || '';
+                    estimatedAbvField.value = data.estimated_abv || '';
+                    batchSizeField.value = data.volume_liters || '';
+                    // Kits don't typically have OG/FG data
+                }
+            });
+    }
+    
+    // Calculate ABV from OG and FG
+    function calculateAbv() {
+        const og = parseFloat(actualOgField.value);
+        const fg = parseFloat(actualFgField.value);
+        
+        if (og && fg && og > fg) {
+            const abv = ((og - fg) * 131.25).toFixed(1);
+            calculatedAbvField.value = abv + '%';
+        } else {
+            calculatedAbvField.value = '';
+        }
+    }
+    
+    // Event listeners
+    sourceType.addEventListener('change', toggleSourceSelection);
+    recipeSelect.addEventListener('change', (e) => populateFromRecipe(e.target.value));
+    kitSelect.addEventListener('change', (e) => populateFromKit(e.target.value));
+    actualOgField.addEventListener('input', calculateAbv);
+    actualFgField.addEventListener('input', calculateAbv);
+    
+    // Initialize
+    toggleSourceSelection();
+});
+</script>
+
+<style>
+.brew-form {
+    max-width: 800px;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.form-help {
+    color: #666;
+    font-size: 0.9em;
+    margin-bottom: 1rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.half-width {
+    flex: 1;
+}
+
+.third-width {
+    flex: 1;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+#calculated_abv {
+    background-color: #e9ecef;
+    font-weight: bold;
+    color: #495057;
+}
+</style>
+{% endblock %}

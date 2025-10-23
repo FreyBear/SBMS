@@ -1,11 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}Brews - BROEN SBMS{% endblock %}
+{% block title %}Brews - SBMS{% endblock %}
 
 {% block content %}
 <div class="brews-page">
     <div class="page-header">
         <h1>{{ _('Brew Management') }}</h1>
+        {% if current_user.can_access('brews', 'edit') %}
+        <a href="{{ url_for('create_brew') }}" class="btn btn-primary">{{ _('Create New Brew') }}</a>
+        {% endif %}
     </div>
 
     {% if brews %}
@@ -14,29 +17,92 @@
             <tr>
                 <th>{{ _('Brew Name') }}</th>
                 <th>{{ _('Date Brewed') }}</th>
-                <th>{{ _('Recipe') }}</th>
+                <th>{{ _('Source') }}</th>
                 <th>{{ _('Style') }}</th>
+                <th>{{ _('ABV') }}</th>
+                <th>{{ _('Batch Size') }}</th>
+                <th>{{ _('Dry Hops') }}</th>
                 <th>{{ _('Kegs') }}</th>
-                <th>{{ _('Notes') }}</th>
+                <th>{{ _('Actions') }}</th>
             </tr>
         </thead>
         <tbody>
             {% for brew in brews %}
             <tr>
-                <td>{{ brew.name }}</td>
+                <td><a href="{{ url_for('brew_detail', brew_id=brew.id) }}" class="brew-link">{{ brew.name }}</a></td>
                 <td>{{ brew.date_brewed.strftime('%d-%m-%Y') if brew.date_brewed else 'Unknown' }}</td>
-                <td>{{ brew.recipe_name or 'Unknown' }}</td>
-                <td>{{ brew.style or 'Unknown' }}</td>
-                <td>{{ brew.keg_count }} kegs</td>
-                <td>{{ brew.notes or 'No notes' }}</td>
+                <td>
+                    {% if brew.recipe_name %}
+                        {{ _('Recipe') }}: {{ brew.recipe_name }}
+                    {% elif brew.kit_name %}
+                        {{ _('Kit') }}: {{ brew.kit_name }}
+                    {% else %}
+                        {{ _('Unknown') }}
+                    {% endif %}
+                </td>
+                <td>{{ brew.source_style or brew.style or '-' }}</td>
+                <td>
+                    {% if brew.actual_abv %}
+                        {{ brew.actual_abv }}% <small>({{ _('Actual') }})</small>
+                    {% elif brew.estimated_abv %}
+                        {{ brew.estimated_abv }}% <small>({{ _('Est.') }})</small>
+                    {% else %}
+                        -
+                    {% endif %}
+                </td>
+                <td>{{ brew.batch_size_liters }}L {% if brew.batch_size_liters %}{% else %}-{% endif %}</td>
+                <td>
+                    {% if brew.dry_hop_count > 0 %}
+                        {{ brew.completed_dry_hops }}/{{ brew.dry_hop_count }} {{ _('completed') }}
+                    {% else %}
+                        {{ _('None') }}
+                    {% endif %}
+                </td>
+                <td>{{ brew.keg_count }} {{ _('kegs') }}</td>
+                <td>
+                    <a href="{{ url_for('brew_detail', brew_id=brew.id) }}" class="btn btn-sm btn-primary">{{ _('View') }}</a>
+                    {% if current_user.can_access('brews', 'edit') %}
+                    <a href="{{ url_for('edit_brew', brew_id=brew.id) }}" class="btn btn-sm btn-secondary">{{ _('Edit') }}</a>
+                    {% endif %}
+                    {% if current_user.can_access('brews', 'delete') %}
+                    <button type="button" class="btn btn-sm btn-danger" onclick="confirmDelete('{{ brew.name }}', {{ brew.id }})">{{ _('Delete') }}</button>
+                    {% endif %}
+                </td>
             </tr>
             {% endfor %}
         </tbody>
     </table>
     {% else %}
     <div class="empty-state">
-        <p>No brews found in the system.</p>
+        <p>{{ _('No brews found in the system.') }}</p>
+        {% if current_user.can_access('brews', 'edit') %}
+        <a href="{{ url_for('create_brew') }}" class="btn btn-primary">{{ _('Create Your First Brew') }}</a>
+        {% endif %}
     </div>
     {% endif %}
 </div>
+
+<script>
+function confirmDelete(brewName, brewId) {
+    if (confirm('Are you sure you want to delete the brew "' + brewName + '"?\n\nThis action cannot be undone and will also delete all associated dry hopping records.')) {
+        // Create a form and submit it
+        var form = document.createElement('form');
+        form.method = 'POST';
+        form.action = '/brew/' + brewId + '/delete';
+        
+        // Add CSRF token if available
+        var csrfToken = document.querySelector('meta[name=csrf-token]');
+        if (csrfToken) {
+            var csrfInput = document.createElement('input');
+            csrfInput.type = 'hidden';
+            csrfInput.name = 'csrf_token';
+            csrfInput.value = csrfToken.getAttribute('content');
+            form.appendChild(csrfInput);
+        }
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
 {% endblock %}

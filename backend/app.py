@@ -6,6 +6,7 @@ from flask_login import LoginManager, login_user, logout_user, login_required, c
 from flask_babel import gettext, ngettext
 from dotenv import load_dotenv
 from datetime import datetime, date
+from decimal import Decimal
 import bcrypt
 import uuid
 from werkzeug.utils import secure_filename
@@ -339,15 +340,38 @@ def index():
                 """)
                 pending_expenses = cur.fetchall()
             
+            # Get pending dry hopping entries across all brews
+            pending_dry_hops = []
+            if current_user.can_access('brews', 'view'):
+                cur.execute("""
+                    SELECT dh.*, b.name as brew_name
+                    FROM brew_dry_hopping dh
+                    JOIN brew b ON dh.brew_id = b.id
+                    WHERE dh.is_completed = FALSE
+                    ORDER BY dh.scheduled_date ASC, dh.created_date ASC
+                    LIMIT 20
+                """)
+                pending_dry_hops = cur.fetchall()
+            
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
         keg_stats = []
         recent_kegs = []
         pending_expenses = []
+        pending_dry_hops = []
     finally:
         conn.close()
     
-    return render_template('index.html', keg_stats=keg_stats, recent_kegs=recent_kegs, pending_expenses=pending_expenses)
+    # Import datetime for template usage
+    from datetime import date
+    today_date = date.today()
+    
+    return render_template('index.html', 
+                         keg_stats=keg_stats, 
+                         recent_kegs=recent_kegs, 
+                         pending_expenses=pending_expenses,
+                         pending_dry_hops=pending_dry_hops,
+                         today_date=today_date)
 
 @app.route('/kegs')
 @require_permission('kegs', 'view')
@@ -631,7 +655,7 @@ def edit_keg_history(keg_id, history_id):
 @app.route('/brews')
 @require_permission('brews', 'view')
 def brews():
-    """View all brews"""
+    """View all brews with enhanced information"""
     conn = get_db_connection()
     if not conn:
         flash('Database connection error', 'error')
@@ -640,12 +664,19 @@ def brews():
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT b.*, r.name as recipe_name, r.style,
-                       COUNT(k.id) as keg_count
+                SELECT b.*, 
+                       r.name as recipe_name, 
+                       k.name as kit_name,
+                       COALESCE(r.style, k.style) as source_style,
+                       COUNT(keg.id) as keg_count,
+                       COUNT(dh.id) as dry_hop_count,
+                       COUNT(CASE WHEN dh.is_completed = true THEN 1 END) as completed_dry_hops
                 FROM brew b
                 LEFT JOIN recipe r ON b.recipe_id = r.id
-                LEFT JOIN keg k ON b.id = k.brew_id
-                GROUP BY b.id, r.name, r.style
+                LEFT JOIN kit k ON b.kit_id = k.id
+                LEFT JOIN keg ON b.id = keg.brew_id
+                LEFT JOIN brew_dry_hopping dh ON b.id = dh.brew_id
+                GROUP BY b.id, r.name, k.name, r.style, k.style
                 ORDER BY b.date_brewed DESC
             """)
             brews = cur.fetchall()
@@ -656,6 +687,539 @@ def brews():
         conn.close()
     
     return render_template('brews.html', brews=brews)
+
+@app.route('/brews/create', methods=['GET', 'POST'])
+@require_permission('brews', 'edit')
+def create_brew():
+    """Create a new brew from recipe or kit"""
+    from forms import CreateBrewForm
+    
+    form = CreateBrewForm()
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Populate recipe and kit choices
+            cur.execute("SELECT id, name FROM recipe WHERE is_active = true ORDER BY name")
+            recipes = cur.fetchall()
+            form.recipe_id.choices = [('', 'Select Recipe')] + [(str(r['id']), r['name']) for r in recipes]
+            
+            cur.execute("SELECT id, name FROM kit ORDER BY name")
+            kits = cur.fetchall()
+            form.kit_id.choices = [('', 'Select Kit')] + [(str(k['id']), k['name']) for k in kits]
+            
+            if form.validate_on_submit():
+                # Validate source selection
+                if form.source_type.data == 'recipe' and not form.recipe_id.data:
+                    flash('Please select a recipe', 'error')
+                elif form.source_type.data == 'kit' and not form.kit_id.data:
+                    flash('Please select a kit', 'error')
+                else:
+                    # Calculate actual ABV if both OG and FG are provided
+                    actual_abv = None
+                    if form.actual_og.data and form.actual_fg.data:
+                        actual_abv = round((form.actual_og.data - form.actual_fg.data) * Decimal('131.25'), 1)
+                    
+                    # Insert brew
+                    cur.execute("""
+                        INSERT INTO brew (name, date_brewed, recipe_id, kit_id, style, 
+                                        estimated_abv, expected_og, expected_fg, batch_size_liters,
+                                        actual_og, actual_fg, actual_abv, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        RETURNING id
+                    """, (
+                        form.name.data,
+                        form.date_brewed.data,
+                        form.recipe_id.data if form.source_type.data == 'recipe' else None,
+                        form.kit_id.data if form.source_type.data == 'kit' else None,
+                        form.style.data,
+                        form.estimated_abv.data,
+                        form.expected_og.data,
+                        form.expected_fg.data,
+                        form.batch_size_liters.data,
+                        form.actual_og.data,
+                        form.actual_fg.data,
+                        actual_abv,
+                        form.notes.data
+                    ))
+                    
+                    brew_id = cur.fetchone()['id']
+                    conn.commit()
+                    
+                    flash('Brew created successfully!', 'success')
+                    return redirect(url_for('brew_detail', brew_id=brew_id))
+    
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return render_template('create_brew.html', form=form)
+
+@app.route('/brew/<int:brew_id>')
+@require_permission('brews', 'view')
+def brew_detail(brew_id):
+    """View brew details with dry hopping schedule"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get brew details
+            cur.execute("""
+                SELECT b.*, r.name as recipe_name, k.name as kit_name,
+                       COALESCE(r.style, k.style, b.style) as display_style
+                FROM brew b
+                LEFT JOIN recipe r ON b.recipe_id = r.id
+                LEFT JOIN kit k ON b.kit_id = k.id
+                WHERE b.id = %s
+            """, (brew_id,))
+            
+            brew = cur.fetchone()
+            if not brew:
+                flash('Brew not found', 'error')
+                return redirect(url_for('brews'))
+            
+            # Get dry hopping schedule
+            cur.execute("""
+                SELECT * FROM brew_dry_hopping 
+                WHERE brew_id = %s 
+                ORDER BY scheduled_date, created_date
+            """, (brew_id,))
+            
+            dry_hops = cur.fetchall()
+            
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('brews'))
+    finally:
+        conn.close()
+    
+    return render_template('brew_detail.html', brew=brew, dry_hops=dry_hops)
+
+@app.route('/brew/<int:brew_id>/edit', methods=['GET', 'POST'])
+@require_permission('brews', 'edit')
+def edit_brew(brew_id):
+    """Edit an existing brew"""
+    from forms import EditBrewForm
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get current brew data
+            cur.execute("""
+                SELECT b.*, r.name as recipe_name, k.name as kit_name
+                FROM brew b
+                LEFT JOIN recipe r ON b.recipe_id = r.id
+                LEFT JOIN kit k ON b.kit_id = k.id
+                WHERE b.id = %s
+            """, (brew_id,))
+            
+            brew = cur.fetchone()
+            if not brew:
+                flash('Brew not found', 'error')
+                return redirect(url_for('brews'))
+            
+            form = EditBrewForm(obj=brew)
+            
+            # Set source info (read-only)
+            if brew['recipe_name']:
+                form.source_info.data = f"Recipe: {brew['recipe_name']}"
+            elif brew['kit_name']:
+                form.source_info.data = f"Kit: {brew['kit_name']}"
+            else:
+                form.source_info.data = "Unknown source"
+            
+            # Get dry hopping schedule
+            cur.execute("""
+                SELECT * FROM brew_dry_hopping 
+                WHERE brew_id = %s 
+                ORDER BY scheduled_date, created_date
+            """, (brew_id,))
+            
+            dry_hops = cur.fetchall()
+            
+            if form.validate_on_submit():
+                # Calculate actual ABV if both OG and FG are provided
+                actual_abv = None
+                if form.actual_og.data and form.actual_fg.data:
+                    actual_abv = round((form.actual_og.data - form.actual_fg.data) * Decimal('131.25'), 1)
+                
+                cur.execute("""
+                    UPDATE brew SET 
+                        name = %s, date_brewed = %s, style = %s, 
+                        estimated_abv = %s, expected_og = %s, expected_fg = %s, 
+                        batch_size_liters = %s, actual_og = %s, actual_fg = %s, 
+                        actual_abv = %s, notes = %s
+                    WHERE id = %s
+                """, (
+                    form.name.data,
+                    form.date_brewed.data,
+                    form.style.data,
+                    form.estimated_abv.data,
+                    form.expected_og.data,
+                    form.expected_fg.data,
+                    form.batch_size_liters.data,
+                    form.actual_og.data,
+                    form.actual_fg.data,
+                    actual_abv,
+                    form.notes.data,
+                    brew_id
+                ))
+                
+                conn.commit()
+                flash('Brew updated successfully!', 'success')
+                return redirect(url_for('brew_detail', brew_id=brew_id))
+    
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return render_template('edit_brew.html', form=form, brew=brew, dry_hops=dry_hops)
+
+@app.route('/brew/<int:brew_id>/delete', methods=['POST'])
+@require_permission('brews', 'delete')
+def delete_brew(brew_id):
+    """Delete a brew (admin only)"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('brews'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # First check if brew exists and get its name
+            cur.execute("SELECT name FROM brew WHERE id = %s", (brew_id,))
+            brew = cur.fetchone()
+            
+            if not brew:
+                flash('Brew not found', 'error')
+                return redirect(url_for('brews'))
+            
+            # Delete the brew (dry hopping records will be cascade deleted)
+            cur.execute("DELETE FROM brew WHERE id = %s", (brew_id,))
+            conn.commit()
+            
+            flash(f'Brew "{brew["name"]}" has been deleted successfully', 'success')
+            
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return redirect(url_for('brews'))
+
+@app.route('/brew/<int:brew_id>/dry-hop/add', methods=['GET', 'POST'])
+@require_permission('brews', 'edit')
+def add_dry_hop(brew_id):
+    """Add dry hopping schedule to a brew"""
+    from forms import AddDryHopForm
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    # Verify brew exists
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, name FROM brew WHERE id = %s", (brew_id,))
+            brew = cur.fetchone()
+            
+            if not brew:
+                flash('Brew not found', 'error')
+                return redirect(url_for('brews'))
+            
+            form = AddDryHopForm()
+            
+            if form.validate_on_submit():
+                cur.execute("""
+                    INSERT INTO brew_dry_hopping (brew_id, scheduled_date, ingredient, 
+                                                amount_grams, hop_variety, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s)
+                """, (
+                    brew_id,
+                    form.scheduled_date.data,
+                    form.ingredient.data,
+                    form.amount_grams.data,
+                    form.hop_variety.data,
+                    form.notes.data
+                ))
+                
+                conn.commit()
+                flash('Dry hop schedule added successfully!', 'success')
+                return redirect(url_for('brew_detail', brew_id=brew_id))
+    
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return render_template('add_dry_hop.html', form=form, brew=brew)
+
+@app.route('/dry-hop/<int:dry_hop_id>/edit', methods=['GET', 'POST'])
+@require_permission('brews', 'edit')
+def edit_dry_hop(dry_hop_id):
+    """Edit or mark dry hopping as completed"""
+    from forms import EditDryHopForm
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT dh.*, b.name as brew_name 
+                FROM brew_dry_hopping dh
+                JOIN brew b ON dh.brew_id = b.id
+                WHERE dh.id = %s
+            """, (dry_hop_id,))
+            
+            dry_hop = cur.fetchone()
+            if not dry_hop:
+                flash('Dry hop entry not found', 'error')
+                return redirect(url_for('brews'))
+            
+            form = EditDryHopForm(obj=dry_hop)
+            
+            if form.validate_on_submit():
+                # Set completed date if marking as completed
+                completed_date = form.completed_date.data
+                if form.is_completed.data and not completed_date:
+                    completed_date = datetime.now().date()
+                
+                cur.execute("""
+                    UPDATE brew_dry_hopping SET 
+                        scheduled_date = %s, completed_date = %s, ingredient = %s,
+                        amount_grams = %s, hop_variety = %s, is_completed = %s,
+                        notes = %s, updated_date = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (
+                    form.scheduled_date.data,
+                    completed_date,
+                    form.ingredient.data,
+                    form.amount_grams.data,
+                    form.hop_variety.data,
+                    form.is_completed.data,
+                    form.notes.data,
+                    dry_hop_id
+                ))
+                
+                conn.commit()
+                flash('Dry hop schedule updated successfully!', 'success')
+                return redirect(url_for('brew_detail', brew_id=dry_hop['brew_id']))
+    
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.rollback()
+    finally:
+        conn.close()
+    
+    return render_template('edit_dry_hop.html', form=form, dry_hop=dry_hop)
+
+@app.route('/api/recipe/<int:recipe_id>')
+@require_permission('brews', 'view')
+def api_recipe_data(recipe_id):
+    """API endpoint to get recipe data for brew creation"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection error'}), 500
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT name, style, target_abv, target_og, target_fg, batch_size_liters
+                FROM recipe WHERE id = %s
+            """, (recipe_id,))
+            
+            recipe = cur.fetchone()
+            if recipe:
+                return jsonify(dict(recipe))
+            else:
+                return jsonify({'error': 'Recipe not found'}), 404
+    
+    except psycopg2.Error as e:
+        return jsonify({'error': 'Database error'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/kit/<int:kit_id>')
+@require_permission('brews', 'view')
+def api_kit_data(kit_id):
+    """API endpoint to get kit data for brew creation"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'error': 'Database connection error'}), 500
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT name, style, estimated_abv, volume_liters
+                FROM kit WHERE id = %s
+            """, (kit_id,))
+            
+            kit = cur.fetchone()
+            if kit:
+                return jsonify(dict(kit))
+            else:
+                return jsonify({'error': 'Kit not found'}), 404
+    
+    except psycopg2.Error as e:
+        return jsonify({'error': 'Database error'}), 500
+    finally:
+        conn.close()
+
+# Dry Hopping Management API Endpoints
+@app.route('/api/dry-hop/add', methods=['POST'])
+@require_permission('brews', 'edit')
+def api_add_dry_hop():
+    """API endpoint to add a new dry hopping entry"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        data = request.get_json()
+        brew_id = data.get('brew_id')
+        
+        # Verify brew exists
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id FROM brew WHERE id = %s", (brew_id,))
+            if not cur.fetchone():
+                return jsonify({'success': False, 'message': 'Brew not found'}), 404
+            
+            # Insert new dry hop entry
+            cur.execute("""
+                INSERT INTO brew_dry_hopping 
+                (brew_id, scheduled_date, ingredient, amount_grams, hop_variety, notes)
+                VALUES (%s, %s, %s, %s, %s, %s)
+            """, (
+                brew_id,
+                data.get('scheduled_date'),
+                data.get('ingredient'),
+                float(data.get('amount_grams', 0)),
+                data.get('hop_variety'),
+                data.get('notes')
+            ))
+            
+            conn.commit()
+            return jsonify({'success': True, 'message': 'Dry hop entry added successfully'})
+            
+    except (psycopg2.Error, ValueError) as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error adding dry hop entry: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/dry-hop/<int:hop_id>/edit', methods=['PUT'])
+@require_permission('brews', 'edit')
+def api_edit_dry_hop(hop_id):
+    """API endpoint to edit a dry hopping entry"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        data = request.get_json()
+        
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Verify dry hop exists
+            cur.execute("SELECT id FROM brew_dry_hopping WHERE id = %s", (hop_id,))
+            if not cur.fetchone():
+                return jsonify({'success': False, 'message': 'Dry hop entry not found'}), 404
+            
+            # Update dry hop entry
+            cur.execute("""
+                UPDATE brew_dry_hopping 
+                SET scheduled_date = %s, ingredient = %s, amount_grams = %s, 
+                    hop_variety = %s, notes = %s, updated_date = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (
+                data.get('scheduled_date'),
+                data.get('ingredient'),
+                float(data.get('amount_grams', 0)),
+                data.get('hop_variety'),
+                data.get('notes'),
+                hop_id
+            ))
+            
+            conn.commit()
+            return jsonify({'success': True, 'message': 'Dry hop entry updated successfully'})
+            
+    except (psycopg2.Error, ValueError) as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error updating dry hop entry: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/dry-hop/<int:hop_id>/delete', methods=['DELETE'])
+@require_permission('brews', 'edit')
+def api_delete_dry_hop(hop_id):
+    """API endpoint to delete a dry hopping entry"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Verify and delete dry hop entry
+            cur.execute("DELETE FROM brew_dry_hopping WHERE id = %s RETURNING id", (hop_id,))
+            if cur.fetchone():
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Dry hop entry deleted successfully'})
+            else:
+                return jsonify({'success': False, 'message': 'Dry hop entry not found'}), 404
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error deleting dry hop entry: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/dry-hop/<int:hop_id>/complete', methods=['POST'])
+@require_permission('brews', 'edit')
+def api_complete_dry_hop(hop_id):
+    """API endpoint to mark a dry hopping entry as completed"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Update dry hop entry to completed
+            cur.execute("""
+                UPDATE brew_dry_hopping 
+                SET is_completed = TRUE, completed_date = CURRENT_DATE, updated_date = CURRENT_TIMESTAMP
+                WHERE id = %s RETURNING id
+            """, (hop_id,))
+            
+            if cur.fetchone():
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Dry hop entry marked as completed'})
+            else:
+                return jsonify({'success': False, 'message': 'Dry hop entry not found'}), 404
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error completing dry hop entry: {e}'}), 500
+    finally:
+        conn.close()
 
 @app.route('/recipes')
 @require_permission('recipes', 'view')
