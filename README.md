@@ -15,11 +15,16 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
   - Label image and instruction PDF uploads
   - Kit-based brewing for easy batch creation
 - **Brew Tracking**: Record and review logs from each brewing session with batch tracking from recipes OR kits
+  - **Gluten-free Tracking**: Mark and filter gluten-free brews for dietary requirements
+  - **ABV Tracking**: Track estimated and actual alcohol by volume for quality control
+  - **Brew Details**: Style, batch size, original/final gravity measurements
 - **Keg Management**: Comprehensive keg tracking system including:
   - Keg status monitoring (Full, Started, Available/Cleaned, Empty)
   - Location tracking for easy inventory management
   - Condition monitoring (Good, Defective)
   - Volume and content tracking
+  - **Brew Linking**: Connect kegs to source brews with automatic ABV and gluten-free info
+  - **Searchable Brew Selection**: Modal interface for easy brew selection with filtering
   - Cleaning schedules and maintenance logs
   - Keg history with detailed tracking of usage patterns
 
@@ -493,8 +498,8 @@ The SBMS system uses a comprehensive PostgreSQL schema that supports all brewery
 - **`user_role`**: Role definitions with JSON-based permission system
 - **`recipe`**: Brewing recipes with styles and detailed notes
 - **`kit`**: Brewing kit management with file uploads and supplier tracking
-- **`brew`**: Batch tracking with recipe OR kit links and brewing dates
-- **`keg`**: Complete keg lifecycle management with status and location tracking
+- **`brew`**: Batch tracking with recipe OR kit links, brewing dates, ABV measurements, and gluten-free status
+- **`keg`**: Complete keg lifecycle management with status, location tracking, brew linking, ABV, and gluten-free info
 - **`keg_history`**: Historical tracking of all keg changes and movements
 
 ### Expense Management Tables

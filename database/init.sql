@@ -74,6 +74,15 @@ CREATE TABLE brew (
     date_brewed DATE NOT NULL,
     recipe_id INTEGER REFERENCES recipe(id),
     kit_id INTEGER REFERENCES kit(id),
+    style TEXT,
+    estimated_abv NUMERIC(4,1),
+    expected_og NUMERIC(6,4),
+    expected_fg NUMERIC(6,4),
+    batch_size_liters NUMERIC(6,2),
+    actual_og NUMERIC(6,4),
+    actual_fg NUMERIC(6,4),
+    actual_abv NUMERIC(4,1),
+    gluten_free BOOLEAN NOT NULL DEFAULT false,
     notes TEXT,
     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT brew_source_check CHECK (
@@ -97,6 +106,8 @@ CREATE TABLE keg (
     contents TEXT,
     date_filled DATE,
     last_measured DATE,
+    abv NUMERIC(4,2) CHECK (abv >= 0 AND abv <= 20),
+    gluten_free BOOLEAN,
     created_date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 
