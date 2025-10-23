@@ -209,11 +209,29 @@ a[href*="shopping-cart"]:hover {
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
 
-/* Small buttons for table actions */
+/* Small buttons for table actions - Standardized sizing */
 .btn-sm,
 .btn-small {
-    padding: 0.25rem 0.5rem;
-    font-size: 0.8rem;
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+    white-space: nowrap !important;
+    display: inline-block !important;
+    vertical-align: middle !important;
+}
+
+/* Ensure consistent button styling in tables */
+.data-table .btn,
+.data-table .btn-sm,
+.data-table .btn-small,
+table .btn,
+table .btn-sm,
+table .btn-small {
+    padding: 4px 8px !important;
+    font-size: 11px !important;
+    line-height: 1.5 !important;
+    margin: 0 2px !important;
+    white-space: nowrap !important;
 }
 
 /* Ensure View buttons in version history get proper styling */

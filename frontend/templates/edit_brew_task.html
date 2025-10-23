@@ -1,0 +1,235 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Edit Brew Task') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="edit-brew-task-page">
+    <div class="page-header">
+        <h1>{{ _('Edit Brew Task') }}</h1>
+        <h2>{{ _('Brew') }}: {{ brew_task.brew_name }}</h2>
+        <a href="{{ url_for('brew_detail', brew_id=brew_task.brew_id) }}" class="btn btn-secondary">{{ _('Back to Brew') }}</a>
+    </div>
+
+    <form method="POST" class="brew-task-form">
+        {{ form.hidden_tag() }}
+        
+        <div class="form-section">
+            <h3>{{ _('Task Details') }}</h3>
+            
+            <div class="form-group">
+                {{ form.scheduled_date.label(class="form-label") }}
+                {{ form.scheduled_date(class="form-control") }}
+                {% if form.scheduled_date.errors %}
+                    <div class="form-errors">
+                        {% for error in form.scheduled_date.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                {{ form.action.label(class="form-label") }}
+                {{ form.action(class="form-control", placeholder=_("e.g., Dry hop with Cascade, Cold crash, Transfer to keg")) }}
+                <small class="form-help">{{ _('Describe what needs to be done for this brew.') }}</small>
+                {% if form.action.errors %}
+                    <div class="form-errors">
+                        {% for error in form.action.errors %}
+                            <span class="error">{{ error }}</span>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Completion Status') }}</h3>
+            
+            <div class="form-row">
+                <div class="form-group half-width">
+                    {{ form.completed_date.label(class="form-label") }}
+                    {{ form.completed_date(class="form-control", id="completed_date") }}
+                    <small class="form-help">{{ _('Leave empty if not completed yet. Will be auto-filled when marking as completed.') }}</small>
+                    {% if brew_task.scheduled_date %}
+                        <small class="form-help scheduled-info">{{ _('Scheduled for') }}: {{ brew_task.scheduled_date.strftime('%Y-%m-%d') }}</small>
+                    {% endif %}
+                </div>
+
+                <div class="form-group half-width">
+                    <div class="checkbox-group">
+                        {{ form.is_completed(class="form-checkbox", id="is_completed") }}
+                        {{ form.is_completed.label(class="form-label checkbox-label") }}
+                    </div>
+                    <small class="form-help">{{ _('Check this to mark the brew task as completed.') }}</small>
+                </div>
+            </div>
+            
+            <div id="date-warning" class="date-warning-box" style="display: none;">
+                <strong>⚠ {{ _('Warning') }}:</strong>
+                <span id="date-warning-message"></span>
+            </div>
+        </div>
+
+        <div class="form-section">
+            <h3>{{ _('Notes') }}</h3>
+            
+            <div class="form-group">
+                {{ form.notes.label(class="form-label") }}
+                {{ form.notes(class="form-control", rows="3", placeholder=_("Optional: Additional details, temperatures, amounts, or instructions...")) }}
+            </div>
+        </div>
+
+        <div class="form-actions">
+            {{ form.submit(class="btn btn-primary") }}
+            <a href="{{ url_for('brew_detail', brew_id=brew_task.brew_id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+        </div>
+    </form>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const isCompletedCheckbox = document.getElementById('is_completed');
+    const completedDateField = document.getElementById('completed_date');
+    const dateWarning = document.getElementById('date-warning');
+    const dateWarningMessage = document.getElementById('date-warning-message');
+    const scheduledDate = '{{ brew_task.scheduled_date.strftime('%Y-%m-%d') if brew_task.scheduled_date else '' }}';
+    
+    function checkDateMismatch() {
+        const completedDate = completedDateField.value;
+        if (completedDate && scheduledDate && completedDate !== scheduledDate) {
+            dateWarningMessage.textContent = '{{ _('The completion date') }} (' + completedDate + ') {{ _('differs from the scheduled date') }} (' + scheduledDate + ')';
+            dateWarning.style.display = 'block';
+        } else {
+            dateWarning.style.display = 'none';
+        }
+    }
+    
+    // Auto-fill completion date when marking as completed, clear when unchecking
+    isCompletedCheckbox.addEventListener('change', function() {
+        if (this.checked) {
+            // If checking and no date set, set today's date
+            if (!completedDateField.value) {
+                const today = new Date();
+                const year = today.getFullYear();
+                const month = String(today.getMonth() + 1).padStart(2, '0');
+                const day = String(today.getDate()).padStart(2, '0');
+                completedDateField.value = `${year}-${month}-${day}`;
+            }
+            checkDateMismatch();
+        } else {
+            // If unchecking, clear the completed date
+            completedDateField.value = '';
+            dateWarning.style.display = 'none';
+        }
+    });
+    
+    // If completion date is cleared, uncheck the completed checkbox
+    completedDateField.addEventListener('change', function() {
+        if (!this.value) {
+            isCompletedCheckbox.checked = false;
+        }
+        checkDateMismatch();
+    });
+    
+    // Check on page load if there's already a completed date
+    if (completedDateField.value) {
+        checkDateMismatch();
+    }
+});
+</script>
+
+<style>
+.brew-task-form {
+    max-width: 600px;
+}
+
+.page-header h2 {
+    color: #666;
+    font-size: 1.1em;
+    margin: 0.5rem 0;
+}
+
+.form-section {
+    margin-bottom: 2rem;
+    padding: 1.5rem;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    background: #f9f9f9;
+}
+
+.form-section h3 {
+    margin-top: 0;
+    margin-bottom: 1rem;
+    color: #333;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.half-width {
+    flex: 1;
+}
+
+.form-help {
+    color: #666;
+    font-size: 0.85em;
+    margin-top: 0.25rem;
+    display: block;
+}
+
+.scheduled-info {
+    color: #2196F3;
+    font-weight: 500;
+    margin-top: 0.5rem;
+}
+
+.checkbox-group {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.form-checkbox {
+    width: auto;
+}
+
+.checkbox-label {
+    margin-bottom: 0;
+    cursor: pointer;
+}
+
+.date-warning-box {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 6px;
+    color: #856404;
+}
+
+.date-warning-box strong {
+    color: #ff9800;
+}
+
+.form-actions {
+    margin-top: 2rem;
+    display: flex;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .half-width {
+        width: 100%;
+    }
+}
+</style>
+{% endblock %}

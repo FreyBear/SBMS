@@ -9,7 +9,7 @@
         <div class="header-actions">
             {% if current_user.can_access('brews', 'edit') %}
             <a href="{{ url_for('edit_brew', brew_id=brew.id) }}" class="btn btn-primary">{{ _('Edit Brew') }}</a>
-            <a href="{{ url_for('add_dry_hop', brew_id=brew.id) }}" class="btn btn-secondary">{{ _('Add Dry Hop') }}</a>
+            <a href="{{ url_for('add_brew_task', brew_id=brew.id) }}" class="btn btn-secondary">{{ _('Add Brew Task') }}</a>
             {% endif %}
             {% if current_user.can_access('brews', 'delete') %}
             <button type="button" class="btn btn-danger" onclick="confirmDelete('{{ brew.name }}', {{ brew.id }})">{{ _('Delete Brew') }}</button>
@@ -47,6 +47,11 @@
                     <strong>{{ _('Batch Size') }}:</strong>
                     <span>{{ brew.batch_size_liters }}L {% if brew.batch_size_liters %}{% else %}-{% endif %}</span>
                 </div>
+                {% if brew.gluten_free %}
+                <div class="info-item gluten-free-badge">
+                    <span class="badge badge-gluten-free">🌾 {{ _('Gluten Free') }}</span>
+                </div>
+                {% endif %}
             </div>
         </div>
 
@@ -118,40 +123,51 @@
             </div>
         </div>
 
-        <!-- Dry Hopping Schedule -->
+        <!-- Brew Tasks Schedule -->
         <div class="info-card">
-            <h3>{{ _('Dry Hopping Schedule') }}</h3>
-            {% if dry_hops %}
-            <div class="dry-hop-list">
-                {% for hop in dry_hops %}
-                <div class="dry-hop-item {% if hop.is_completed %}completed{% endif %}">
-                    <div class="hop-info">
-                        <div class="hop-main">
-                            <strong>{{ hop.ingredient }}</strong>
-                            {% if hop.hop_variety and hop.hop_variety != hop.ingredient %}
-                                <span class="hop-variety">({{ hop.hop_variety }})</span>
-                            {% endif %}
-                            <span class="hop-amount">{{ hop.amount_grams }}g</span>
+            <h3>{{ _('Brew Tasks Schedule') }}</h3>
+            {% if brew_tasks %}
+            <div class="brew-task-list">
+                {% for task in brew_tasks %}
+                <div class="brew-task-item {% if task.is_completed %}completed{% endif %}">
+                    <div class="task-info">
+                        <div class="task-main">
+                            <strong>{{ task.action }}</strong>
                         </div>
-                        <div class="hop-dates">
+                        <div class="task-dates">
                             <span class="scheduled-date">
-                                {{ _('Scheduled') }}: {{ hop.scheduled_date.strftime('%d-%m-%Y') }}
+                                {{ _('Scheduled') }}: {{ task.scheduled_date.strftime('%d-%m-%Y') }}
                             </span>
-                            {% if hop.completed_date %}
+                            {% if task.completed_date %}
                                 <span class="completed-date">
-                                    {{ _('Completed') }}: {{ hop.completed_date.strftime('%d-%m-%Y') }}
+                                    {{ _('Completed') }}: {{ task.completed_date.strftime('%d-%m-%Y') }}
+                                    {% if task.scheduled_date != task.completed_date %}
+                                        <span class="date-warning" title="{{ _('Task completed on a different date than scheduled') }}">⚠</span>
+                                    {% endif %}
                                 </span>
                             {% endif %}
                         </div>
-                        {% if hop.notes %}
-                        <div class="hop-notes">{{ hop.notes }}</div>
+                        {% if task.notes %}
+                        <div class="task-notes">{{ task.notes }}</div>
                         {% endif %}
                     </div>
-                    <div class="hop-actions">
+                    <div class="task-actions">
                         {% if current_user.can_access('brews', 'edit') %}
-                        <a href="{{ url_for('edit_dry_hop', dry_hop_id=hop.id) }}" class="btn btn-sm">
-                            {% if hop.is_completed %}{{ _('Edit') }}{% else %}{{ _('Complete') }}{% endif %}
+                        <a href="{{ url_for('edit_brew_task', task_id=task.id) }}" class="btn btn-sm btn-secondary">
+                            {{ _('Edit') }}
                         </a>
+                        {% if not task.is_completed %}
+                        <button type="button" class="btn btn-sm btn-success" onclick="completeBrewTask({{ task.id }}, '{{ task.scheduled_date.strftime('%Y-%m-%d') }}')">
+                            {{ _('Complete') }}
+                        </button>
+                        {% else %}
+                        <button type="button" class="btn btn-sm btn-warning" onclick="undoTaskCompletion({{ task.id }})">
+                            {{ _('Undo') }}
+                        </button>
+                        {% endif %}
+                        <form method="POST" action="{{ url_for('delete_brew_task', task_id=task.id) }}" style="display: inline;" onsubmit="return confirm('{{ _('Delete this task?') }}')">
+                            <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                        </form>
                         {% endif %}
                     </div>
                 </div>
@@ -159,9 +175,9 @@
             </div>
             {% else %}
             <div class="empty-state">
-                <p>{{ _('No dry hopping schedule for this brew.') }}</p>
+                <p>{{ _('No brew tasks scheduled for this brew.') }}</p>
                 {% if current_user.can_access('brews', 'edit') %}
-                <a href="{{ url_for('add_dry_hop', brew_id=brew.id) }}" class="btn btn-primary">{{ _('Add Dry Hop Schedule') }}</a>
+                <a href="{{ url_for('add_brew_task', brew_id=brew.id) }}" class="btn btn-primary">{{ _('Add Brew Task') }}</a>
                 {% endif %}
             </div>
             {% endif %}
@@ -232,6 +248,23 @@
     gap: 0.25rem;
 }
 
+.gluten-free-badge {
+    grid-column: 1 / -1;
+    justify-content: center;
+    align-items: center;
+}
+
+.badge-gluten-free {
+    display: inline-block;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
 .info-item strong {
     color: #555;
     font-size: 0.9em;
@@ -259,13 +292,13 @@
     color: #dc3545;
 }
 
-.dry-hop-list {
+.brew-task-list {
     display: flex;
     flex-direction: column;
     gap: 1rem;
 }
 
-.dry-hop-item {
+.brew-task-item {
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
@@ -275,33 +308,21 @@
     background: #f8f9fa;
 }
 
-.dry-hop-item.completed {
+.brew-task-item.completed {
     background: #d4edda;
     border-color: #c3e6cb;
 }
 
-.hop-info {
+.task-info {
     flex: 1;
 }
 
-.hop-main {
+.task-main {
     margin-bottom: 0.5rem;
+    font-size: 1.1em;
 }
 
-.hop-variety {
-    color: #666;
-    font-style: italic;
-}
-
-.hop-amount {
-    background: #e9ecef;
-    padding: 0.2rem 0.5rem;
-    border-radius: 4px;
-    font-size: 0.9em;
-    margin-left: 0.5rem;
-}
-
-.hop-dates {
+.task-dates {
     display: flex;
     gap: 1rem;
     font-size: 0.9em;
@@ -314,15 +335,23 @@
     font-weight: 500;
 }
 
-.hop-notes {
+.date-warning {
+    color: #ff9800;
+    font-size: 1.2em;
+    margin-left: 0.3rem;
+    cursor: help;
+}
+
+.task-notes {
     font-size: 0.9em;
     color: #666;
     font-style: italic;
 }
 
-.hop-actions {
+.task-actions {
     display: flex;
     gap: 0.5rem;
+    flex-wrap: wrap;
 }
 
 .notes-content {
@@ -340,20 +369,80 @@
         justify-content: center;
     }
     
-    .dry-hop-item {
+    .brew-task-item {
         flex-direction: column;
         gap: 1rem;
     }
     
-    .hop-actions {
+    .task-actions {
         justify-content: flex-start;
     }
 }
 </style>
 
 <script>
+function completeBrewTask(taskId, scheduledDate) {
+    const today = new Date().toISOString().split('T')[0];
+    let confirmMessage = 'Mark this brew task as completed today?';
+    
+    // Check if completion date differs from scheduled date
+    if (scheduledDate !== today) {
+        confirmMessage = `This task was scheduled for ${scheduledDate} but will be marked as completed on ${today}. Continue?`;
+    }
+    
+    if (confirm(confirmMessage)) {
+        fetch('/api/brew-task/' + taskId + '/complete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                completed_date: today
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                // Show alert if date mismatch
+                if (data.warning) {
+                    alert('Warning: ' + data.warning);
+                }
+                // Reload page to show updated task list
+                location.reload();
+            } else {
+                alert(data.message || 'Error completing task');
+            }
+        })
+        .catch(error => {
+            alert('Error completing brew task');
+        });
+    }
+}
+
+function undoTaskCompletion(taskId) {
+    if (confirm('{{ _('Are you sure you want to undo the completion of this task?') }}')) {
+        fetch('/api/brew-task/' + taskId + '/uncomplete', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert(data.message || 'Error undoing task completion');
+            }
+        })
+        .catch(error => {
+            alert('Error undoing task completion');
+        });
+    }
+}
+
 function confirmDelete(brewName, brewId) {
-    if (confirm('Are you sure you want to delete the brew "' + brewName + '"?\n\nThis action cannot be undone and will also delete all associated dry hopping records.')) {
+    if (confirm('Are you sure you want to delete the brew "' + brewName + '"?\n\nThis action cannot be undone and will also delete all associated brew task records.')) {
         // Create a form and submit it
         var form = document.createElement('form');
         form.method = 'POST';

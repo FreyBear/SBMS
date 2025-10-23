@@ -29,8 +29,8 @@
                 <input type="checkbox" id="filter-empty" checked> 
                 <span class="status-empty">{{ _('Empty') }}</span>
             </label>
-            <button id="toggle-all" class="btn btn-small btn-secondary" style="margin-left: 15px;">{{ _('Toggle All') }}</button>
-            <button id="show-only-available" class="btn btn-small btn-primary" style="margin-left: 5px;">{{ _('Show Only Available + Empty') }}</button>
+            <button id="toggle-all" class="btn btn-sm btn-secondary" style="margin-left: 15px;">{{ _('Toggle All') }}</button>
+            <button id="show-only-available" class="btn btn-sm btn-primary" style="margin-left: 5px;">{{ _('Show Only Available + Empty') }}</button>
         </div>
     </div>
     <table class="data-table sortable-table" id="kegsTable">
@@ -68,15 +68,23 @@
             <tr>
                 <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
                 <td>{{ keg.volume_liters }}L</td>
-                <td>{{ keg.contents or 'Empty' }}</td>
+                <td>
+                    {{ keg.contents or 'Empty' }}
+                    {% if keg.abv %}
+                        <small class="keg-abv">({{ "%.1f"|format(keg.abv) }}%)</small>
+                    {% endif %}
+                    {% if keg.gluten_free %}
+                        <span class="gluten-free-icon-small" title="{{ _('Gluten Free') }}">🌾</span>
+                    {% endif %}
+                </td>
                 <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status|translate_status }}</span></td>
                 <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
                 <td>{{ keg.location or 'Unknown' }}</td>
                 <td>{{ keg.brew_name or 'None' }}</td>
                 <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
                 <td>
-                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-small">{{ _('View') }}</a>
-                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-small btn-secondary">{{ _('Edit') }}</a>
+                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-sm">{{ _('View') }}</a>
+                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-sm btn-secondary">{{ _('Edit') }}</a>
                 </td>
             </tr>
             {% endfor %}
@@ -97,6 +105,19 @@
 </div>
 
 <style>
+/* Keg-specific styles */
+.keg-abv {
+    color: #666;
+    font-weight: normal;
+    margin-left: 0.25rem;
+}
+
+.gluten-free-icon-small {
+    font-size: 0.9rem;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+}
+
 /* Sortable table styles */
 .sortable {
     cursor: pointer;

@@ -21,7 +21,7 @@
                 <th>{{ _('Style') }}</th>
                 <th>{{ _('ABV') }}</th>
                 <th>{{ _('Batch Size') }}</th>
-                <th>{{ _('Dry Hops') }}</th>
+                <th>{{ _('Tasks') }}</th>
                 <th>{{ _('Kegs') }}</th>
                 <th>{{ _('Actions') }}</th>
             </tr>
@@ -29,7 +29,12 @@
         <tbody>
             {% for brew in brews %}
             <tr>
-                <td><a href="{{ url_for('brew_detail', brew_id=brew.id) }}" class="brew-link">{{ brew.name }}</a></td>
+                <td>
+                    <a href="{{ url_for('brew_detail', brew_id=brew.id) }}" class="brew-link">{{ brew.name }}</a>
+                    {% if brew.gluten_free %}
+                        <span class="gluten-free-icon" title="{{ _('Gluten Free') }}">🌾</span>
+                    {% endif %}
+                </td>
                 <td>{{ brew.date_brewed.strftime('%d-%m-%Y') if brew.date_brewed else 'Unknown' }}</td>
                 <td>
                     {% if brew.recipe_name %}
@@ -52,8 +57,8 @@
                 </td>
                 <td>{{ brew.batch_size_liters }}L {% if brew.batch_size_liters %}{% else %}-{% endif %}</td>
                 <td>
-                    {% if brew.dry_hop_count > 0 %}
-                        {{ brew.completed_dry_hops }}/{{ brew.dry_hop_count }} {{ _('completed') }}
+                    {% if brew.task_count > 0 %}
+                        {{ brew.completed_tasks }}/{{ brew.task_count }} {{ _('completed') }}
                     {% else %}
                         {{ _('None') }}
                     {% endif %}
@@ -84,7 +89,7 @@
 
 <script>
 function confirmDelete(brewName, brewId) {
-    if (confirm('Are you sure you want to delete the brew "' + brewName + '"?\n\nThis action cannot be undone and will also delete all associated dry hopping records.')) {
+    if (confirm('Are you sure you want to delete the brew "' + brewName + '"?\n\nThis action cannot be undone and will also delete all associated brew task records.')) {
         // Create a form and submit it
         var form = document.createElement('form');
         form.method = 'POST';
@@ -105,4 +110,13 @@ function confirmDelete(brewName, brewId) {
     }
 }
 </script>
+
+<style>
+.gluten-free-icon {
+    display: inline-block;
+    margin-left: 0.5rem;
+    font-size: 1rem;
+    vertical-align: middle;
+}
+</style>
 {% endblock %}

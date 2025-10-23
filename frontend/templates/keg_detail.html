@@ -43,6 +43,16 @@
                     <dt>Amount Left:</dt>
                     <dd>{{ "%.1f"|format(keg.amount_left_liters) }}L</dd>
                     
+                    {% if keg.abv %}
+                    <dt>ABV:</dt>
+                    <dd>{{ "%.1f"|format(keg.abv) }}%</dd>
+                    {% endif %}
+                    
+                    {% if keg.gluten_free %}
+                    <dt>Dietary:</dt>
+                    <dd><span class="badge badge-gluten-free">🌾 {{ _('Gluten Free') }}</span></dd>
+                    {% endif %}
+                    
                     <dt>Date Filled:</dt>
                     <dd>{{ keg.date_filled.strftime('%d-%m-%Y') if keg.date_filled else 'Unknown' }}</dd>
                 </dl>
@@ -122,6 +132,17 @@
 </div>
 
 <style>
+.badge-gluten-free {
+    display: inline-block;
+    background: linear-gradient(135deg, #4CAF50, #45a049);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 15px;
+    font-weight: bold;
+    font-size: 0.9rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+}
+
 .keg-history {
     margin-top: 40px;
 }

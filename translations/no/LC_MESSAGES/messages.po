@@ -2293,6 +2293,212 @@ msgstr "Opprettet"
 msgid "Last Login"
 msgstr "Siste Innlogging"
 
+# Brew Tasks - New brew task system translations
+#: frontend/templates/index.html:127 frontend/templates/index.html:180
+msgid "Upcoming Brew Schedule"
+msgstr "Kommende Handlinger"
+
+#: frontend/templates/index.html:182
+msgid "No brew tasks scheduled in the next 7 days."
+msgstr "Ingen bryggeoppgaver planlagt de neste 7 dagene."
+
+#: frontend/templates/brews.html:24
+msgid "Tasks"
+msgstr "Oppgaver"
+
+#: frontend/templates/brew_detail.html:12 frontend/templates/brew_detail.html:175
+#: frontend/templates/add_brew_task.html:3
+msgid "Add Brew Task"
+msgstr "Legg til Bryggeoppgave"
+
+#: frontend/templates/brew_detail.html:123
+msgid "Brew Tasks Schedule"
+msgstr "Bryggeoppgaver Skjema"
+
+#: frontend/templates/brew_detail.html:138
+msgid "Completed"
+msgstr "Fullført"
+
+#: frontend/templates/brew_detail.html:140
+msgid "Task completed on a different date than scheduled"
+msgstr "Oppgaven ble fullført på en annen dato enn planlagt"
+
+#: frontend/templates/brew_detail.html:156
+msgid "Complete"
+msgstr "Fullfør"
+
+#: frontend/templates/brew_detail.html:160
+msgid "Undo"
+msgstr "Angre"
+
+#: frontend/templates/brew_detail.html:173
+msgid "No brew tasks scheduled for this brew."
+msgstr "Ingen bryggeoppgaver planlagt for dette brygget."
+
+#: frontend/templates/edit_brew_task.html:3
+msgid "Edit Brew Task"
+msgstr "Rediger Bryggeoppgave"
+
+#: frontend/templates/add_brew_task.html:18 frontend/templates/edit_brew_task.html:18
+msgid "Task Details"
+msgstr "Oppgavedetaljer"
+
+#: frontend/templates/add_brew_task.html:35 frontend/templates/edit_brew_task.html:35
+msgid "e.g., Dry hop with Cascade, Cold crash, Transfer to keg, Bottle beer"
+msgstr "f.eks., Tørr-humle med Cascade, Kaldkrasch, Overføre til fat, Tappe på flaske"
+
+#: frontend/templates/add_brew_task.html:36 frontend/templates/edit_brew_task.html:36
+msgid "Describe what needs to be done for this brew."
+msgstr "Beskriv hva som må gjøres for dette brygget."
+
+#: frontend/templates/add_brew_task.html:48 frontend/templates/edit_brew_task.html:89
+msgid "Optional: Additional details, temperatures, amounts, or instructions..."
+msgstr "Valgfritt: Flere detaljer, temperaturer, mengder eller instruksjoner..."
+
+#: frontend/templates/edit_brew_task.html:48
+msgid "Completion Status"
+msgstr "Fullføringsstatus"
+
+#: frontend/templates/edit_brew_task.html:58
+msgid "Leave empty if not completed yet. Will be auto-filled when marking as completed."
+msgstr "La stå tom hvis ikke fullført ennå. Vil bli automatisk fylt ut når den markeres som fullført."
+
+#: frontend/templates/edit_brew_task.html:60
+msgid "Scheduled for"
+msgstr "Planlagt for"
+
+#: frontend/templates/edit_brew_task.html:68
+msgid "Check this to mark the brew task as completed."
+msgstr "Kryss av dette for å markere bryggeoppgaven som fullført."
+
+#: frontend/templates/edit_brew_task.html:73
+msgid "Warning"
+msgstr "Advarsel"
+
+#: frontend/templates/edit_brew_task.html:114
+msgid "The completion date"
+msgstr "Fullføringsdatoen"
+
+#: frontend/templates/edit_brew_task.html:114
+msgid "differs from the scheduled date"
+msgstr "avviker fra den planlagte datoen"
+
+#: frontend/templates/add_brew_task.html:60
+msgid "Common Brew Tasks"
+msgstr "Vanlige Bryggeoppgaver"
+
+#: frontend/templates/add_brew_task.html:62
+msgid "Dry hopping (2-4 days before kegging)"
+msgstr "Tørr-humling (2-4 dager før fatlegging)"
+
+#: frontend/templates/add_brew_task.html:63
+msgid "Cold crash (2-3 days before kegging)"
+msgstr "Kaldkrasch (2-3 dager før fatlegging)"
+
+#: frontend/templates/add_brew_task.html:64
+msgid "Take final gravity reading"
+msgstr "Ta endelig tetthetsmåling"
+
+#: frontend/templates/add_brew_task.html:65
+msgid "Transfer to keg or bottles"
+msgstr "Overføre til fat eller flasker"
+
+#: frontend/templates/add_brew_task.html:66
+msgid "Add priming sugar (for bottle conditioning)"
+msgstr "Tilsett gjæringsukker (for flaskemodning)"
+
+#: frontend/templates/add_brew_task.html:67
+msgid "Temperature changes for lagers"
+msgstr "Temperaturendringer for lagers"
+
+#: backend/forms.py:231 backend/forms.py:242
+msgid "Action/Task"
+msgstr "Handling/Oppgave"
+
+#: backend/forms.py:237
+msgid "Add Brew Task"
+msgstr "Legg til Bryggeoppgave"
+
+#: backend/forms.py:245
+msgid "Mark as Completed"
+msgstr "Marker som fullført"
+
+#: backend/forms.py:247
+msgid "Update Brew Task"
+msgstr "Oppdater Bryggeoppgave"
+
+#: frontend/templates/brew_detail.html:163
+msgid "Delete this task?"
+msgstr "Slett denne oppgaven?"
+
+#: frontend/templates/brew_detail.html:401
+msgid "Are you sure you want to undo the completion of this task?"
+msgstr "Er du sikker på at du vil angre fullføringen av denne oppgaven?"
+
+# Gluten-free translations
+#: backend/forms.py:206 backend/forms.py:229
+#: frontend/templates/brew_detail.html:52 frontend/templates/brews.html:36
+msgid "Gluten Free"
+msgstr "Glutenfri"
+
+#: frontend/templates/create_brew.html:132 frontend/templates/edit_brew.html:116
+msgid "Check this if the brew was made gluten-free"
+msgstr "Kryss av dette hvis brygget ble laget glutenfritt"
+
+# Keg ABV and gluten-free translations
+#: frontend/templates/update_keg.html:60
+msgid "Linked Brew"
+msgstr "Koblet Brygg"
+
+#: frontend/templates/update_keg.html:60 frontend/templates/update_keg.html:70
+msgid "Optional"
+msgstr "Valgfritt"
+
+#: frontend/templates/update_keg.html:61
+msgid "None - Manual entry"
+msgstr "Ingen - Manuell innføring"
+
+#: frontend/templates/update_keg.html:69
+msgid "Select a brew to auto-fill ABV and gluten-free status"
+msgstr "Velg et brygg for å autofylle ABV og glutenfri status"
+
+#: frontend/templates/update_keg.html:73
+msgid "ABV"
+msgstr "ABV"
+
+#: frontend/templates/update_keg.html:77
+msgid "e.g., 5.2"
+msgstr "f.eks., 5.2"
+
+#: frontend/templates/update_keg.html:78
+msgid "Alcohol by volume percentage"
+msgstr "Alkoholprosent"
+
+# Brew selection modal translations
+#: frontend/templates/update_keg.html:61 frontend/templates/update_keg.html:209
+msgid "No brew selected - Manual entry"
+msgstr "Ingen brygg valgt - Manuell innføring"
+
+#: frontend/templates/update_keg.html:64
+msgid "Select Brew"
+msgstr "Velg Brygg"
+
+#: frontend/templates/update_keg.html:74
+msgid "Select a Brew"
+msgstr "Velg et Brygg"
+
+#: frontend/templates/update_keg.html:79
+msgid "Search brews by name, style, or date..."
+msgstr "Søk brygg etter navn, stil eller dato..."
+
+#: frontend/templates/update_keg.html:161
+msgid "Select"
+msgstr "Velg"
+
+#: frontend/templates/update_keg.html:191
+msgid "Clear selection"
+msgstr "Fjern valg"
+
 #~ msgid "Are you sure you want to delete user"
 #~ msgstr "Er du sikker på at du vil slette brukeren"
 

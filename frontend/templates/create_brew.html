@@ -123,6 +123,12 @@
                 {{ form.notes.label(class="form-label") }}
                 {{ form.notes(class="form-control", rows="4", placeholder=_("Add any brewing notes, observations, or modifications...")) }}
             </div>
+            
+            <div class="form-group checkbox-group">
+                {{ form.gluten_free(class="form-checkbox", id="gluten_free") }}
+                {{ form.gluten_free.label(class="form-label checkbox-label") }}
+                <small class="form-help">{{ _('Check this if the brew was made gluten-free') }}</small>
+            </div>
         </div>
 
         <div class="form-actions">

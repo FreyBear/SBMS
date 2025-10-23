@@ -203,6 +203,9 @@ class CreateBrewForm(FlaskForm):
     actual_og = DecimalField(_l('Actual OG'), validators=[Optional(), NumberRange(min=1.000, max=1.200)], places=4)
     actual_fg = DecimalField(_l('Actual FG'), validators=[Optional(), NumberRange(min=0.990, max=1.050)], places=4)
     
+    # Gluten-free indicator
+    gluten_free = BooleanField(_l('Gluten Free'))
+    
     notes = TextAreaField(_l('Notes'), validators=[Optional()])
     submit = SubmitField(_l('Create Brew'))
 
@@ -224,9 +227,29 @@ class EditBrewForm(FlaskForm):
     actual_og = DecimalField(_l('Actual OG'), validators=[Optional(), NumberRange(min=1.000, max=1.200)], places=4)
     actual_fg = DecimalField(_l('Actual FG'), validators=[Optional(), NumberRange(min=0.990, max=1.050)], places=4)
     
+    # Gluten-free indicator
+    gluten_free = BooleanField(_l('Gluten Free'))
+    
     notes = TextAreaField(_l('Notes'), validators=[Optional()])
     submit = SubmitField(_l('Update Brew'))
 
+class AddBrewTaskForm(FlaskForm):
+    scheduled_date = DateField(_l('Scheduled Date'), validators=[DataRequired()])
+    action = StringField(_l('Action/Task'), validators=[DataRequired(), Length(max=500)], 
+                        render_kw={"placeholder": _l("e.g., Add Cascade hops 50g, Cold crash to 2°C, Transfer to keg #5")})
+    notes = TextAreaField(_l('Notes'), validators=[Optional()], 
+                         render_kw={"placeholder": _l("Optional additional details or instructions")})
+    submit = SubmitField(_l('Add Brew Task'))
+
+class EditBrewTaskForm(FlaskForm):
+    scheduled_date = DateField(_l('Scheduled Date'), validators=[DataRequired()])
+    completed_date = DateField(_l('Completed Date'), validators=[Optional()])
+    action = StringField(_l('Action/Task'), validators=[DataRequired(), Length(max=500)])
+    is_completed = BooleanField(_l('Mark as Completed'))
+    notes = TextAreaField(_l('Notes'), validators=[Optional()])
+    submit = SubmitField(_l('Update Brew Task'))
+
+# Legacy forms kept for backwards compatibility (can be removed if not needed elsewhere)
 class AddDryHopForm(FlaskForm):
     scheduled_date = DateField(_l('Scheduled Date'), validators=[DataRequired()])
     ingredient = StringField(_l('Hop Variety/Ingredient'), validators=[DataRequired(), Length(max=200)])

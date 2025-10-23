@@ -108,6 +108,12 @@
                 {{ form.notes.label(class="form-label") }}
                 {{ form.notes(class="form-control", rows="4", placeholder=_("Add any brewing notes, observations, or modifications...")) }}
             </div>
+            
+            <div class="form-group checkbox-group">
+                {{ form.gluten_free(class="form-checkbox", id="gluten_free") }}
+                {{ form.gluten_free.label(class="form-label checkbox-label") }}
+                <small class="form-help">{{ _('Check this if the brew was made gluten-free') }}</small>
+            </div>
         </div>
 
         <div class="form-actions">
@@ -116,45 +122,37 @@
         </div>
     </form>
     
-    <!-- Dry Hopping Schedule Management -->
-    <div class="dry-hopping-management">
+    <!-- Brew Tasks Schedule Management -->
+    <div class="brew-task-management">
         <div class="section-header">
-            <h3>{{ _('Dry Hopping Schedule') }}</h3>
-            <button type="button" class="btn btn-primary btn-sm" onclick="showAddDryHopForm()">{{ _('Add Dry Hop') }}</button>
+            <h3>{{ _('Brew Tasks Schedule') }}</h3>
+            <button type="button" class="btn btn-primary btn-sm" onclick="showAddBrewTaskForm()">{{ _('Add Brew Task') }}</button>
         </div>
         
-        <!-- Add New Dry Hop Form (hidden by default) -->
-        <div id="add-dry-hop-form" class="dry-hop-form" style="display: none;">
-            <h4>{{ _('Add New Dry Hop') }}</h4>
-            <form id="new-dry-hop-form">
+        <!-- Add New Brew Task Form (hidden by default) -->
+        <div id="add-brew-task-form" class="brew-task-form" style="display: none;">
+            <h4>{{ _('Add New Brew Task') }}</h4>
+            <form id="new-brew-task-form">
                 <input type="hidden" name="brew_id" value="{{ brew.id }}">
                 <div class="form-row">
                     <div class="form-group">
                         <label>{{ _('Scheduled Date') }}</label>
                         <input type="date" name="scheduled_date" class="form-control" required>
                     </div>
-                    <div class="form-group">
-                        <label>{{ _('Ingredient') }}</label>
-                        <input type="text" name="ingredient" class="form-control" required>
-                    </div>
-                    <div class="form-group">
-                        <label>{{ _('Amount (grams)') }}</label>
-                        <input type="number" name="amount_grams" class="form-control" step="0.1" min="0" required>
+                    <div class="form-group full-width">
+                        <label>{{ _('Action/Task') }}</label>
+                        <input type="text" name="action" class="form-control" placeholder="{{ _('e.g., Dry hop with Cascade, Cold crash, Transfer to keg') }}" required>
                     </div>
                 </div>
                 <div class="form-row">
-                    <div class="form-group">
-                        <label>{{ _('Hop Variety') }}</label>
-                        <input type="text" name="hop_variety" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label>{{ _('Notes') }}</label>
-                        <input type="text" name="notes" class="form-control">
+                    <div class="form-group full-width">
+                        <label>{{ _('Notes') }} ({{ _('optional') }})</label>
+                        <input type="text" name="notes" class="form-control" placeholder="{{ _('Additional details...') }}">
                     </div>
                 </div>
                 <div class="form-actions">
-                    <button type="submit" class="btn btn-success btn-sm">{{ _('Add Dry Hop') }}</button>
-                    <button type="button" class="btn btn-secondary btn-sm" onclick="hideAddDryHopForm()">{{ _('Cancel') }}</button>
+                    <button type="submit" class="btn btn-success btn-sm">{{ _('Add Brew Task') }}</button>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="hideAddBrewTaskForm()">{{ _('Cancel') }}</button>
                 </div>
             </form>
         </div>

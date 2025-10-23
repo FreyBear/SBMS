@@ -340,25 +340,26 @@ def index():
                 """)
                 pending_expenses = cur.fetchall()
             
-            # Get pending dry hopping entries across all brews
-            pending_dry_hops = []
+            # Get pending brew tasks (next 7 days) across all brews
+            pending_brew_tasks = []
             if current_user.can_access('brews', 'view'):
                 cur.execute("""
-                    SELECT dh.*, b.name as brew_name
-                    FROM brew_dry_hopping dh
-                    JOIN brew b ON dh.brew_id = b.id
-                    WHERE dh.is_completed = FALSE
-                    ORDER BY dh.scheduled_date ASC, dh.created_date ASC
+                    SELECT bt.*, b.name as brew_name
+                    FROM brew_task bt
+                    JOIN brew b ON bt.brew_id = b.id
+                    WHERE bt.is_completed = FALSE
+                      AND bt.scheduled_date <= CURRENT_DATE + INTERVAL '7 days'
+                    ORDER BY bt.scheduled_date ASC, bt.created_date ASC
                     LIMIT 20
                 """)
-                pending_dry_hops = cur.fetchall()
+                pending_brew_tasks = cur.fetchall()
             
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
         keg_stats = []
         recent_kegs = []
         pending_expenses = []
-        pending_dry_hops = []
+        pending_brew_tasks = []
     finally:
         conn.close()
     
@@ -370,7 +371,7 @@ def index():
                          keg_stats=keg_stats, 
                          recent_kegs=recent_kegs, 
                          pending_expenses=pending_expenses,
-                         pending_dry_hops=pending_dry_hops,
+                         pending_brew_tasks=pending_brew_tasks,
                          today_date=today_date)
 
 @app.route('/kegs')
@@ -456,9 +457,19 @@ def update_keg(keg_id):
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 cur.execute("SELECT * FROM keg WHERE id = %s", (keg_id,))
                 keg = cur.fetchone()
+                
+                # Get all brews for dropdown
+                cur.execute("""
+                    SELECT id, name, actual_abv, gluten_free 
+                    FROM brew 
+                    ORDER BY date_brewed DESC
+                """)
+                brews = cur.fetchall()
+                
         except psycopg2.Error as e:
             flash(f'Database error: {e}', 'error')
             keg = None
+            brews = []
         finally:
             conn.close()
         
@@ -468,7 +479,7 @@ def update_keg(keg_id):
         
         # Pass today's date to template
         today = datetime.now().strftime('%Y-%m-%d')
-        return render_template('update_keg.html', keg=keg, today=today)
+        return render_template('update_keg.html', keg=keg, brews=brews, today=today)
     
     # POST request - handle dual action (update current vs add new entry)
     action = request.form.get('action', 'update_current')
@@ -479,6 +490,15 @@ def update_keg(keg_id):
             update_date = datetime.strptime(request.form['update_date'], '%Y-%m-%d').date()
             
             if action == 'update_current':
+                # Get brew_id, abv, and gluten_free from form
+                brew_id = request.form.get('brew_id')
+                brew_id = int(brew_id) if brew_id and brew_id != '' else None
+                
+                abv = request.form.get('abv')
+                abv = float(abv) if abv and abv != '' else None
+                
+                gluten_free = request.form.get('gluten_free') == 'on'
+                
                 # Update the main keg record AND create history entry
                 cur.execute("""
                     UPDATE keg SET
@@ -486,6 +506,9 @@ def update_keg(keg_id):
                         status = %s,
                         amount_left_liters = %s,
                         location = %s,
+                        brew_id = %s,
+                        abv = %s,
+                        gluten_free = %s,
                         notes = %s,
                         last_measured = %s
                     WHERE id = %s
@@ -494,6 +517,9 @@ def update_keg(keg_id):
                     request.form['status'],
                     float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
                     request.form['location'],
+                    brew_id,
+                    abv,
+                    gluten_free,
                     request.form['notes'],
                     update_date,
                     keg_id
@@ -669,13 +695,13 @@ def brews():
                        k.name as kit_name,
                        COALESCE(r.style, k.style) as source_style,
                        COUNT(keg.id) as keg_count,
-                       COUNT(dh.id) as dry_hop_count,
-                       COUNT(CASE WHEN dh.is_completed = true THEN 1 END) as completed_dry_hops
+                       COUNT(bt.id) as task_count,
+                       COUNT(CASE WHEN bt.is_completed = true THEN 1 END) as completed_tasks
                 FROM brew b
                 LEFT JOIN recipe r ON b.recipe_id = r.id
                 LEFT JOIN kit k ON b.kit_id = k.id
                 LEFT JOIN keg ON b.id = keg.brew_id
-                LEFT JOIN brew_dry_hopping dh ON b.id = dh.brew_id
+                LEFT JOIN brew_task bt ON b.id = bt.brew_id
                 GROUP BY b.id, r.name, k.name, r.style, k.style
                 ORDER BY b.date_brewed DESC
             """)
@@ -727,8 +753,8 @@ def create_brew():
                     cur.execute("""
                         INSERT INTO brew (name, date_brewed, recipe_id, kit_id, style, 
                                         estimated_abv, expected_og, expected_fg, batch_size_liters,
-                                        actual_og, actual_fg, actual_abv, notes)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                                        actual_og, actual_fg, actual_abv, gluten_free, notes)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id
                     """, (
                         form.name.data,
@@ -743,6 +769,7 @@ def create_brew():
                         form.actual_og.data,
                         form.actual_fg.data,
                         actual_abv,
+                        form.gluten_free.data or False,
                         form.notes.data
                     ))
                     
@@ -763,7 +790,7 @@ def create_brew():
 @app.route('/brew/<int:brew_id>')
 @require_permission('brews', 'view')
 def brew_detail(brew_id):
-    """View brew details with dry hopping schedule"""
+    """View brew details with task schedule"""
     conn = get_db_connection()
     if not conn:
         flash('Database connection error', 'error')
@@ -786,14 +813,14 @@ def brew_detail(brew_id):
                 flash('Brew not found', 'error')
                 return redirect(url_for('brews'))
             
-            # Get dry hopping schedule
+            # Get brew task schedule
             cur.execute("""
-                SELECT * FROM brew_dry_hopping 
+                SELECT * FROM brew_task 
                 WHERE brew_id = %s 
                 ORDER BY scheduled_date, created_date
             """, (brew_id,))
             
-            dry_hops = cur.fetchall()
+            brew_tasks = cur.fetchall()
             
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
@@ -801,7 +828,7 @@ def brew_detail(brew_id):
     finally:
         conn.close()
     
-    return render_template('brew_detail.html', brew=brew, dry_hops=dry_hops)
+    return render_template('brew_detail.html', brew=brew, brew_tasks=brew_tasks)
 
 @app.route('/brew/<int:brew_id>/edit', methods=['GET', 'POST'])
 @require_permission('brews', 'edit')
@@ -830,24 +857,39 @@ def edit_brew(brew_id):
                 flash('Brew not found', 'error')
                 return redirect(url_for('brews'))
             
-            form = EditBrewForm(obj=brew)
+            # Initialize form
+            form = EditBrewForm()
             
-            # Set source info (read-only)
-            if brew['recipe_name']:
-                form.source_info.data = f"Recipe: {brew['recipe_name']}"
-            elif brew['kit_name']:
-                form.source_info.data = f"Kit: {brew['kit_name']}"
-            else:
-                form.source_info.data = "Unknown source"
+            # On GET request, populate form with current brew data
+            if request.method == 'GET':
+                form.name.data = brew['name']
+                form.date_brewed.data = brew['date_brewed']
+                form.style.data = brew['style']
+                form.estimated_abv.data = brew['estimated_abv']
+                form.expected_og.data = brew['expected_og']
+                form.expected_fg.data = brew['expected_fg']
+                form.batch_size_liters.data = brew['batch_size_liters']
+                form.actual_og.data = brew['actual_og']
+                form.actual_fg.data = brew['actual_fg']
+                form.gluten_free.data = brew.get('gluten_free', False)
+                form.notes.data = brew['notes']
+                
+                # Set source info (read-only)
+                if brew['recipe_name']:
+                    form.source_info.data = f"Recipe: {brew['recipe_name']}"
+                elif brew['kit_name']:
+                    form.source_info.data = f"Kit: {brew['kit_name']}"
+                else:
+                    form.source_info.data = "Unknown source"
             
-            # Get dry hopping schedule
+            # Get brew task schedule
             cur.execute("""
-                SELECT * FROM brew_dry_hopping 
+                SELECT * FROM brew_task 
                 WHERE brew_id = %s 
                 ORDER BY scheduled_date, created_date
             """, (brew_id,))
             
-            dry_hops = cur.fetchall()
+            brew_tasks = cur.fetchall()
             
             if form.validate_on_submit():
                 # Calculate actual ABV if both OG and FG are provided
@@ -860,7 +902,7 @@ def edit_brew(brew_id):
                         name = %s, date_brewed = %s, style = %s, 
                         estimated_abv = %s, expected_og = %s, expected_fg = %s, 
                         batch_size_liters = %s, actual_og = %s, actual_fg = %s, 
-                        actual_abv = %s, notes = %s
+                        actual_abv = %s, gluten_free = %s, notes = %s
                     WHERE id = %s
                 """, (
                     form.name.data,
@@ -873,6 +915,7 @@ def edit_brew(brew_id):
                     form.actual_og.data,
                     form.actual_fg.data,
                     actual_abv,
+                    form.gluten_free.data or False,
                     form.notes.data,
                     brew_id
                 ))
@@ -887,7 +930,7 @@ def edit_brew(brew_id):
     finally:
         conn.close()
     
-    return render_template('edit_brew.html', form=form, brew=brew, dry_hops=dry_hops)
+    return render_template('edit_brew.html', form=form, brew=brew, brew_tasks=brew_tasks)
 
 @app.route('/brew/<int:brew_id>/delete', methods=['POST'])
 @require_permission('brews', 'delete')
@@ -908,7 +951,7 @@ def delete_brew(brew_id):
                 flash('Brew not found', 'error')
                 return redirect(url_for('brews'))
             
-            # Delete the brew (dry hopping records will be cascade deleted)
+            # Delete the brew (brew task records will be cascade deleted)
             cur.execute("DELETE FROM brew WHERE id = %s", (brew_id,))
             conn.commit()
             
@@ -922,11 +965,15 @@ def delete_brew(brew_id):
     
     return redirect(url_for('brews'))
 
-@app.route('/brew/<int:brew_id>/dry-hop/add', methods=['GET', 'POST'])
+# ========================================
+# Brew Task Management Routes
+# ========================================
+
+@app.route('/brew/<int:brew_id>/task/add', methods=['GET', 'POST'])
 @require_permission('brews', 'edit')
-def add_dry_hop(brew_id):
-    """Add dry hopping schedule to a brew"""
-    from forms import AddDryHopForm
+def add_brew_task(brew_id):
+    """Add a brew task to a brew"""
+    from forms import AddBrewTaskForm
     
     conn = get_db_connection()
     if not conn:
@@ -943,24 +990,21 @@ def add_dry_hop(brew_id):
                 flash('Brew not found', 'error')
                 return redirect(url_for('brews'))
             
-            form = AddDryHopForm()
+            form = AddBrewTaskForm()
             
             if form.validate_on_submit():
                 cur.execute("""
-                    INSERT INTO brew_dry_hopping (brew_id, scheduled_date, ingredient, 
-                                                amount_grams, hop_variety, notes)
-                    VALUES (%s, %s, %s, %s, %s, %s)
+                    INSERT INTO brew_task (brew_id, scheduled_date, action, notes)
+                    VALUES (%s, %s, %s, %s)
                 """, (
                     brew_id,
                     form.scheduled_date.data,
-                    form.ingredient.data,
-                    form.amount_grams.data,
-                    form.hop_variety.data,
+                    form.action.data,
                     form.notes.data
                 ))
                 
                 conn.commit()
-                flash('Dry hop schedule added successfully!', 'success')
+                flash('Brew task added successfully!', 'success')
                 return redirect(url_for('brew_detail', brew_id=brew_id))
     
     except psycopg2.Error as e:
@@ -969,13 +1013,13 @@ def add_dry_hop(brew_id):
     finally:
         conn.close()
     
-    return render_template('add_dry_hop.html', form=form, brew=brew)
+    return render_template('add_brew_task.html', form=form, brew=brew)
 
-@app.route('/dry-hop/<int:dry_hop_id>/edit', methods=['GET', 'POST'])
+@app.route('/brew-task/<int:task_id>/edit', methods=['GET', 'POST'])
 @require_permission('brews', 'edit')
-def edit_dry_hop(dry_hop_id):
-    """Edit or mark dry hopping as completed"""
-    from forms import EditDryHopForm
+def edit_brew_task(task_id):
+    """Edit or mark brew task as completed"""
+    from forms import EditBrewTaskForm
     
     conn = get_db_connection()
     if not conn:
@@ -985,45 +1029,56 @@ def edit_dry_hop(dry_hop_id):
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT dh.*, b.name as brew_name 
-                FROM brew_dry_hopping dh
-                JOIN brew b ON dh.brew_id = b.id
-                WHERE dh.id = %s
-            """, (dry_hop_id,))
+                SELECT bt.*, b.name as brew_name 
+                FROM brew_task bt
+                JOIN brew b ON bt.brew_id = b.id
+                WHERE bt.id = %s
+            """, (task_id,))
             
-            dry_hop = cur.fetchone()
-            if not dry_hop:
-                flash('Dry hop entry not found', 'error')
+            brew_task = cur.fetchone()
+            if not brew_task:
+                flash('Brew task not found', 'error')
                 return redirect(url_for('brews'))
             
-            form = EditDryHopForm(obj=dry_hop)
+            # Initialize form
+            form = EditBrewTaskForm()
+            
+            # On GET request, populate form with current brew task data
+            if request.method == 'GET':
+                form.scheduled_date.data = brew_task['scheduled_date']
+                form.completed_date.data = brew_task['completed_date']
+                form.action.data = brew_task['action']
+                form.is_completed.data = brew_task['is_completed']
+                form.notes.data = brew_task['notes']
             
             if form.validate_on_submit():
-                # Set completed date if marking as completed
-                completed_date = form.completed_date.data
-                if form.is_completed.data and not completed_date:
-                    completed_date = datetime.now().date()
+                # Handle completed date based on is_completed checkbox
+                if form.is_completed.data:
+                    # If marking as completed, set completed date if not already set
+                    completed_date = form.completed_date.data
+                    if not completed_date:
+                        completed_date = datetime.now().date()
+                else:
+                    # If unchecking completed, clear the completed date
+                    completed_date = None
                 
                 cur.execute("""
-                    UPDATE brew_dry_hopping SET 
-                        scheduled_date = %s, completed_date = %s, ingredient = %s,
-                        amount_grams = %s, hop_variety = %s, is_completed = %s,
-                        notes = %s, updated_date = CURRENT_TIMESTAMP
+                    UPDATE brew_task SET 
+                        scheduled_date = %s, completed_date = %s, action = %s,
+                        is_completed = %s, notes = %s, updated_date = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (
                     form.scheduled_date.data,
                     completed_date,
-                    form.ingredient.data,
-                    form.amount_grams.data,
-                    form.hop_variety.data,
+                    form.action.data,
                     form.is_completed.data,
                     form.notes.data,
-                    dry_hop_id
+                    task_id
                 ))
                 
                 conn.commit()
-                flash('Dry hop schedule updated successfully!', 'success')
-                return redirect(url_for('brew_detail', brew_id=dry_hop['brew_id']))
+                flash('Brew task updated successfully!', 'success')
+                return redirect(url_for('brew_detail', brew_id=brew_task['brew_id']))
     
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
@@ -1031,7 +1086,42 @@ def edit_dry_hop(dry_hop_id):
     finally:
         conn.close()
     
-    return render_template('edit_dry_hop.html', form=form, dry_hop=dry_hop)
+    return render_template('edit_brew_task.html', form=form, brew_task=brew_task)
+
+@app.route('/brew-task/<int:task_id>/delete', methods=['POST'])
+@require_permission('brews', 'edit')
+def delete_brew_task(task_id):
+    """Delete a brew task"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('brews'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get brew_id before deleting
+            cur.execute("SELECT brew_id FROM brew_task WHERE id = %s", (task_id,))
+            result = cur.fetchone()
+            
+            if not result:
+                flash('Brew task not found', 'error')
+                return redirect(url_for('brews'))
+            
+            brew_id = result['brew_id']
+            
+            # Delete the task
+            cur.execute("DELETE FROM brew_task WHERE id = %s", (task_id,))
+            conn.commit()
+            
+            flash('Brew task deleted successfully!', 'success')
+            return redirect(url_for('brew_detail', brew_id=brew_id))
+    
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.rollback()
+        return redirect(url_for('brews'))
+    finally:
+        conn.close()
 
 @app.route('/api/recipe/<int:recipe_id>')
 @require_permission('brews', 'view')
@@ -1085,11 +1175,14 @@ def api_kit_data(kit_id):
     finally:
         conn.close()
 
-# Dry Hopping Management API Endpoints
-@app.route('/api/dry-hop/add', methods=['POST'])
+# ========================================
+# Brew Task Management API Endpoints
+# ========================================
+
+@app.route('/api/brew-task/add', methods=['POST'])
 @require_permission('brews', 'edit')
-def api_add_dry_hop():
-    """API endpoint to add a new dry hopping entry"""
+def api_add_brew_task():
+    """API endpoint to add a new brew task"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'success': False, 'message': 'Database connection error'}), 500
@@ -1104,33 +1197,31 @@ def api_add_dry_hop():
             if not cur.fetchone():
                 return jsonify({'success': False, 'message': 'Brew not found'}), 404
             
-            # Insert new dry hop entry
+            # Insert new brew task
             cur.execute("""
-                INSERT INTO brew_dry_hopping 
-                (brew_id, scheduled_date, ingredient, amount_grams, hop_variety, notes)
-                VALUES (%s, %s, %s, %s, %s, %s)
+                INSERT INTO brew_task 
+                (brew_id, scheduled_date, action, notes)
+                VALUES (%s, %s, %s, %s)
             """, (
                 brew_id,
                 data.get('scheduled_date'),
-                data.get('ingredient'),
-                float(data.get('amount_grams', 0)),
-                data.get('hop_variety'),
+                data.get('action'),
                 data.get('notes')
             ))
             
             conn.commit()
-            return jsonify({'success': True, 'message': 'Dry hop entry added successfully'})
+            return jsonify({'success': True, 'message': 'Brew task added successfully'})
             
-    except (psycopg2.Error, ValueError) as e:
+    except psycopg2.Error as e:
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Error adding dry hop entry: {e}'}), 500
+        return jsonify({'success': False, 'message': f'Error adding brew task: {e}'}), 500
     finally:
         conn.close()
 
-@app.route('/api/dry-hop/<int:hop_id>/edit', methods=['PUT'])
+@app.route('/api/brew-task/<int:task_id>/edit', methods=['PUT'])
 @require_permission('brews', 'edit')
-def api_edit_dry_hop(hop_id):
-    """API endpoint to edit a dry hopping entry"""
+def api_edit_brew_task(task_id):
+    """API endpoint to edit a brew task"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'success': False, 'message': 'Database connection error'}), 500
@@ -1139,85 +1230,134 @@ def api_edit_dry_hop(hop_id):
         data = request.get_json()
         
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify dry hop exists
-            cur.execute("SELECT id FROM brew_dry_hopping WHERE id = %s", (hop_id,))
+            # Verify brew task exists
+            cur.execute("SELECT id FROM brew_task WHERE id = %s", (task_id,))
             if not cur.fetchone():
-                return jsonify({'success': False, 'message': 'Dry hop entry not found'}), 404
+                return jsonify({'success': False, 'message': 'Brew task not found'}), 404
             
-            # Update dry hop entry
+            # Update brew task
             cur.execute("""
-                UPDATE brew_dry_hopping 
-                SET scheduled_date = %s, ingredient = %s, amount_grams = %s, 
-                    hop_variety = %s, notes = %s, updated_date = CURRENT_TIMESTAMP
+                UPDATE brew_task 
+                SET scheduled_date = %s, action = %s, notes = %s, 
+                    updated_date = CURRENT_TIMESTAMP
                 WHERE id = %s
             """, (
                 data.get('scheduled_date'),
-                data.get('ingredient'),
-                float(data.get('amount_grams', 0)),
-                data.get('hop_variety'),
+                data.get('action'),
                 data.get('notes'),
-                hop_id
+                task_id
             ))
             
             conn.commit()
-            return jsonify({'success': True, 'message': 'Dry hop entry updated successfully'})
+            return jsonify({'success': True, 'message': 'Brew task updated successfully'})
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error updating brew task: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/brew-task/<int:task_id>/delete', methods=['DELETE'])
+@require_permission('brews', 'edit')
+def api_delete_brew_task(task_id):
+    """API endpoint to delete a brew task"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Verify and delete brew task
+            cur.execute("DELETE FROM brew_task WHERE id = %s RETURNING id", (task_id,))
+            if cur.fetchone():
+                conn.commit()
+                return jsonify({'success': True, 'message': 'Brew task deleted successfully'})
+            else:
+                return jsonify({'success': False, 'message': 'Brew task not found'}), 404
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': f'Error deleting brew task: {e}'}), 500
+    finally:
+        conn.close()
+
+@app.route('/api/brew-task/<int:task_id>/complete', methods=['POST'])
+@require_permission('brews', 'edit')
+def api_complete_brew_task(task_id):
+    """API endpoint to mark a brew task as completed with date validation"""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    
+    try:
+        data = request.get_json()
+        completed_date = data.get('completed_date', str(datetime.now().date()))
+        
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get scheduled date for comparison
+            cur.execute("""
+                SELECT scheduled_date FROM brew_task WHERE id = %s
+            """, (task_id,))
+            
+            result = cur.fetchone()
+            if not result:
+                return jsonify({'success': False, 'message': 'Brew task not found'}), 404
+            
+            scheduled_date = result['scheduled_date']
+            completed_date_obj = datetime.strptime(completed_date, '%Y-%m-%d').date()
+            
+            # Check for date mismatch warning
+            warning = None
+            if scheduled_date != completed_date_obj:
+                warning = f'Task was scheduled for {scheduled_date.strftime("%Y-%m-%d")} but marked completed on {completed_date}'
+            
+            # Update brew task to completed
+            cur.execute("""
+                UPDATE brew_task 
+                SET is_completed = TRUE, completed_date = %s, updated_date = CURRENT_TIMESTAMP
+                WHERE id = %s
+            """, (completed_date, task_id))
+            
+            conn.commit()
+            
+            response = {'success': True, 'message': 'Brew task marked as completed'}
+            if warning:
+                response['warning'] = warning
+            
+            return jsonify(response)
             
     except (psycopg2.Error, ValueError) as e:
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Error updating dry hop entry: {e}'}), 500
+        return jsonify({'success': False, 'message': f'Error completing brew task: {e}'}), 500
     finally:
         conn.close()
 
-@app.route('/api/dry-hop/<int:hop_id>/delete', methods=['DELETE'])
+@app.route('/api/brew-task/<int:task_id>/uncomplete', methods=['POST'])
 @require_permission('brews', 'edit')
-def api_delete_dry_hop(hop_id):
-    """API endpoint to delete a dry hopping entry"""
+def api_uncomplete_brew_task(task_id):
+    """API endpoint to undo completion of a brew task"""
     conn = get_db_connection()
     if not conn:
         return jsonify({'success': False, 'message': 'Database connection error'}), 500
     
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify and delete dry hop entry
-            cur.execute("DELETE FROM brew_dry_hopping WHERE id = %s RETURNING id", (hop_id,))
-            if cur.fetchone():
-                conn.commit()
-                return jsonify({'success': True, 'message': 'Dry hop entry deleted successfully'})
-            else:
-                return jsonify({'success': False, 'message': 'Dry hop entry not found'}), 404
-            
-    except psycopg2.Error as e:
-        conn.rollback()
-        return jsonify({'success': False, 'message': f'Error deleting dry hop entry: {e}'}), 500
-    finally:
-        conn.close()
-
-@app.route('/api/dry-hop/<int:hop_id>/complete', methods=['POST'])
-@require_permission('brews', 'edit')
-def api_complete_dry_hop(hop_id):
-    """API endpoint to mark a dry hopping entry as completed"""
-    conn = get_db_connection()
-    if not conn:
-        return jsonify({'success': False, 'message': 'Database connection error'}), 500
-    
-    try:
-        with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Update dry hop entry to completed
+            # Update brew task to not completed
             cur.execute("""
-                UPDATE brew_dry_hopping 
-                SET is_completed = TRUE, completed_date = CURRENT_DATE, updated_date = CURRENT_TIMESTAMP
+                UPDATE brew_task 
+                SET is_completed = FALSE, completed_date = NULL, updated_date = CURRENT_TIMESTAMP
                 WHERE id = %s RETURNING id
-            """, (hop_id,))
+            """, (task_id,))
             
             if cur.fetchone():
                 conn.commit()
-                return jsonify({'success': True, 'message': 'Dry hop entry marked as completed'})
+                return jsonify({'success': True, 'message': 'Brew task completion undone'})
             else:
-                return jsonify({'success': False, 'message': 'Dry hop entry not found'}), 404
+                return jsonify({'success': False, 'message': 'Brew task not found'}), 404
             
     except psycopg2.Error as e:
         conn.rollback()
-        return jsonify({'success': False, 'message': f'Error completing dry hop entry: {e}'}), 500
+        return jsonify({'success': False, 'message': f'Error uncompleting brew task: {e}'}), 500
     finally:
         conn.close()
 

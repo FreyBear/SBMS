@@ -64,17 +64,17 @@
                 <td>
                     {% if current_user.can_access('users', 'full') %}
                         <div class="action-buttons">
-                            <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-edit">{{ _('Edit') }}</a>
-                            <a href="{{ url_for('reset_password', user_id=user.id) }}" class="btn-reset">{{ _('Reset Password') }}</a>
+                            <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-sm btn-success">{{ _('Edit') }}</a>
+                            <a href="{{ url_for('reset_password', user_id=user.id) }}" class="btn btn-sm btn-warning">{{ _('Reset Password') }}</a>
                             {% if user.id != current_user.id %}
                             <form method="POST" action="{{ url_for('delete_user', user_id=user.id) }}" style="display: inline-block;" 
                                   onsubmit="return confirm('Are you sure you want to delete user {{ user.username }}? This action cannot be undone.')">
-                                <button type="submit" class="btn-delete">{{ _('Delete') }}</button>
+                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
                             </form>
                             {% endif %}
                         </div>
                     {% elif user.id == current_user.id %}
-                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn-edit">{{ _('My Profile') }}</a>
+                        <a href="{{ url_for('edit_user', user_id=user.id) }}" class="btn btn-sm btn-success">{{ _('My Profile') }}</a>
                     {% endif %}
                 </td>
             </tr>
@@ -128,52 +128,10 @@
 
 .action-buttons {
     display: flex;
-    gap: 8px;
+    gap: 4px;
     flex-wrap: wrap;
     align-items: center;
     justify-content: flex-start;
-}
-
-.btn-edit, .btn-reset, .btn-delete {
-    padding: 6px 12px;
-    border: none;
-    border-radius: 4px;
-    font-size: 12px;
-    font-weight: 600;
-    text-decoration: none !important;
-    cursor: pointer;
-    display: inline-block;
-    font-family: inherit;
-    transition: all 0.2s ease-in-out;
-    min-width: 60px;
-    text-align: center;
-    color: white !important;
-}
-
-.btn-edit {
-    background: linear-gradient(135deg, #28a745, #20c997) !important;
-    color: white !important;
-    border: none;
-}
-
-.btn-reset {
-    background: linear-gradient(135deg, #fd7e14, #f39c12) !important;
-    color: white !important;
-    border: none;
-}
-
-.btn-delete {
-    background: linear-gradient(135deg, #dc3545, #c0392b) !important;
-    color: white !important;
-    border: none;
-}
-
-.btn-edit:hover, .btn-reset:hover, .btn-delete:hover {
-    opacity: 0.85;
-    text-decoration: none !important;
-    color: white !important;
-    transform: translateY(-1px);
-    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 /* Make sure buttons stack nicely on small screens */
@@ -183,7 +141,7 @@
         gap: 2px;
     }
     
-    .btn-edit, .btn-reset, .btn-delete {
+    .action-buttons .btn {
         width: 100%;
         text-align: center;
     }
