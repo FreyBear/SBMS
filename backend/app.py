@@ -390,6 +390,7 @@ def kegs():
                 FROM keg k
                 LEFT JOIN brew b ON k.brew_id = b.id
                 LEFT JOIN recipe r ON b.recipe_id = r.id
+                WHERE k.historical = false
                 ORDER BY k.keg_number::integer
             """)
             kegs = cur.fetchall()
@@ -400,6 +401,70 @@ def kegs():
         conn.close()
     
     return render_template('kegs.html', kegs=kegs)
+
+@app.route('/keg/add', methods=['GET', 'POST'])
+@require_permission('kegs', 'edit')
+def add_keg():
+    """Add a new keg - Admin only"""
+    # Only admins can add kegs
+    if current_user.role_name != 'admin':
+        flash(_('Only administrators can add kegs'), 'error')
+        return redirect(url_for('kegs'))
+    
+    if request.method == 'GET':
+        return render_template('add_keg.html')
+    
+    # POST request - create new keg
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kegs'))
+    
+    try:
+        keg_number = request.form.get('keg_number')
+        volume_liters = float(request.form.get('volume_liters'))
+        location = request.form.get('location', 'Storage')
+        notes = request.form.get('notes', '')
+        
+        with conn.cursor() as cur:
+            # Check if keg number already exists (including historical kegs)
+            cur.execute("SELECT id, historical FROM keg WHERE keg_number = %s", (keg_number,))
+            existing = cur.fetchone()
+            
+            if existing:
+                if existing[1]:  # historical = true
+                    flash(_('Keg #%(num)s exists but is marked as historical. Restore it instead of creating a new one.', num=keg_number), 'error')
+                else:
+                    flash(_('Keg #%(num)s already exists', num=keg_number), 'error')
+                return redirect(url_for('kegs'))
+            
+            # Insert new keg
+            cur.execute("""
+                INSERT INTO keg 
+                (keg_number, volume_liters, status, location, notes, historical, amount_left_liters, last_measured)
+                VALUES (%s, %s, 'Available/Cleaned', %s, %s, false, 0, CURRENT_DATE)
+                RETURNING id
+            """, (keg_number, volume_liters, location, notes))
+            
+            keg_id = cur.fetchone()[0]
+            
+            # Create initial history entry
+            cur.execute("""
+                INSERT INTO keg_history 
+                (keg_id, recorded_date, status, amount_left_liters, location, arrangement, notes)
+                VALUES (%s, CURRENT_DATE, 'Available/Cleaned', 0, %s, 'Keg added to system', %s)
+            """, (keg_id, location, notes))
+            
+            conn.commit()
+            flash(_('Keg #%(num)s added successfully', num=keg_number), 'success')
+            return redirect(url_for('keg_detail', keg_id=keg_id))
+            
+    except (psycopg2.Error, ValueError) as e:
+        conn.rollback()
+        flash(f'Error adding keg: {e}', 'error')
+        return redirect(url_for('kegs'))
+    finally:
+        conn.close()
 
 @app.route('/keg/<int:keg_id>')
 @require_permission('kegs', 'view')
@@ -481,88 +546,65 @@ def update_keg(keg_id):
         today = datetime.now().strftime('%Y-%m-%d')
         return render_template('update_keg.html', keg=keg, brews=brews, today=today)
     
-    # POST request - handle dual action (update current vs add new entry)
-    action = request.form.get('action', 'update_current')
-    
+    # POST request - always update main keg AND create history entry
     try:
         with conn.cursor() as cur:
             # Parse the update date
             update_date = datetime.strptime(request.form['update_date'], '%Y-%m-%d').date()
             
-            if action == 'update_current':
-                # Get brew_id, abv, and gluten_free from form
-                brew_id = request.form.get('brew_id')
-                brew_id = int(brew_id) if brew_id and brew_id != '' else None
-                
-                abv = request.form.get('abv')
-                abv = float(abv) if abv and abv != '' else None
-                
-                gluten_free = request.form.get('gluten_free') == 'on'
-                
-                # Update the main keg record AND create history entry
-                cur.execute("""
-                    UPDATE keg SET
-                        contents = %s,
-                        status = %s,
-                        amount_left_liters = %s,
-                        location = %s,
-                        brew_id = %s,
-                        abv = %s,
-                        gluten_free = %s,
-                        notes = %s,
-                        last_measured = %s
-                    WHERE id = %s
-                """, (
-                    request.form['contents'],
-                    request.form['status'],
-                    float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
-                    request.form['location'],
-                    brew_id,
-                    abv,
-                    gluten_free,
-                    request.form['notes'],
-                    update_date,
-                    keg_id
-                ))
-                
-                # Create a history entry for this update
-                cur.execute("""
-                    INSERT INTO keg_history 
-                    (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    keg_id,
-                    update_date,
-                    request.form['contents'],
-                    request.form['status'],
-                    float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
-                    request.form['location'],
-                    request.form.get('arrangement', 'Normal operation'),
-                    request.form['notes']
-                ))
-                
-                flash(_('Keg updated successfully and history entry created'), 'success')
-                
-            elif action == 'add_new_entry':
-                # Only create history entry, don't update main keg record
-                cur.execute("""
-                    INSERT INTO keg_history 
-                    (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
-                """, (
-                    keg_id,
-                    update_date,
-                    request.form['contents'],
-                    request.form['status'],
-                    float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
-                    request.form['location'],
-                    request.form.get('arrangement', 'Normal operation'),
-                    request.form['notes']
-                ))
-                
-                flash(_('New history entry created without updating current keg status'), 'success')
+            # Get brew_id, abv, and gluten_free from form
+            brew_id = request.form.get('brew_id')
+            brew_id = int(brew_id) if brew_id and brew_id != '' else None
+            
+            abv = request.form.get('abv')
+            abv = float(abv) if abv and abv != '' else None
+            
+            gluten_free = request.form.get('gluten_free') == 'on'
+            
+            # Update the main keg record with latest values
+            cur.execute("""
+                UPDATE keg SET
+                    contents = %s,
+                    status = %s,
+                    amount_left_liters = %s,
+                    location = %s,
+                    brew_id = %s,
+                    abv = %s,
+                    gluten_free = %s,
+                    notes = %s,
+                    last_measured = %s
+                WHERE id = %s
+            """, (
+                request.form['contents'],
+                request.form['status'],
+                float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                request.form['location'],
+                brew_id,
+                abv,
+                gluten_free,
+                request.form['notes'],
+                update_date,
+                keg_id
+            ))
+            
+            # Create a history entry for this update
+            cur.execute("""
+                INSERT INTO keg_history 
+                (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+            """, (
+                keg_id,
+                update_date,
+                request.form['contents'],
+                request.form['status'],
+                float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                request.form['location'],
+                request.form.get('arrangement', 'Normal operation'),
+                request.form['notes']
+            ))
             
             conn.commit()
+            flash(_('Keg updated successfully and history entry created'), 'success')
     except (psycopg2.Error, ValueError) as e:
         flash(f'Error updating keg: {e}', 'error')
     finally:
@@ -570,10 +612,223 @@ def update_keg(keg_id):
     
     return redirect(url_for('keg_detail', keg_id=keg_id))
 
+@app.route('/kegs/bulk_mark_cleaned', methods=['POST'])
+@require_permission('kegs', 'edit')
+def bulk_mark_cleaned():
+    """Mark multiple kegs as cleaned in one operation"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kegs'))
+    
+    try:
+        # Get form data
+        keg_ids_str = request.form.get('keg_ids', '')
+        location = request.form.get('location', 'Storage')
+        notes = request.form.get('notes', 'Bulk cleaned')
+        
+        if not keg_ids_str:
+            flash('No kegs selected', 'error')
+            return redirect(url_for('kegs'))
+        
+        # Parse keg IDs
+        keg_ids = [int(kid.strip()) for kid in keg_ids_str.split(',') if kid.strip()]
+        
+        if not keg_ids:
+            flash('No valid keg IDs provided', 'error')
+            return redirect(url_for('kegs'))
+        
+        update_date = datetime.now().date()
+        updated_count = 0
+        
+        with conn.cursor() as cur:
+            for keg_id in keg_ids:
+                # Update main keg record to Available/Cleaned status
+                cur.execute("""
+                    UPDATE keg SET
+                        status = 'Available/Cleaned',
+                        contents = NULL,
+                        amount_left_liters = 0,
+                        location = %s,
+                        brew_id = NULL,
+                        abv = NULL,
+                        gluten_free = false,
+                        notes = %s,
+                        last_measured = %s
+                    WHERE id = %s
+                """, (location, notes, update_date, keg_id))
+                
+                # Create history entry
+                cur.execute("""
+                    INSERT INTO keg_history 
+                    (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    keg_id,
+                    update_date,
+                    None,  # contents
+                    'Available/Cleaned',
+                    0,  # amount_left_liters
+                    location,
+                    'Bulk cleaning',  # arrangement
+                    notes
+                ))
+                
+                updated_count += 1
+        
+        conn.commit()
+        flash(_('Successfully marked %(count)d kegs as cleaned', count=updated_count), 'success')
+        
+    except (psycopg2.Error, ValueError) as e:
+        conn.rollback()
+        flash(f'Error during bulk cleaning: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('kegs'))
+
+@app.route('/kegs/bulk_mark_empty', methods=['POST'])
+@require_permission('kegs', 'edit')
+def bulk_mark_empty():
+    """Mark multiple kegs as empty in one operation"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kegs'))
+    
+    try:
+        # Get form data
+        keg_ids_str = request.form.get('keg_ids', '')
+        location = request.form.get('location', 'Storage')
+        notes = request.form.get('notes', 'Bulk emptied')
+        
+        if not keg_ids_str:
+            flash('No kegs selected', 'error')
+            return redirect(url_for('kegs'))
+        
+        # Parse keg IDs
+        keg_ids = [int(kid.strip()) for kid in keg_ids_str.split(',') if kid.strip()]
+        
+        if not keg_ids:
+            flash('No valid keg IDs provided', 'error')
+            return redirect(url_for('kegs'))
+        
+        update_date = datetime.now().date()
+        updated_count = 0
+        
+        with conn.cursor() as cur:
+            for keg_id in keg_ids:
+                # Update main keg record to Empty status
+                cur.execute("""
+                    UPDATE keg SET
+                        status = 'Empty',
+                        contents = NULL,
+                        amount_left_liters = 0,
+                        location = %s,
+                        brew_id = NULL,
+                        abv = NULL,
+                        gluten_free = false,
+                        notes = %s,
+                        last_measured = %s
+                    WHERE id = %s
+                """, (location, notes, update_date, keg_id))
+                
+                # Create history entry
+                cur.execute("""
+                    INSERT INTO keg_history 
+                    (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    keg_id,
+                    update_date,
+                    None,  # contents
+                    'Empty',
+                    0,  # amount_left_liters
+                    location,
+                    'Bulk emptying',  # arrangement
+                    notes
+                ))
+                
+                updated_count += 1
+        
+        conn.commit()
+        flash(_('Successfully marked %(count)d kegs as empty', count=updated_count), 'success')
+        
+    except (psycopg2.Error, ValueError) as e:
+        conn.rollback()
+        flash(f'Error during bulk emptying: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('kegs'))
+
+@app.route('/keg/<int:keg_id>/delete', methods=['POST'])
+@require_permission('kegs', 'edit')
+def delete_keg(keg_id):
+    """Soft-delete a keg by marking it as historical - Admin only"""
+    # Only admins can delete kegs
+    if current_user.role_name != 'admin':
+        flash(_('Only administrators can delete kegs'), 'error')
+        return redirect(url_for('kegs'))
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kegs'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get keg info before marking as historical
+            cur.execute("SELECT keg_number, historical FROM keg WHERE id = %s", (keg_id,))
+            keg = cur.fetchone()
+            
+            if not keg:
+                flash(_('Keg not found'), 'error')
+                return redirect(url_for('kegs'))
+            
+            if keg['historical']:
+                flash(_('Keg is already marked as historical'), 'error')
+                return redirect(url_for('kegs'))
+            
+            # Mark keg as historical (soft delete)
+            cur.execute("""
+                UPDATE keg 
+                SET historical = true,
+                    notes = CASE 
+                        WHEN notes IS NULL OR notes = '' THEN 'Marked as historical'
+                        ELSE notes || ' - Marked as historical'
+                    END
+                WHERE id = %s
+            """, (keg_id,))
+            
+            # Create history entry
+            cur.execute("""
+                INSERT INTO keg_history 
+                (keg_id, recorded_date, status, amount_left_liters, location, arrangement, notes)
+                SELECT id, CURRENT_DATE, status, amount_left_liters, location, 'Keg marked as historical', 'Removed from active inventory'
+                FROM keg WHERE id = %s
+            """, (keg_id,))
+            
+            conn.commit()
+            flash(_('Keg #%(num)s marked as historical', num=keg['keg_number']), 'success')
+            
+    except psycopg2.Error as e:
+        conn.rollback()
+        flash(f'Error marking keg as historical: {e}', 'error')
+    finally:
+        conn.close()
+    
+    return redirect(url_for('kegs'))
+
 @app.route('/keg/<int:keg_id>/history/<int:history_id>/edit', methods=['GET', 'POST'])
 @require_permission('kegs', 'edit')
 def edit_keg_history(keg_id, history_id):
-    """Edit keg history entry"""
+    """Edit keg history entry - Admin only"""
+    # Only admins can edit/delete history entries
+    if current_user.role_name != 'admin':
+        flash(_('Only administrators can edit or delete history entries'), 'error')
+        return redirect(url_for('keg_detail', keg_id=keg_id))
+    
     conn = get_db_connection()
     if not conn:
         flash('Database connection error', 'error')

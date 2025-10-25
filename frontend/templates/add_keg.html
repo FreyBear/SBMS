@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+
+{% block title %}Add Keg - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="add-keg-page">
+    <div class="page-header">
+        <h1>{{ _('Add New Keg') }}</h1>
+    </div>
+
+    <div class="form-container" style="max-width: 600px; margin: 0 auto;">
+        <form method="POST" action="{{ url_for('add_keg') }}">
+            <div class="form-group">
+                <label for="keg_number">{{ _('Keg Number') }}:*</label>
+                <input type="text" id="keg_number" name="keg_number" required 
+                       placeholder="{{ _('e.g., 1, 2, 3, etc.') }}"
+                       pattern="[0-9]+" 
+                       title="{{ _('Please enter a valid keg number (digits only)') }}">
+                <small class="form-help">{{ _('Unique identifier for this keg') }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="volume_liters">{{ _('Size') }} ({{ _('liters') }}):*</label>
+                <select id="volume_liters" name="volume_liters" required>
+                    <option value="">{{ _('Select size') }}</option>
+                    <option value="9">9L</option>
+                    <option value="19">19L</option>
+                    <option value="20">20L</option>
+                    <option value="25">25L</option>
+                    <option value="30">30L</option>
+                    <option value="50">50L</option>
+                </select>
+                <small class="form-help">{{ _('Total capacity of the keg') }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="location">{{ _('Initial Location') }}:*</label>
+                <select id="location" name="location" required>
+                    <option value="Storage">{{ _('Storage') }}</option>
+                    <option value="Brewery">{{ _('Brewery') }}</option>
+                    <option value="Cellar">{{ _('Cellar') }}</option>
+                    <option value="Cleaning">{{ _('Cleaning') }}</option>
+                    <option value="Bar">{{ _('Bar') }}</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="notes">{{ _('Notes') }} ({{ _('optional') }}):</label>
+                <textarea id="notes" name="notes" rows="3" 
+                          placeholder="{{ _('e.g., New keg purchased from supplier X') }}"></textarea>
+            </div>
+
+            <div class="form-actions" style="margin-top: 30px; display: flex; gap: 10px; justify-content: flex-end;">
+                <a href="{{ url_for('kegs') }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+                <button type="submit" class="btn btn-primary">✓ {{ _('Add Keg') }}</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.form-help {
+    display: block;
+    margin-top: 5px;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.form-container {
+    background: white;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+</style>
+{% endblock %}

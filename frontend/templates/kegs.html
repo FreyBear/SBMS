@@ -4,58 +4,102 @@
 
 {% block content %}
 <div class="kegs-page">
-    <div class="page-header">
+    <div class="page-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h1>{{ _('Keg Management') }}</h1>
+        {% if current_user.role_name == 'admin' %}
+        <a href="{{ url_for('add_keg') }}" class="btn btn-primary">+ {{ _('Add Keg') }}</a>
+        {% endif %}
     </div>
 
     {% if kegs %}
-    <!-- Status Filter Controls -->
+    <!-- Filter Controls -->
     <div class="filter-controls" style="margin-bottom: 20px; padding: 15px; background: #f5f5f5; border-radius: 5px;">
-        <h3 style="margin: 0 0 10px 0;">{{ _('Filter by Status') }}:</h3>
-        <div class="status-filters">
-            <label class="filter-checkbox">
-                <input type="checkbox" id="filter-full" checked> 
-                <span class="status-full">{{ _('Full') }}</span>
-            </label>
-            <label class="filter-checkbox">
-                <input type="checkbox" id="filter-started" checked> 
-                <span class="status-started">{{ _('Started') }}</span>
-            </label>
-            <label class="filter-checkbox">
-                <input type="checkbox" id="filter-available-cleaned" checked> 
-                <span class="status-available-cleaned">{{ _('Available/Cleaned') }}</span>
-            </label>
-            <label class="filter-checkbox">
-                <input type="checkbox" id="filter-empty" checked> 
-                <span class="status-empty">{{ _('Empty') }}</span>
-            </label>
-            <button id="toggle-all" class="btn btn-sm btn-secondary" style="margin-left: 15px;">{{ _('Toggle All') }}</button>
-            <button id="show-only-available" class="btn btn-sm btn-primary" style="margin-left: 5px;">{{ _('Show Only Available + Empty') }}</button>
+        <h3 style="margin: 0 0 10px 0;">{{ _('Filter by') }}:</h3>
+        <div class="filters" style="display: flex; flex-wrap: wrap; gap: 20px; align-items: center;">
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filter-full" checked> 
+                    <span class="status-full">{{ _('Full') }}</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filter-started" checked> 
+                    <span class="status-started">{{ _('Started') }}</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filter-available-cleaned" checked> 
+                    <span class="status-available-cleaned">{{ _('Available/Cleaned') }}</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filter-empty" checked> 
+                    <span class="status-empty">{{ _('Empty') }}</span>
+                </label>
+            </div>
+            
+            <div style="border-left: 2px solid #ccc; height: 30px;"></div>
+            
+            <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filter-size-9" checked> 
+                    <span>9L</span>
+                </label>
+                <label class="filter-checkbox">
+                    <input type="checkbox" id="filter-size-19" checked> 
+                    <span>19L</span>
+                </label>
+            </div>
+            
+            <div style="border-left: 2px solid #ccc; height: 30px;"></div>
+            
+            <div style="display: flex; gap: 5px; flex-wrap: wrap;">
+                <button id="toggle-all" class="btn btn-sm btn-secondary">{{ _('Toggle All') }}</button>
+                <button id="show-only-available" class="btn btn-sm btn-primary">{{ _('Show Only Available + Empty') }}</button>
+            </div>
         </div>
     </div>
+    
+    <!-- Bulk Actions Bar (hidden by default) -->
+    <div id="bulk-actions-bar" style="display: none; margin-bottom: 20px; padding: 15px; background: #e3f2fd; border-radius: 5px; border-left: 4px solid #2196F3;">
+        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+            <div>
+                <strong><span id="selected-count">0</span> {{ _('kegs selected') }}</strong>
+            </div>
+            <div style="display: flex; gap: 10px;">
+                <button id="bulk-mark-cleaned" class="btn btn-primary">
+                    ✓ {{ _('Mark as Cleaned') }}
+                </button>
+                <button id="bulk-mark-empty" class="btn btn-warning" style="background-color: #ff9800; border-color: #ff9800;">
+                    ○ {{ _('Mark as Empty') }}
+                </button>
+                <button id="bulk-clear-selection" class="btn btn-secondary">
+                    {{ _('Clear Selection') }}
+                </button>
+            </div>
+        </div>
+    </div>
+    
     <table class="data-table sortable-table" id="kegsTable">
         <thead>
             <tr>
-                <th class="sortable" data-column="0" data-type="number">
-                    {{ _('Keg #') }} <span class="sort-arrow">↕</span>
+                <th style="width: 40px;">
+                    <input type="checkbox" id="select-all-kegs" title="{{ _('Select all') }}">
                 </th>
                 <th class="sortable" data-column="1" data-type="number">
-                    {{ _('Volume') }} <span class="sort-arrow">↕</span>
+                    {{ _('Keg #') }} <span class="sort-arrow">↕</span>
                 </th>
-                <th class="sortable" data-column="2" data-type="text">
-                    {{ _('Contents') }} <span class="sort-arrow">↕</span>
+                <th class="sortable" data-column="2" data-type="number">
+                    {{ _('Size') }} <span class="sort-arrow">↕</span>
                 </th>
                 <th class="sortable" data-column="3" data-type="text">
+                    {{ _('Contents') }} <span class="sort-arrow">↕</span>
+                </th>
+                <th class="sortable" data-column="4" data-type="text">
                     {{ _('Status') }} <span class="sort-arrow">↕</span>
                 </th>
-                <th class="sortable" data-column="4" data-type="number">
+                <th class="sortable" data-column="5" data-type="number">
                     {{ _('Amount Left') }} <span class="sort-arrow">↕</span>
                 </th>
-                <th class="sortable" data-column="5" data-type="text">
-                    {{ _('Location') }} <span class="sort-arrow">↕</span>
-                </th>
                 <th class="sortable" data-column="6" data-type="text">
-                    {{ _('Brew') }} <span class="sort-arrow">↕</span>
+                    {{ _('Location') }} <span class="sort-arrow">↕</span>
                 </th>
                 <th class="sortable" data-column="7" data-type="date">
                     {{ _('Last Measured') }} <span class="sort-arrow">↕</span>
@@ -65,7 +109,10 @@
         </thead>
         <tbody>
             {% for keg in kegs %}
-            <tr>
+            <tr data-status="{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}" data-size="{{ keg.volume_liters }}">
+                <td>
+                    <input type="checkbox" class="keg-checkbox" value="{{ keg.id }}" data-keg-number="{{ keg.keg_number }}">
+                </td>
                 <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
                 <td>{{ keg.volume_liters }}L</td>
                 <td>
@@ -80,23 +127,131 @@
                 <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status|translate_status }}</span></td>
                 <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
                 <td>{{ keg.location or 'Unknown' }}</td>
-                <td>{{ keg.brew_name or 'None' }}</td>
                 <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
                 <td>
-                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-sm">{{ _('View') }}</a>
-                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-sm btn-secondary">{{ _('Edit') }}</a>
+                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-info btn-sm">{{ _('View') }}</a>
+                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-warning btn-sm">{{ _('Update') }}</a>
+                    {% if current_user.role_name == 'admin' %}
+                    <button onclick="confirmDeleteKeg({{ keg.id }}, '{{ keg.keg_number }}')" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
+                    {% endif %}
                 </td>
             </tr>
             {% endfor %}
         </tbody>
         <tfoot>
             <tr class="total-row">
-                <td colspan="4" style="text-align: right; font-weight: bold;">{{ _('Total Amount Left') }}:</td>
+                <td colspan="5" style="text-align: right; font-weight: bold;">{{ _('Total Amount Left') }}:</td>
                 <td id="total-amount" style="font-weight: bold; background-color: #f8f9fa;">0.0L</td>
-                <td colspan="4"></td>
+                <td colspan="3"></td>
             </tr>
         </tfoot>
     </table>
+    
+    <!-- Bulk Mark as Cleaned Modal -->
+    <div id="bulkCleanedModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>{{ _('Mark Kegs as Cleaned') }}</h2>
+                <button type="button" class="close-modal" onclick="closeBulkCleanedModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong><span id="modal-selected-count">0</span> {{ _('kegs will be marked as cleaned') }}</strong></p>
+                <div id="selected-kegs-list" style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; max-height: 150px; overflow-y: auto;">
+                </div>
+                
+                <form id="bulk-cleaned-form" method="POST" action="{{ url_for('bulk_mark_cleaned') }}">
+                    <div class="form-group">
+                        <label for="bulk-location">{{ _('Storage Location') }}:</label>
+                        <select id="bulk-location" name="location" required>
+                            <option value="Storage">{{ _('Storage') }}</option>
+                            <option value="Brewery">{{ _('Brewery') }}</option>
+                            <option value="Cellar">{{ _('Cellar') }}</option>
+                            <option value="Cleaning">{{ _('Cleaning') }}</option>
+                            <option value="Bar">{{ _('Bar') }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bulk-notes">{{ _('Notes') }} ({{ _('optional') }}):</label>
+                        <textarea id="bulk-notes" name="notes" rows="3" placeholder="{{ _('e.g., Weekly cleaning session') }}"></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="keg_ids" id="bulk-keg-ids">
+                    
+                    <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="closeBulkCleanedModal()" class="btn btn-secondary">{{ _('Cancel') }}</button>
+                        <button type="submit" class="btn btn-primary">✓ {{ _('Mark as Cleaned') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Bulk Mark as Empty Modal -->
+    <div id="bulkEmptyModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 500px;">
+            <div class="modal-header">
+                <h2>{{ _('Mark Kegs as Empty') }}</h2>
+                <button type="button" class="close-modal" onclick="closeBulkEmptyModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong><span id="modal-empty-selected-count">0</span> {{ _('kegs will be marked as empty') }}</strong></p>
+                <div id="selected-kegs-list-empty" style="margin: 10px 0; padding: 10px; background: #f5f5f5; border-radius: 5px; max-height: 150px; overflow-y: auto;">
+                </div>
+                
+                <form id="bulk-empty-form" method="POST" action="{{ url_for('bulk_mark_empty') }}">
+                    <div class="form-group">
+                        <label for="bulk-empty-location">{{ _('Storage Location') }}:</label>
+                        <select id="bulk-empty-location" name="location" required>
+                            <option value="Storage">{{ _('Storage') }}</option>
+                            <option value="Brewery">{{ _('Brewery') }}</option>
+                            <option value="Cellar">{{ _('Cellar') }}</option>
+                            <option value="Cleaning">{{ _('Cleaning') }}</option>
+                            <option value="Bar">{{ _('Bar') }}</option>
+                        </select>
+                    </div>
+                    
+                    <div class="form-group">
+                        <label for="bulk-empty-notes">{{ _('Notes') }} ({{ _('optional') }}):</label>
+                        <textarea id="bulk-empty-notes" name="notes" rows="3" placeholder="{{ _('e.g., Emptied during event') }}"></textarea>
+                    </div>
+                    
+                    <input type="hidden" name="keg_ids" id="bulk-empty-keg-ids">
+                    
+                    <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="closeBulkEmptyModal()" class="btn btn-secondary">{{ _('Cancel') }}</button>
+                        <button type="submit" class="btn btn-warning" style="background-color: #ff9800; border-color: #ff9800;">○ {{ _('Mark as Empty') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Delete Keg Confirmation Modal -->
+    <div id="deleteKegModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 450px;">
+            <div class="modal-header">
+                <h2>{{ _('Confirm Delete') }}</h2>
+                <button type="button" class="close-modal" onclick="closeDeleteKegModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p style="margin-bottom: 20px;">
+                    <strong>{{ _('Are you sure you want to mark Keg #') }}<span id="delete-keg-number"></span> {{ _('as historical?') }}</strong>
+                </p>
+                <p style="color: #666; font-size: 0.9rem;">
+                    {{ _('The keg will be hidden from the active inventory but preserved in the database with all its history.') }}
+                </p>
+                
+                <form id="delete-keg-form" method="POST" action="">
+                    <div class="form-actions" style="margin-top: 20px; display: flex; gap: 10px; justify-content: flex-end;">
+                        <button type="button" onclick="closeDeleteKegModal()" class="btn btn-secondary">{{ _('Cancel') }}</button>
+                        <button type="submit" class="btn btn-danger" style="background-color: #dc3545; border-color: #dc3545;">{{ _('Delete') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+    
     {% else %}
     <div class="empty-state">
         <p>No kegs found in the system.</p>
@@ -116,6 +271,64 @@
     font-size: 0.9rem;
     margin-left: 0.25rem;
     vertical-align: middle;
+}
+
+/* Modal styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fff;
+    border-radius: 8px;
+    width: 90%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem;
+    border-bottom: 1px solid #ddd;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+}
+
+.close-modal {
+    background: none;
+    border: none;
+    font-size: 2rem;
+    cursor: pointer;
+    color: #666;
+    line-height: 1;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+}
+
+.close-modal:hover {
+    color: #000;
+}
+
+.modal-body {
+    padding: 1.5rem;
+    overflow-y: auto;
 }
 
 /* Sortable table styles */
@@ -278,34 +491,175 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Status filtering functionality
+    // === Bulk Selection Functionality ===
+    const selectAllCheckbox = document.getElementById('select-all-kegs');
+    const bulkActionsBar = document.getElementById('bulk-actions-bar');
+    const selectedCountSpan = document.getElementById('selected-count');
+    
+    function updateBulkActionsBar() {
+        const checkedBoxes = document.querySelectorAll('.keg-checkbox:checked');
+        const count = checkedBoxes.length;
+        
+        if (count > 0) {
+            bulkActionsBar.style.display = 'block';
+            selectedCountSpan.textContent = count;
+        } else {
+            bulkActionsBar.style.display = 'none';
+        }
+        
+        // Update select-all checkbox state
+        const allCheckboxes = document.querySelectorAll('.keg-checkbox');
+        const allVisible = Array.from(allCheckboxes).filter(cb => cb.closest('tr').style.display !== 'none');
+        const allVisibleChecked = allVisible.length > 0 && allVisible.every(cb => cb.checked);
+        selectAllCheckbox.checked = allVisibleChecked;
+        selectAllCheckbox.indeterminate = count > 0 && !allVisibleChecked;
+    }
+    
+    // Select all checkbox
+    selectAllCheckbox.addEventListener('change', function() {
+        const visibleCheckboxes = Array.from(document.querySelectorAll('.keg-checkbox'))
+            .filter(cb => cb.closest('tr').style.display !== 'none');
+        visibleCheckboxes.forEach(cb => cb.checked = this.checked);
+        updateBulkActionsBar();
+    });
+    
+    // Individual checkboxes
+    document.addEventListener('change', function(e) {
+        if (e.target.classList.contains('keg-checkbox')) {
+            updateBulkActionsBar();
+        }
+    });
+    
+    // Clear selection button
+    document.getElementById('bulk-clear-selection').addEventListener('click', function() {
+        document.querySelectorAll('.keg-checkbox:checked').forEach(cb => cb.checked = false);
+        updateBulkActionsBar();
+    });
+    
+    // Mark as Cleaned button
+    document.getElementById('bulk-mark-cleaned').addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.keg-checkbox:checked');
+        if (checkedBoxes.length === 0) return;
+        
+        const kegIds = Array.from(checkedBoxes).map(cb => cb.value);
+        const kegNumbers = Array.from(checkedBoxes).map(cb => cb.dataset.kegNumber);
+        
+        // Update modal
+        document.getElementById('modal-selected-count').textContent = kegIds.length;
+        document.getElementById('bulk-keg-ids').value = kegIds.join(',');
+        
+        // Show list of selected kegs
+        const kegsList = document.getElementById('selected-kegs-list');
+        kegsList.innerHTML = kegNumbers.map(num => 
+            `<span style="display: inline-block; background: white; padding: 3px 8px; margin: 2px; border-radius: 3px; font-weight: bold;">Keg #${num}</span>`
+        ).join('');
+        
+        // Open modal
+        document.getElementById('bulkCleanedModal').style.display = 'flex';
+    });
+    
+    // Mark as Empty button
+    document.getElementById('bulk-mark-empty').addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.keg-checkbox:checked');
+        if (checkedBoxes.length === 0) return;
+        
+        const kegIds = Array.from(checkedBoxes).map(cb => cb.value);
+        const kegNumbers = Array.from(checkedBoxes).map(cb => cb.dataset.kegNumber);
+        
+        // Update modal
+        document.getElementById('modal-empty-selected-count').textContent = kegIds.length;
+        document.getElementById('bulk-empty-keg-ids').value = kegIds.join(',');
+        
+        // Show list of selected kegs
+        const kegsListEmpty = document.getElementById('selected-kegs-list-empty');
+        kegsListEmpty.innerHTML = kegNumbers.map(num => 
+            `<span style="display: inline-block; background: white; padding: 3px 8px; margin: 2px; border-radius: 3px; font-weight: bold;">Keg #${num}</span>`
+        ).join('');
+        
+        // Open modal
+        document.getElementById('bulkEmptyModal').style.display = 'flex';
+    });
+    
+    // === Bulk Actions Modal Functions ===
+    window.closeBulkCleanedModal = function() {
+        document.getElementById('bulkCleanedModal').style.display = 'none';
+    };
+    
+    window.closeBulkEmptyModal = function() {
+        document.getElementById('bulkEmptyModal').style.display = 'none';
+    };
+    
+    // === Delete Keg Modal Functions ===
+    window.confirmDeleteKeg = function(kegId, kegNumber) {
+        document.getElementById('delete-keg-number').textContent = kegNumber;
+        document.getElementById('delete-keg-form').action = '/keg/' + kegId + '/delete';
+        document.getElementById('deleteKegModal').style.display = 'flex';
+    };
+    
+    window.closeDeleteKegModal = function() {
+        document.getElementById('deleteKegModal').style.display = 'none';
+    };
+    
+    // Close modal on outside click
+    window.addEventListener('click', function(e) {
+        const cleanedModal = document.getElementById('bulkCleanedModal');
+        const emptyModal = document.getElementById('bulkEmptyModal');
+        const deleteModal = document.getElementById('deleteKegModal');
+        
+        if (e.target === cleanedModal) {
+            closeBulkCleanedModal();
+        }
+        if (e.target === emptyModal) {
+            closeBulkEmptyModal();
+        }
+        if (e.target === deleteModal) {
+            closeDeleteKegModal();
+        }
+    });
+
+    // Status and Size filtering functionality
     function updateKegFilters() {
+        // Status filters
         const showFull = document.getElementById('filter-full').checked;
         const showStarted = document.getElementById('filter-started').checked;
         const showAvailable = document.getElementById('filter-available-cleaned').checked;
         const showEmpty = document.getElementById('filter-empty').checked;
+        
+        // Size filters
+        const showSize9 = document.getElementById('filter-size-9').checked;
+        const showSize19 = document.getElementById('filter-size-19').checked;
         
         const rows = document.querySelectorAll('#kegsTable tbody tr');
         let visibleCount = 0;
         let totalAmount = 0;
         
         rows.forEach(row => {
-            const statusCell = row.querySelector('td:nth-child(4)');
+            const statusCell = row.querySelector('td:nth-child(5)');  // Status column (5th column including checkbox)
+            const kegSize = parseFloat(row.getAttribute('data-size'));
+            
             if (statusCell) {
                 const statusText = statusCell.textContent.trim();
-                let showRow = false;
+                let showByStatus = false;
+                let showBySize = false;
                 
-                // Check for both English and Norwegian status values
-                if ((statusText.includes('Full') || statusText.includes('Fullt')) && showFull) showRow = true;
-                if ((statusText.includes('Started') || statusText.includes('Påbegynt')) && showStarted) showRow = true;
-                if ((statusText.includes('Available/Cleaned') || statusText.includes('Vasket')) && showAvailable) showRow = true;
-                if ((statusText.includes('Empty') || statusText.includes('Tomt')) && showEmpty) showRow = true;
+                // Check status filter
+                if ((statusText.includes('Full') || statusText.includes('Fullt')) && showFull) showByStatus = true;
+                if ((statusText.includes('Started') || statusText.includes('Påbegynt')) && showStarted) showByStatus = true;
+                if ((statusText.includes('Available/Cleaned') || statusText.includes('Vasket')) && showAvailable) showByStatus = true;
+                if ((statusText.includes('Empty') || statusText.includes('Tomt')) && showEmpty) showByStatus = true;
+                
+                // Check size filter - only show if size matches one of the checked options
+                if (kegSize === 9 && showSize9) showBySize = true;
+                if (kegSize === 19 && showSize19) showBySize = true;
+                
+                // Show row only if BOTH filters match
+                const showRow = showByStatus && showBySize;
                 
                 row.style.display = showRow ? '' : 'none';
                 if (showRow) {
                     visibleCount++;
-                    // Calculate total amount left from visible rows (column 5 = Amount Left)
-                    const amountCell = row.querySelector('td:nth-child(5)');
+                    // Calculate total amount left from visible rows (column 6 = Amount Left)
+                    const amountCell = row.querySelector('td:nth-child(6)');
                     if (amountCell) {
                         const amountText = amountCell.textContent.trim();
                         // Extract number from "X.XL" format
@@ -322,21 +676,28 @@ document.addEventListener('DOMContentLoaded', function() {
             totalElement.textContent = totalAmount.toFixed(1) + 'L';
         }
         
+        // Update bulk actions bar (in case selected kegs got hidden)
+        updateBulkActionsBar();
+        
         console.log(`Showing ${visibleCount} kegs, Total: ${totalAmount.toFixed(1)}L`);
     }
     
-    // Add event listeners to checkboxes
+    // Add event listeners to status checkboxes
     document.getElementById('filter-full').addEventListener('change', updateKegFilters);
     document.getElementById('filter-started').addEventListener('change', updateKegFilters);
     document.getElementById('filter-available-cleaned').addEventListener('change', updateKegFilters);
     document.getElementById('filter-empty').addEventListener('change', updateKegFilters);
     
-    // Toggle all button
+    // Add event listeners to size checkboxes
+    document.getElementById('filter-size-9').addEventListener('change', updateKegFilters);
+    document.getElementById('filter-size-19').addEventListener('change', updateKegFilters);
+    
+    // Toggle all button - toggles both status and size filters
     document.getElementById('toggle-all').addEventListener('click', function() {
-        const checkboxes = document.querySelectorAll('.filter-controls input[type="checkbox"]');
-        const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+        const allCheckboxes = document.querySelectorAll('.filter-controls input[type="checkbox"]');
+        const allChecked = Array.from(allCheckboxes).every(cb => cb.checked);
         
-        checkboxes.forEach(cb => cb.checked = !allChecked);
+        allCheckboxes.forEach(cb => cb.checked = !allChecked);
         updateKegFilters();
     });
     
@@ -426,38 +787,9 @@ document.addEventListener('DOMContentLoaded', function() {
     font-weight: bold;
 }
 
-/* Improve button visibility in the table */
-.data-table .btn {
-    background-color: #007bff !important;
-    color: white !important;
-    border: 2px solid #0056b3 !important;
-    padding: 6px 12px !important;
-    font-weight: bold !important;
-    text-decoration: none !important;
-    border-radius: 4px !important;
-    font-size: 12px !important;
-    margin: 0 2px !important;
-}
-
-.data-table .btn:hover {
-    background-color: #0056b3 !important;
-    border-color: #004085 !important;
-    text-decoration: none !important;
-}
-
-.data-table .btn-secondary {
-    background-color: #6c757d !important;
-    border-color: #545b62 !important;
-}
-
-.data-table .btn-secondary:hover {
-    background-color: #545b62 !important;
-    border-color: #3d4142 !important;
-}
-
-.data-table .btn-small {
-    padding: 4px 8px !important;
-    font-size: 11px !important;
+.total-row {
+    background-color: #f8f9fa;
+    font-weight: bold;
 }
 
 /* Improve status badges in the table */

@@ -54,6 +54,15 @@ msgstr "Logg Ut"
 msgid "Keg updated successfully and history entry created"
 msgstr "Fat oppdatert og historikeoppføring oppretta"
 
+#: backend/app.py:594
+#, python-format
+msgid "Successfully marked %(count)d kegs as cleaned"
+msgstr "Merka %(count)d fat som vaska"
+
+#, python-format
+msgid "Successfully marked %(count)d kegs as empty"
+msgstr "Merka %(count)d fat som tomme"
+
 #: backend/app.py:536
 msgid "New history entry created without updating current keg status"
 msgstr ""
@@ -1814,9 +1823,144 @@ msgstr "Vis berre tilgjengelege + tomme"
 msgid "Volume"
 msgstr "VOLUM"
 
+msgid "Size"
+msgstr "Storleik"
+
+msgid "Filter by Size"
+msgstr "Filtrer etter storleik"
+
+msgid "Filter by"
+msgstr "Filtrer etter"
+
+msgid "Other"
+msgstr "Anna"
+
+msgid "Toggle All Sizes"
+msgstr "Veksle alle storleikar"
+
 #: frontend/templates/kegs.html:86
 msgid "Total Amount Left"
 msgstr "Total Mengd Igjen"
+
+#: frontend/templates/kegs.html:61
+msgid "kegs selected"
+msgstr "fat valde"
+
+#: frontend/templates/kegs.html:65
+msgid "Mark as Cleaned"
+msgstr "Merk som vaska"
+
+#: frontend/templates/kegs.html:68
+msgid "Clear Selection"
+msgstr "Fjern valet"
+
+#: frontend/templates/kegs.html:68
+msgid "Mark as Empty"
+msgstr "Merk som tomt"
+
+#: frontend/templates/kegs.html:77
+msgid "Select all"
+msgstr "Vel alle"
+
+#: frontend/templates/kegs.html:149
+msgid "Mark Kegs as Cleaned"
+msgstr "Merk fat som vaska"
+
+#: frontend/templates/kegs.html:154
+msgid "kegs will be marked as cleaned"
+msgstr "fat vil bli merka som vaska"
+
+#: frontend/templates/kegs.html:159
+msgid "Storage Location"
+msgstr "Lagringsplass"
+
+#: frontend/templates/kegs.html:189
+msgid "Mark Kegs as Empty"
+msgstr "Merk fat som tomme"
+
+#: frontend/templates/kegs.html:194
+msgid "kegs will be marked as empty"
+msgstr "fat vil bli merka som tomme"
+
+#: frontend/templates/kegs.html:199
+msgid "e.g., Emptied during event"
+msgstr "t.d., Tømt under arrangement"
+
+msgid "Add Keg"
+msgstr "Legg til fat"
+
+msgid "Delete"
+msgstr "Slett"
+
+msgid "Confirm Delete"
+msgstr "Stadfest sletting"
+
+msgid "Are you sure you want to mark Keg #"
+msgstr "Er du sikker på at du vil markere fat #"
+
+msgid "as historical?"
+msgstr "som historisk?"
+
+msgid "The keg will be hidden from the active inventory but preserved in the database with all its history."
+msgstr "Fatet vil bli gøymt frå aktiv behaldning, men bevart i databasen med all si historikk."
+
+msgid "Add New Keg"
+msgstr "Legg til nytt fat"
+
+msgid "Keg Number"
+msgstr "Fatnummer"
+
+msgid "e.g., 1, 2, 3, etc."
+msgstr "t.d., 1, 2, 3, osb."
+
+msgid "Please enter a valid keg number (digits only)"
+msgstr "Vennlegst skriv inn eit gyldig fatnummer (berre tal)"
+
+msgid "Unique identifier for this keg"
+msgstr "Unik identifikator for dette fatet"
+
+msgid "liters"
+msgstr "liter"
+
+msgid "Select size"
+msgstr "Vel storleik"
+
+msgid "Total capacity of the keg"
+msgstr "Total kapasitet på fatet"
+
+msgid "Initial Location"
+msgstr "Opphavleg plassering"
+
+msgid "e.g., New keg purchased from supplier X"
+msgstr "t.d., Nytt fat kjøpt frå leverandør X"
+
+#, python-format
+msgid "Keg #%(num)s exists but is marked as historical. Restore it instead of creating a new one."
+msgstr "Fat #%(num)s eksisterer, men er markert som historisk. Gjenopprett det i staden for å opprette eit nytt."
+
+#, python-format
+msgid "Keg #%(num)s already exists"
+msgstr "Fat #%(num)s eksisterer allereie"
+
+#, python-format
+msgid "Keg #%(num)s added successfully"
+msgstr "Fat #%(num)s lagt til"
+
+msgid "Only administrators can add kegs"
+msgstr "Berre administratorar kan legge til fat"
+
+msgid "Only administrators can delete kegs"
+msgstr "Berre administratorar kan slette fat"
+
+msgid "Keg not found"
+msgstr "Fat ikkje funne"
+
+msgid "Keg is already marked as historical"
+msgstr "Fat er allereie markert som historisk"
+
+#, python-format
+msgid "Keg #%(num)s marked as historical"
+msgstr "Fat #%(num)s markert som historisk"
 
 #: frontend/templates/kit_detail.html:13
 msgid "By"
@@ -2072,9 +2216,8 @@ msgid "Version:"
 msgstr ""
 
 #: frontend/templates/recipe_detail.html:476
-#, fuzzy
 msgid "Update"
-msgstr "Dato"
+msgstr "Oppdater"
 
 #: frontend/templates/recipe_detail.html:493
 #, fuzzy
@@ -2507,6 +2650,18 @@ msgstr "Fjern val"
 
 #~ msgid "All Kegs"
 #~ msgstr "Alle Fat"
+
+msgid "Update Keg"
+msgstr "Oppdater Fat"
+
+msgid "Are you sure you want to delete this history entry?"
+msgstr "Er du sikker på at du vil slette denne historikkoppføringa?"
+
+msgid "Only administrators can edit or delete history entries"
+msgstr "Berre administratorar kan redigere eller slette historikkoppføringar"
+
+msgid "Delete"
+msgstr "Slett"
 
 #~ msgid "Keg Number"
 #~ msgstr "FAT NUMMER"

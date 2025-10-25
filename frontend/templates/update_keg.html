@@ -104,12 +104,8 @@
         </div>
 
         <div class="form-actions">
-            <button type="button" onclick="setEmpty()" class="btn btn-warning">🗑️ {{ _('Set Empty') }}</button>
-            <button type="submit" name="action" value="update_current" class="btn btn-primary">
-                💾 {{ _('Update Current Status') }}
-            </button>
-            <button type="submit" name="action" value="add_new_entry" class="btn btn-success">
-                📝 {{ _('Add New History Entry') }}
+            <button type="submit" class="btn btn-primary">
+                💾 {{ _('Update Keg') }}
             </button>
             <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
         </div>
@@ -233,21 +229,32 @@ window.onclick = function(event) {
     }
 }
 
-function setEmpty() {
-    if (confirm('{{ _("Set this keg as empty? This will fill the form with empty keg values.") }}')) {
-        // Set all fields to empty keg values
-        document.getElementById('contents').value = 'Empty';
-        document.getElementById('status').value = 'Empty';
-        document.getElementById('amount_left_liters').value = '0';
-        document.getElementById('location').value = 'Storage';
-        document.getElementById('arrangement').value = 'Normal operation';
-        document.getElementById('notes').value = '{{ _("Keg is empty") }}';
+// Auto-clear fields when status changes to Empty or Available/Cleaned
+document.addEventListener('DOMContentLoaded', function() {
+    const statusSelect = document.getElementById('status');
+    
+    statusSelect.addEventListener('change', function() {
+        const status = this.value;
         
-        // Set update date to today if not already set
-        const today = new Date().toISOString().split('T')[0];
-        document.getElementById('update_date').value = today;
-    }
-}
+        if (status === 'Empty' || status === 'Available/Cleaned') {
+            // Clear contents
+            document.getElementById('contents').value = '';
+            
+            // Clear amount left
+            document.getElementById('amount_left_liters').value = '0';
+            
+            // Set location to Storage
+            document.getElementById('location').value = 'Storage';
+            
+            // Clear brew link and related fields
+            document.getElementById('brew_id').value = '';
+            document.getElementById('abv').value = '';
+            document.getElementById('gluten_free').checked = false;
+            document.getElementById('selected-brew-display').innerHTML = 
+                '<span class="no-brew-selected">{{ _('No brew selected - Manual entry') }}</span>';
+        }
+    });
+});
 </script>
 
 <style>

@@ -20,7 +20,7 @@
                     <dt>Keg Number:</dt>
                     <dd>{{ keg.keg_number }}</dd>
                     
-                    <dt>Volume:</dt>
+                    <dt>Size:</dt>
                     <dd>{{ keg.volume_liters }}L</dd>
                     
                     <dt>Condition:</dt>
@@ -34,8 +34,10 @@
             <div class="info-card">
                 <h3>Contents & Status</h3>
                 <dl>
+                    {% if keg.contents %}
                     <dt>Contents:</dt>
-                    <dd>{{ keg.contents or 'Empty' }}</dd>
+                    <dd>{{ keg.contents }}</dd>
+                    {% endif %}
                     
                     <dt>Status:</dt>
                     <dd><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status }}</span></dd>
@@ -53,12 +55,14 @@
                     <dd><span class="badge badge-gluten-free">🌾 {{ _('Gluten Free') }}</span></dd>
                     {% endif %}
                     
+                    {% if keg.date_filled %}
                     <dt>Date Filled:</dt>
-                    <dd>{{ keg.date_filled.strftime('%d-%m-%Y') if keg.date_filled else 'Unknown' }}</dd>
+                    <dd>{{ keg.date_filled.strftime('%d-%m-%Y') }}</dd>
+                    {% endif %}
                 </dl>
             </div>
 
-            {% if keg.brew_name %}
+            {% if keg.brew_id %}
             <div class="info-card">
                 <h3>Brew Information</h3>
                 <dl>
@@ -76,20 +80,6 @@
                 </dl>
             </div>
             {% endif %}
-
-            <div class="info-card">
-                <h3>Maintenance</h3>
-                <dl>
-                    <dt>Last Cleaned:</dt>
-                    <dd>{{ keg.last_cleaned.strftime('%d-%m-%Y') if keg.last_cleaned else 'Unknown' }}</dd>
-                    
-                    <dt>Last Measured:</dt>
-                    <dd>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</dd>
-                    
-                    <dt>Notes:</dt>
-                    <dd>{{ keg.notes or 'No notes' }}</dd>
-                </dl>
-            </div>
         </div>
 
         {% if keg_history %}
@@ -119,8 +109,17 @@
                         <td>{{ entry.arrangement or 'Normal operation' }}</td>
                         <td>{{ entry.notes or '' }}</td>
                         <td>
+                            {% if current_user.role_name == 'admin' %}
                             <a href="{{ url_for('edit_keg_history', keg_id=keg.id, history_id=entry.id) }}" 
                                class="btn btn-small btn-secondary">{{ _('Edit') }}</a>
+                            <form action="{{ url_for('edit_keg_history', keg_id=keg.id, history_id=entry.id) }}" 
+                                  method="POST" style="display: inline;"
+                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this history entry?') }}');">
+                                <button type="submit" name="delete" value="true" class="btn btn-small btn-danger">{{ _('Delete') }}</button>
+                            </form>
+                            {% else %}
+                            <span class="text-muted">-</span>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
