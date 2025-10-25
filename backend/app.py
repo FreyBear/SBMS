@@ -15,6 +15,7 @@ from werkzeug.middleware.proxy_fix import ProxyFix
 from auth import User, require_auth, require_permission
 from forms import LoginForm, ChangePasswordForm, CreateUserForm, EditUserForm, CreateExpenseForm, MarkPaidForm, RejectExpenseForm, DeleteExpenseForm, EditExpenseForm, CreateKitForm, EditKitForm, DeleteKitForm
 from i18n import init_babel, _, _l
+from beerxml_handler import BeerXMLHandler
 
 # Load environment variables
 load_dotenv()
@@ -2196,16 +2197,34 @@ def delete_entire_recipe(recipe_name):
         return redirect(url_for('recipes'))
     
     try:
-        with conn.cursor() as cur:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Get all recipe IDs for this recipe name
             cur.execute("SELECT id FROM recipe WHERE name = %s", (recipe_name,))
-            recipe_ids = [row[0] for row in cur.fetchall()]
+            recipe_ids = [row['id'] for row in cur.fetchall()]
             
             if not recipe_ids:
                 flash('Recipe not found', 'error')
                 return redirect(url_for('recipes'))
             
-            # Delete all ingredients for all versions
+            # Check if any version is used in brews
+            placeholders = ','.join(['%s'] * len(recipe_ids))
+            cur.execute(f"""
+                SELECT COUNT(*) as brew_count, 
+                       STRING_AGG(DISTINCT b.name, ', ') as brew_names
+                FROM brew b 
+                WHERE b.recipe_id IN ({placeholders})
+            """, tuple(recipe_ids))
+            
+            result = cur.fetchone()
+            if result and result['brew_count'] > 0:
+                flash(
+                    f'Cannot delete "{recipe_name}". This recipe is used in {result["brew_count"]} brew(s): {result["brew_names"]}. '
+                    f'Please delete or update the brews first.',
+                    'error'
+                )
+                return redirect(url_for('recipes'))
+            
+            # Delete all ingredients for all versions (CASCADE should handle this, but being explicit)
             for recipe_id in recipe_ids:
                 cur.execute("DELETE FROM recipe_malts WHERE recipe_id = %s", (recipe_id,))
                 cur.execute("DELETE FROM recipe_hops WHERE recipe_id = %s", (recipe_id,))
@@ -2354,6 +2373,174 @@ def create_recipe():
             conn.close()
     
     return render_template('create_recipe.html')
+
+
+@app.route('/recipe/import', methods=['GET', 'POST'])
+@login_required
+def import_recipe():
+    """Import recipe from BeerXML file (available to brewer, economy, and admin)"""
+    # Check if user has appropriate role
+    if current_user.role_name not in ['admin', 'brewer', 'economy']:
+        flash(_('You do not have permission to import recipes.'), 'error')
+        return redirect(url_for('recipes'))
+    
+    if request.method == 'POST':
+        # Check if file was uploaded
+        if 'beerxml_file' not in request.files:
+            flash(_('No file selected'), 'error')
+            return redirect(request.url)
+        
+        file = request.files['beerxml_file']
+        
+        if file.filename == '':
+            flash(_('No file selected'), 'error')
+            return redirect(request.url)
+        
+        if not file.filename.lower().endswith('.xml'):
+            flash(_('File must be a BeerXML (.xml) file'), 'error')
+            return redirect(request.url)
+        
+        try:
+            # Read XML content
+            xml_content = file.read().decode('utf-8')
+            
+            # Import using BeerXMLHandler
+            conn = get_db_connection()
+            if not conn:
+                flash(_('Database connection error'), 'error')
+                return redirect(url_for('recipes'))
+            
+            try:
+                handler = BeerXMLHandler(conn)
+                result = handler.import_from_xml(xml_content, user_id=current_user.id)
+                
+                if result['success']:
+                    recipe_names = ', '.join([r['name'] for r in result['recipes']])
+                    flash(ngettext(
+                        'Successfully imported %(count)d recipe: %(names)s',
+                        'Successfully imported %(count)d recipes: %(names)s',
+                        result['count'],
+                        count=result['count'],
+                        names=recipe_names
+                    ), 'success')
+                    
+                    # Redirect to first imported recipe if only one
+                    if result['count'] == 1:
+                        return redirect(url_for('recipe_detail', recipe_id=result['recipes'][0]['id']))
+                    else:
+                        return redirect(url_for('recipes'))
+                else:
+                    flash(_('Import failed: %(error)s', error=result.get('error', 'Unknown error')), 'error')
+                    return redirect(request.url)
+                    
+            finally:
+                conn.close()
+                
+        except UnicodeDecodeError:
+            flash(_('Invalid file encoding. File must be UTF-8 encoded XML.'), 'error')
+            return redirect(request.url)
+        except Exception as e:
+            flash(_('Error importing recipe: %(error)s', error=str(e)), 'error')
+            return redirect(request.url)
+    
+    return render_template('import_recipe.html')
+
+
+@app.route('/recipe/<int:recipe_id>/export')
+@login_required
+def export_recipe(recipe_id):
+    """Export single recipe to BeerXML format (available to all users)"""
+    conn = get_db_connection()
+    if not conn:
+        flash(_('Database connection error'), 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        # Verify recipe exists
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT name FROM recipe WHERE id = %s", (recipe_id,))
+            recipe = cur.fetchone()
+            
+            if not recipe:
+                flash(_('Recipe not found'), 'error')
+                return redirect(url_for('recipes'))
+        
+        # Export using BeerXMLHandler
+        handler = BeerXMLHandler(conn)
+        xml_content = handler.export_to_xml(recipe_id)
+        
+        if xml_content:
+            # Create safe filename
+            safe_name = secure_filename(recipe['name'])
+            filename = f"{safe_name}.xml"
+            
+            # Send file
+            from io import BytesIO
+            xml_bytes = BytesIO(xml_content.encode('utf-8'))
+            
+            return send_file(
+                xml_bytes,
+                mimetype='application/xml',
+                as_attachment=True,
+                download_name=filename
+            )
+        else:
+            flash(_('Error exporting recipe'), 'error')
+            return redirect(url_for('recipe_detail', recipe_id=recipe_id))
+            
+    finally:
+        conn.close()
+
+
+@app.route('/recipes/export', methods=['POST'])
+@login_required
+def export_multiple_recipes():
+    """Export multiple recipes to single BeerXML file (available to all users)"""
+    # Get selected recipe IDs from form
+    recipe_ids = request.form.getlist('recipe_ids[]')
+    
+    if not recipe_ids:
+        flash(_('No recipes selected for export'), 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        recipe_ids = [int(rid) for rid in recipe_ids]
+    except ValueError:
+        flash(_('Invalid recipe selection'), 'error')
+        return redirect(url_for('recipes'))
+    
+    conn = get_db_connection()
+    if not conn:
+        flash(_('Database connection error'), 'error')
+        return redirect(url_for('recipes'))
+    
+    try:
+        # Export using BeerXMLHandler
+        handler = BeerXMLHandler(conn)
+        xml_content = handler.export_multiple_recipes(recipe_ids)
+        
+        if xml_content:
+            # Create filename with timestamp
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"recipes_export_{timestamp}.xml"
+            
+            # Send file
+            from io import BytesIO
+            xml_bytes = BytesIO(xml_content.encode('utf-8'))
+            
+            return send_file(
+                xml_bytes,
+                mimetype='application/xml',
+                as_attachment=True,
+                download_name=filename
+            )
+        else:
+            flash(_('Error exporting recipes'), 'error')
+            return redirect(url_for('recipes'))
+            
+    finally:
+        conn.close()
+
 
 @app.errorhandler(404)
 def not_found(error):

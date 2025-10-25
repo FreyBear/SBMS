@@ -33,8 +33,13 @@
             </div>
         </div>
         <div class="actions">
+            <a href="{{ url_for('export_recipe', recipe_id=recipe.id) }}" 
+               class="btn btn-success"
+               title="{{ _('Export as BeerXML') }}">
+                <i class="bi bi-download"></i> {{ _('Export BeerXML') }}
+            </a>
             <a href="{{ url_for('recipe_shopping_cart', recipe_id=recipe.id) }}" class="btn btn-shopping">
-                🛒 {{ _('Shopping Cart') }}
+                🛒 {{ _('Shopping List') }}
             </a>
             {% if current_user.can_access('recipes', 'edit') %}
             <a href="#" onclick="showEditForm()" class="btn btn-warning">{{ _('Edit Recipe') }}</a>
@@ -1150,5 +1155,13 @@ function confirmDeleteRecipe() {
         }, 300);
     }
 }
+
+// Auto-open version manager if URL parameter is set
+document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('openVersions') === 'true') {
+        showVersionManager();
+    }
+});
 </script>
 {% endblock %}

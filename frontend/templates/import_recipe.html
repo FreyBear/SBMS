@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Import Recipe') }} - SBMS{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-8 offset-md-2">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h3 class="mb-0">
+                        <i class="bi bi-upload"></i> {{ _('Import Recipe from BeerXML') }}
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>{{ _('BeerXML Import') }}</strong><br>
+                        {{ _('Upload a BeerXML file (.xml) exported from BeerSmith, Brewfather, or other brewing software.') }}
+                        {{ _('The file can contain one or more recipes.') }}
+                    </div>
+
+                    <form method="POST" enctype="multipart/form-data">
+                        <div class="mb-3">
+                            <label for="beerxml_file" class="form-label">
+                                {{ _('Select BeerXML File') }} <span class="text-danger">*</span>
+                            </label>
+                            <input type="file" 
+                                   class="form-control" 
+                                   id="beerxml_file" 
+                                   name="beerxml_file" 
+                                   accept=".xml"
+                                   required>
+                            <div class="form-text">
+                                {{ _('Accepted format: .xml (BeerXML 1.0)') }}
+                            </div>
+                        </div>
+
+                        <div class="alert alert-warning">
+                            <i class="bi bi-exclamation-triangle"></i>
+                            <strong>{{ _('Note') }}:</strong>
+                            <ul class="mb-0 mt-2">
+                                <li>{{ _('All recipes in the file will be imported as new recipes') }}</li>
+                                <li>{{ _('Recipes will be assigned to your user account') }}</li>
+                                <li>{{ _('Temperature and volume units will be converted automatically if needed') }}</li>
+                                <li>{{ _('All ingredient information (malts, hops, yeast, adjuncts) will be imported') }}</li>
+                            </ul>
+                        </div>
+
+                        <div class="d-flex justify-content-between">
+                            <a href="{{ url_for('recipes') }}" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> {{ _('Cancel') }}
+                            </a>
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-upload"></i> {{ _('Import Recipe(s)') }}
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="card mt-4">
+                <div class="card-header">
+                    <h5 class="mb-0">{{ _('Supported Software') }}</h5>
+                </div>
+                <div class="card-body">
+                    <p>{{ _('This import function is compatible with BeerXML files exported from:') }}</p>
+                    <ul>
+                        <li><strong>BeerSmith</strong> - {{ _('Export via "File > Export > BeerXML"') }}</li>
+                        <li><strong>Brewfather</strong> - {{ _('Export via Recipe menu > "Export as BeerXML"') }}</li>
+                        <li><strong>BrewTarget</strong> - {{ _('Export via "File > Export Recipes > BeerXML"') }}</li>
+                        <li><strong>Brewer\'s Friend</strong> - {{ _('Export via Recipe Tools > "BeerXML Download"') }}</li>
+                        <li>{{ _('Any other software supporting BeerXML 1.0 standard') }}</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

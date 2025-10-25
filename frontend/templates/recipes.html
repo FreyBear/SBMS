@@ -6,81 +6,182 @@
 <div class="recipes-page">
     <div class="page-header">
         <h1>{{ _('Recipe Management') }}</h1>
-        {% if current_user.can_access('recipes', 'edit') %}
-        <a href="{{ url_for('create_recipe') }}" class="btn btn-primary">
-            {{ _('Create New Recipe') }}
-        </a>
-        {% endif %}
+        <div class="header-actions">
+            {% if current_user.can_access('recipes', 'edit') %}
+            <a href="{{ url_for('create_recipe') }}" class="btn btn-primary">
+                <i class="bi bi-plus-circle"></i> {{ _('Create New Recipe') }}
+            </a>
+            {% endif %}
+            {% if current_user.role_name in ['admin', 'brewer', 'economy'] %}
+            <a href="{{ url_for('import_recipe') }}" class="btn btn-success">
+                <i class="bi bi-upload"></i> {{ _('Import BeerXML') }}
+            </a>
+            {% endif %}
+        </div>
     </div>
 
     {% if recipes %}
-    <table class="data-table">
-        <thead>
-            <tr>
-                <th>{{ _('Recipe Name') }}</th>
-                <th>{{ _('Style') }}</th>
-                <th>{{ _('Version') }}</th>
-                <th>{{ _('ABV') }}</th>
-                <th>{{ _('IBU') }}</th>
-                <th>{{ _('Batch Size') }}</th>
-                <th>{{ _('Brews') }}</th>
-                <th>{{ _('Actions') }}</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for recipe in recipes %}
-            <tr>
-                <td>
-                    <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="recipe-link">
-                        {{ recipe.name }}
-                    </a>
-                </td>
-                <td>{{ recipe.style or '-' }}</td>
-                <td>
-                    <span class="version-badge">v{{ recipe.version }}</span>
-                    {% if recipe.version_count > 1 %}
-                    <small>({{ recipe.version_count }} versions)</small>
-                    {% endif %}
-                </td>
-                <td>
-                    {% if recipe.target_abv %}
-                        {{ "%.1f"|format(recipe.target_abv) }}%
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if recipe.ibu %}
-                        {{ "%.0f"|format(recipe.ibu) }} IBU
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>
-                    {% if recipe.batch_size_liters %}
-                        {{ "%.1f"|format(recipe.batch_size_liters) }}L
-                    {% else %}
-                        -
-                    {% endif %}
-                </td>
-                <td>{{ recipe.brew_count }} {{ _('brews') }}</td>
-                <td>
-                    <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-info btn-sm">
-                        {{ _('View') }}
-                    </a>
-                    {% if current_user.can_access('recipes', 'edit') %}
-                    <a href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}" class="btn btn-warning btn-sm">
-                        {{ _('Edit') }}
-                    </a>
-                    {% endif %}
-                    <a href="{{ url_for('recipe_shopping_cart', recipe_id=recipe.id) }}" class="btn btn-shopping btn-sm">
-                        🛒 {{ _('Cart') }}
-                    </a>
-                </td>
-            </tr>
-            {% endfor %}
+    <!-- Export Selection Bar (hidden by default) -->
+    <div id="exportBar" class="alert alert-primary d-none mb-3">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <i class="bi bi-check-square"></i>
+                <span id="selectedCount">0</span> {{ _('recipe(s) selected') }}
+            </div>
+            <div>
+                <button type="button" class="btn btn-sm btn-primary" onclick="exportSelected()">
+                    <i class="bi bi-download"></i> {{ _('Export Selected') }}
+                </button>
+                <button type="button" class="btn btn-sm btn-secondary" onclick="clearSelection()">
+                    {{ _('Clear Selection') }}
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <form id="exportForm" action="{{ url_for('export_multiple_recipes') }}" method="POST">
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th style="width: 40px;">
+                        <input type="checkbox" id="selectAll" onchange="toggleAllRecipes(this)">
+                    </th>
+                    <th>{{ _('Recipe Name') }}</th>
+                    <th>{{ _('Style') }}</th>
+                    <th>{{ _('Version') }}</th>
+                    <th>{{ _('ABV') }}</th>
+                    <th>{{ _('IBU') }}</th>
+                    <th>{{ _('Batch Size') }}</th>
+                    <th>{{ _('Brews') }}</th>
+                    <th>{{ _('Actions') }}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for recipe in recipes %}
+                <tr>
+                    <td>
+                        <input type="checkbox" 
+                               class="recipe-checkbox" 
+                               name="recipe_ids[]" 
+                               value="{{ recipe.id }}"
+                               onchange="updateExportBar()">
+                    </td>
+                    <td>
+                        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="recipe-link">
+                            {{ recipe.name }}
+                        </a>
+                    </td>
+                    <td>{{ recipe.style or '-' }}</td>
+                    <td>
+                        <span class="version-badge">v{{ recipe.version }}</span>
+                        {% if recipe.version_count > 1 %}
+                        <small>({{ recipe.version_count }} versions)</small>
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if recipe.target_abv %}
+                            {{ "%.1f"|format(recipe.target_abv) }}%
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if recipe.ibu %}
+                            {{ "%.0f"|format(recipe.ibu) }} IBU
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>
+                        {% if recipe.batch_size_liters %}
+                            {{ "%.1f"|format(recipe.batch_size_liters) }}L
+                        {% else %}
+                            -
+                        {% endif %}
+                    </td>
+                    <td>{{ recipe.brew_count }} {{ _('brews') }}</td>
+                    <td>
+                        <a href="{{ url_for('recipe_detail', recipe_id=recipe.id) }}" class="btn btn-info btn-sm">
+                            <i class="bi bi-eye"></i> {{ _('View') }}
+                        </a>
+                        {% if current_user.can_access('recipes', 'edit') %}
+                        <a href="{{ url_for('edit_recipe', recipe_id=recipe.id) }}" class="btn btn-warning btn-sm">
+                            <i class="bi bi-pencil"></i> {{ _('Edit') }}
+                        </a>
+                        {% endif %}
+                        {% if current_user.role_name == 'admin' %}
+                        <button type="button" 
+                                onclick="confirmDeleteFromList('{{ recipe.name }}', {{ recipe.id }})" 
+                                class="btn btn-danger btn-sm"
+                                title="{{ _('Delete recipe') }}">
+                            <i class="bi bi-trash"></i> {{ _('Delete') }}
+                        </button>
+                        {% endif %}
+                        <a href="{{ url_for('export_recipe', recipe_id=recipe.id) }}" 
+                           class="btn btn-success btn-sm"
+                           title="{{ _('Export as BeerXML') }}">
+                            <i class="bi bi-download"></i> {{ _('Export') }}
+                        </a>
+                        <a href="{{ url_for('recipe_shopping_cart', recipe_id=recipe.id) }}" class="btn btn-shopping btn-sm">
+                            🛒 {{ _('Shopping List') }}
+                        </a>
+                    </td>
+                </tr>
+                {% endfor %}
         </tbody>
     </table>
+    </form>
+
+    <script>
+        function confirmDeleteFromList(recipeName, recipeId) {
+            if (confirm('{{ _("Are you sure you want to delete") }} "' + recipeName + '"? {{ _("This will delete ALL versions of this recipe!") }}')) {
+                // Submit delete form - URL uses recipe name, not ID
+                const form = document.createElement('form');
+                form.method = 'POST';
+                form.action = '/recipe/delete-entire/' + encodeURIComponent(recipeName);
+                document.body.appendChild(form);
+                form.submit();
+            }
+        }
+
+        function toggleAllRecipes(checkbox) {
+            const checkboxes = document.querySelectorAll('.recipe-checkbox');
+            checkboxes.forEach(cb => {
+                cb.checked = checkbox.checked;
+            });
+            updateExportBar();
+        }
+
+        function updateExportBar() {
+            const checkboxes = document.querySelectorAll('.recipe-checkbox:checked');
+            const count = checkboxes.length;
+            const exportBar = document.getElementById('exportBar');
+            const selectedCount = document.getElementById('selectedCount');
+            
+            selectedCount.textContent = count;
+            
+            if (count > 0) {
+                exportBar.classList.remove('d-none');
+            } else {
+                exportBar.classList.add('d-none');
+            }
+        }
+
+        function exportSelected() {
+            const checkboxes = document.querySelectorAll('.recipe-checkbox:checked');
+            if (checkboxes.length === 0) {
+                alert('{{ _("Please select at least one recipe to export") }}');
+                return;
+            }
+            document.getElementById('exportForm').submit();
+        }
+
+        function clearSelection() {
+            document.querySelectorAll('.recipe-checkbox').forEach(cb => cb.checked = false);
+            document.getElementById('selectAll').checked = false;
+            updateExportBar();
+        }
+    </script>
     {% else %}
     <div class="empty-state">
         <p>{{ _('No recipes found in the system.') }}</p>

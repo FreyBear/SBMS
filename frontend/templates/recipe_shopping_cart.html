@@ -1,11 +1,11 @@
 {% extends "base.html" %}
 
-{% block title %}Shopping Cart - {{ recipe.name }} - BROEN SBMS{% endblock %}
+{% block title %}Shopping List - {{ recipe.name }} - BROEN SBMS{% endblock %}
 
 {% block content %}
 <div class="shopping-cart-page">
     <div class="page-header">
-        <h1>🛒 {{ _('Shopping Cart') }}</h1>
+        <h1>🛒 {{ _('Shopping List') }}</h1>
         <div class="recipe-info">
             <h2>{{ recipe.name }} v{{ recipe.version }}</h2>
             <p class="recipe-meta">
@@ -28,7 +28,6 @@
                         <th>{{ _('Malt/Grain') }}</th>
                         <th>{{ _('Amount') }}</th>
                         <th>{{ _('Type') }}</th>
-                        <th>{{ _('Color') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -37,9 +36,6 @@
                         <td><strong>{{ malt.name }}</strong></td>
                         <td class="amount">{{ "%.2f"|format(malt.amount_kg) }} kg</td>
                         <td>{{ malt.malt_type or '-' }}</td>
-                        <td>
-                            {% if malt.lovibond %}{{ malt.lovibond }}°L{% else %}-{% endif %}
-                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -47,7 +43,7 @@
                     <tr class="total-row">
                         <td><strong>{{ _('Total Malt') }}</strong></td>
                         <td class="amount"><strong>{{ "%.2f"|format(malts|sum(attribute='amount_kg')) }} kg</strong></td>
-                        <td colspan="2">-</td>
+                        <td>-</td>
                     </tr>
                 </tfoot>
             </table>
@@ -62,9 +58,8 @@
                 <thead>
                     <tr>
                         <th>{{ _('Hop Variety') }}</th>
-                        <th>{{ _('Total Amount') }}</th>
+                        <th>{{ _('Amount') }}</th>
                         <th>{{ _('Alpha Acid') }}</th>
-                        <th>{{ _('Type') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -75,7 +70,6 @@
                         <td>
                             {% if hop.alpha_acid %}{{ "%.1f"|format(hop.alpha_acid) }}%{% else %}-{% endif %}
                         </td>
-                        <td>{{ hop.hop_type or '-' }}</td>
                     </tr>
                     {% endfor %}
                 </tbody>
@@ -83,7 +77,7 @@
                     <tr class="total-row">
                         <td><strong>{{ _('Total Hops') }}</strong></td>
                         <td class="amount"><strong>{{ "%.1f"|format(hops|sum(attribute='amount_g')) }} g</strong></td>
-                        <td colspan="2">-</td>
+                        <td>-</td>
                     </tr>
                 </tfoot>
             </table>
@@ -100,7 +94,6 @@
                         <th>{{ _('Yeast Strain') }}</th>
                         <th>{{ _('Amount') }}</th>
                         <th>{{ _('Type') }}</th>
-                        <th>{{ _('Temperature Range') }}</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -109,13 +102,6 @@
                         <td><strong>{{ y.strain }}</strong></td>
                         <td class="amount">{{ y.amount or '-' }}</td>
                         <td>{{ y.yeast_type or '-' }}</td>
-                        <td>
-                            {% if y.temperature_range %}
-                                {{ y.temperature_range }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
                     </tr>
                     {% endfor %}
                 </tbody>
