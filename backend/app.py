@@ -319,6 +319,25 @@ def index():
             """)
             keg_stats = cur.fetchall()
             
+            # Get bottle batch summary (only non-empty batches)
+            cur.execute("""
+                SELECT 
+                    bb.id,
+                    bb.bottle_size_liters,
+                    bb.bottles_left,
+                    bb.initial_quantity,
+                    bb.location,
+                    bb.cap_type,
+                    b.name as brew_name,
+                    b.style as brew_style,
+                    COALESCE(b.actual_abv, b.estimated_abv) as abv
+                FROM bottle_batch bb
+                LEFT JOIN brew b ON bb.brew_id = b.id
+                WHERE bb.bottles_left > 0
+                ORDER BY bb.bottling_date DESC, bb.id DESC
+            """)
+            bottle_batches = cur.fetchall()
+            
             # Get recent kegs
             cur.execute("""
                 SELECT id, keg_number, contents, status, amount_left_liters, location, last_measured
@@ -358,6 +377,7 @@ def index():
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
         keg_stats = []
+        bottle_batches = []
         recent_kegs = []
         pending_expenses = []
         pending_brew_tasks = []
@@ -369,7 +389,8 @@ def index():
     today_date = date.today()
     
     return render_template('index.html', 
-                         keg_stats=keg_stats, 
+                         keg_stats=keg_stats,
+                         bottle_batches=bottle_batches,
                          recent_kegs=recent_kegs, 
                          pending_expenses=pending_expenses,
                          pending_brew_tasks=pending_brew_tasks,
@@ -933,6 +954,199 @@ def edit_keg_history(keg_id, history_id):
             conn.close()
     
     return redirect(url_for('keg_detail', keg_id=keg_id))
+
+# ============================================================================
+# BOTTLE BATCH ROUTES
+# ============================================================================
+
+@app.route('/bottles')
+@require_permission('brews', 'view')
+def bottles():
+    """View all bottle batches"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return render_template('error.html')
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT bb.*, 
+                       b.name as brew_name,
+                       b.style as brew_style,
+                       b.actual_abv,
+                       b.estimated_abv,
+                       b.gluten_free
+                FROM bottle_batch bb
+                LEFT JOIN brew b ON bb.brew_id = b.id
+                ORDER BY bb.bottling_date DESC, bb.id DESC
+            """)
+            bottle_batches = cur.fetchall()
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        bottle_batches = []
+    finally:
+        conn.close()
+    
+    return render_template('bottles.html', bottle_batches=bottle_batches)
+
+@app.route('/bottles/create', methods=['GET', 'POST'])
+@require_permission('brews', 'edit')
+def create_bottle_batch():
+    """Create a new bottle batch"""
+    if request.method == 'POST':
+        conn = get_db_connection()
+        if not conn:
+            flash('Database connection error', 'error')
+            return redirect(url_for('bottles'))
+        
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    INSERT INTO bottle_batch (
+                        brew_id, bottle_size_liters, initial_quantity, bottles_left,
+                        bottling_date, cap_type, location, notes
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    request.form['brew_id'],
+                    request.form['bottle_size_liters'],
+                    request.form['initial_quantity'],
+                    request.form['initial_quantity'],  # bottles_left = initial_quantity when created
+                    request.form['bottling_date'],
+                    request.form.get('cap_type'),
+                    request.form.get('location'),
+                    request.form.get('notes')
+                ))
+                conn.commit()
+                flash('Bottle batch registered successfully!', 'success')
+        except psycopg2.Error as e:
+            conn.rollback()
+            flash(f'Database error: {e}', 'error')
+        finally:
+            conn.close()
+        
+        return redirect(url_for('bottles'))
+    
+    # GET request - show form
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('bottles'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Get all brews for the dropdown
+            cur.execute("""
+                SELECT b.id, b.name, b.style, b.date_brewed,
+                       COALESCE(b.actual_abv, b.estimated_abv) as abv
+                FROM brew b
+                ORDER BY b.date_brewed DESC, b.name
+            """)
+            brews = cur.fetchall()
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        brews = []
+    finally:
+        conn.close()
+    
+    return render_template('create_bottle_batch.html', brews=brews)
+
+@app.route('/bottles/<int:batch_id>')
+@require_permission('brews', 'view')
+def bottle_batch_detail(batch_id):
+    """View bottle batch details"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('bottles'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT bb.*,
+                       b.name as brew_name,
+                       b.style as brew_style,
+                       b.date_brewed,
+                       b.actual_abv,
+                       b.estimated_abv,
+                       b.gluten_free,
+                       b.actual_og,
+                       b.actual_fg
+                FROM bottle_batch bb
+                LEFT JOIN brew b ON bb.brew_id = b.id
+                WHERE bb.id = %s
+            """, (batch_id,))
+            batch = cur.fetchone()
+            
+            if not batch:
+                flash('Bottle batch not found', 'error')
+                return redirect(url_for('bottles'))
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('bottles'))
+    finally:
+        conn.close()
+    
+    return render_template('bottle_batch_detail.html', batch=batch)
+
+@app.route('/bottles/<int:batch_id>/update', methods=['GET', 'POST'])
+@require_permission('brews', 'edit')
+def update_bottle_batch(batch_id):
+    """Update bottle batch information"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('bottles'))
+    
+    if request.method == 'POST':
+        try:
+            with conn.cursor() as cur:
+                cur.execute("""
+                    UPDATE bottle_batch SET
+                        bottles_left = %s,
+                        location = %s,
+                        notes = %s,
+                        updated_at = CURRENT_TIMESTAMP
+                    WHERE id = %s
+                """, (
+                    request.form['bottles_left'],
+                    request.form.get('location'),
+                    request.form.get('notes'),
+                    batch_id
+                ))
+                conn.commit()
+                flash('Bottle batch updated successfully!', 'success')
+        except psycopg2.Error as e:
+            conn.rollback()
+            flash(f'Database error: {e}', 'error')
+        finally:
+            conn.close()
+        
+        return redirect(url_for('bottle_batch_detail', batch_id=batch_id))
+    
+    # GET request - show form
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                SELECT bb.*,
+                       b.name as brew_name,
+                       b.style as brew_style
+                FROM bottle_batch bb
+                LEFT JOIN brew b ON bb.brew_id = b.id
+                WHERE bb.id = %s
+            """, (batch_id,))
+            batch = cur.fetchone()
+            
+            if not batch:
+                flash('Bottle batch not found', 'error')
+                return redirect(url_for('bottles'))
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('bottles'))
+    finally:
+        conn.close()
+    
+    return render_template('update_bottle_batch.html', batch=batch)
 
 @app.route('/brews')
 @require_permission('brews', 'view')
@@ -3343,7 +3557,13 @@ def expenses():
                     LEFT JOIN users r ON e.rejected_by = r.id
                     LEFT JOIN expense_images ei ON e.id = ei.expense_id
                     GROUP BY e.id, e.user_id, u.full_name, u.username, u.bank_account, p.full_name, r.full_name
-                    ORDER BY e.submitted_date DESC
+                    ORDER BY 
+                        CASE 
+                            WHEN e.status = 'Pending' THEN 1
+                            WHEN e.status = 'Rejected' THEN 2
+                            WHEN e.status = 'Paid' THEN 3
+                        END,
+                        e.submitted_date DESC
                 """)
             else:
                 # Brewer view - only their own expenses
@@ -3360,7 +3580,13 @@ def expenses():
                     LEFT JOIN expense_images ei ON e.id = ei.expense_id
                     WHERE e.user_id = %s
                     GROUP BY e.id, e.user_id, u.full_name, u.username, u.bank_account, p.full_name, r.full_name
-                    ORDER BY e.submitted_date DESC
+                    ORDER BY 
+                        CASE 
+                            WHEN e.status = 'Pending' THEN 1
+                            WHEN e.status = 'Rejected' THEN 2
+                            WHEN e.status = 'Paid' THEN 3
+                        END,
+                        e.submitted_date DESC
                 """, (current_user.id,))
             
             expenses_list = cur.fetchall()
@@ -3372,6 +3598,163 @@ def expenses():
         conn.close()
     
     return render_template('expenses.html', expenses=expenses_list)
+
+@app.route('/expenses/export', methods=['GET'])
+@require_permission('expenses', 'view')
+def export_expenses():
+    """Export expenses to CSV with optional date range"""
+    from io import BytesIO
+    import csv
+    from datetime import datetime
+    
+    # Get date range parameters
+    start_date = request.args.get('start_date')
+    end_date = request.args.get('end_date')
+    
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('expenses'))
+    
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Build query based on permissions and filters
+            where_clauses = []
+            params = []
+            
+            if not current_user.can_access('expenses', 'full'):
+                # Brewers only see their own expenses
+                where_clauses.append("e.user_id = %s")
+                params.append(current_user.id)
+            
+            if start_date:
+                where_clauses.append("e.purchase_date >= %s")
+                params.append(start_date)
+            
+            if end_date:
+                where_clauses.append("e.purchase_date <= %s")
+                params.append(end_date)
+            
+            where_sql = ""
+            if where_clauses:
+                where_sql = "WHERE " + " AND ".join(where_clauses)
+            
+            query = f"""
+                SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
+                       e.status, e.paid_date, e.rejection_reason, e.rejected_date,
+                       u.full_name, u.username, u.bank_account,
+                       p.full_name as paid_by_name, r.full_name as rejected_by_name,
+                       COUNT(ei.id) as receipt_count
+                FROM expenses e
+                JOIN users u ON e.user_id = u.id
+                LEFT JOIN users p ON e.paid_by = p.id
+                LEFT JOIN users r ON e.rejected_by = r.id
+                LEFT JOIN expense_images ei ON e.id = ei.expense_id
+                {where_sql}
+                GROUP BY e.id, e.user_id, u.full_name, u.username, u.bank_account, p.full_name, r.full_name
+                ORDER BY e.purchase_date DESC
+            """
+            
+            cur.execute(query, params)
+            expenses_list = cur.fetchall()
+            
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        return redirect(url_for('expenses'))
+    finally:
+        conn.close()
+    
+    # Create CSV in memory (using BytesIO for Flask send_file)
+    output = BytesIO()
+    # CSV writer needs text mode, so we'll write to string first
+    import io
+    text_stream = io.StringIO()
+    # Use semicolon delimiter for Excel compatibility (especially Norwegian/European Excel)
+    writer = csv.writer(text_stream, delimiter=';')
+    
+    # Write header
+    if current_user.can_access('expenses', 'full'):
+        writer.writerow([
+            'Submitted Date', 'User', 'Bank Account', 'Amount (NOK)', 
+            'Description', 'Purchase Date', 'Status', 'Paid Date', 
+            'Paid By', 'Rejection Reason', 'Receipts'
+        ])
+    else:
+        writer.writerow([
+            'Submitted Date', 'Amount (NOK)', 'Description', 
+            'Purchase Date', 'Status', 'Paid Date', 'Receipts'
+        ])
+    
+    # Write data
+    total_amount = 0
+    for expense in expenses_list:
+        total_amount += float(expense['amount'])
+        
+        # Format dates
+        submitted = expense['submitted_date'].strftime('%Y-%m-%d %H:%M') if expense['submitted_date'] else ''
+        purchase = expense['purchase_date'].strftime('%Y-%m-%d') if expense['purchase_date'] else ''
+        paid = expense['paid_date'].strftime('%Y-%m-%d') if expense['paid_date'] else ''
+        
+        # Format bank account
+        bank_account = ''
+        if expense.get('bank_account'):
+            ba = expense['bank_account']
+            bank_account = f"{ba[:4]}.{ba[4:6]}.{ba[6:]}"
+        
+        if current_user.can_access('expenses', 'full'):
+            writer.writerow([
+                submitted,
+                expense['full_name'] or expense['username'],
+                bank_account,
+                f"{expense['amount']:.2f}",
+                expense['description'],
+                purchase,
+                expense['status'],
+                paid,
+                expense['paid_by_name'] or '',
+                expense['rejection_reason'] or '',
+                expense['receipt_count']
+            ])
+        else:
+            writer.writerow([
+                submitted,
+                f"{expense['amount']:.2f}",
+                expense['description'],
+                purchase,
+                expense['status'],
+                paid,
+                expense['receipt_count']
+            ])
+    
+    # Add total row
+    if expenses_list:
+        if current_user.can_access('expenses', 'full'):
+            writer.writerow(['', '', 'TOTAL:', f"{total_amount:.2f}", '', '', '', '', '', '', ''])
+        else:
+            writer.writerow(['', f"{total_amount:.2f}", '', '', '', '', ''])
+    
+    # Convert string to bytes for send_file
+    output.write(text_stream.getvalue().encode('utf-8'))
+    output.seek(0)
+    
+    # Generate filename with date range
+    filename = 'expenses'
+    if start_date and end_date:
+        filename += f'_{start_date}_to_{end_date}'
+    elif start_date:
+        filename += f'_from_{start_date}'
+    elif end_date:
+        filename += f'_until_{end_date}'
+    filename += '.csv'
+    
+    response = send_file(
+        output,
+        mimetype='text/csv',
+        as_attachment=True,
+        download_name=filename
+    )
+    
+    return response
 
 @app.route('/expenses/create', methods=['GET', 'POST'])
 @require_permission('expenses', 'edit')

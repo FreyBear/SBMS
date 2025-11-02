@@ -47,6 +47,11 @@ Old_system/
 *.swp
 *.swo
 
+# AI assistant rules (contains local preferences)
+.cursorrules
+.clinerules
+.aidigest
+
 # Python cache
 __pycache__/
 *.pyc

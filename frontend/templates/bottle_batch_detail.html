@@ -1,0 +1,338 @@
+{% extends "base.html" %}
+
+{% block title %}{{ batch.brew_name }} - {{ _('Bottle Batch') }} - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="bottle-detail-page">
+    <div class="page-header">
+        <h1>🍾 {{ batch.brew_name }}</h1>
+        <div class="actions">
+            {% if current_user.can_access('brews', 'edit') %}
+            <a href="{{ url_for('update_bottle_batch', batch_id=batch.id) }}" class="btn btn-warning">
+                <i class="bi bi-pencil"></i> {{ _('Update Bottles') }}
+            </a>
+            {% endif %}
+            <a href="{{ url_for('bottles') }}" class="btn btn-secondary">
+                {{ _('Back to Bottles') }}
+            </a>
+        </div>
+    </div>
+
+    <div class="detail-grid">
+        <div class="detail-card">
+            <h2>{{ _('Batch Information') }}</h2>
+            <dl class="detail-list">
+                <dt>{{ _('Bottle Size') }}:</dt>
+                <dd>{{ "%.2f"|format(batch.bottle_size_liters) }}L</dd>
+
+                <dt>{{ _('Bottles Left') }}:</dt>
+                <dd class="bottle-count">
+                    <strong>{{ batch.bottles_left }} / {{ batch.initial_quantity }}</strong>
+                    {% if batch.bottles_left == 0 %}
+                    <span class="badge badge-empty">{{ _('Empty') }}</span>
+                    {% elif batch.bottles_left < batch.initial_quantity * 0.2 %}
+                    <span class="badge badge-low">{{ _('Low Stock') }}</span>
+                    {% elif batch.bottles_left == batch.initial_quantity %}
+                    <span class="badge badge-full">{{ _('Full') }}</span>
+                    {% endif %}
+                </dd>
+
+                <dt>{{ _('Consumed') }}:</dt>
+                <dd>{{ batch.initial_quantity - batch.bottles_left }} {{ _('bottles') }}</dd>
+
+                <dt>{{ _('Bottling Date') }}:</dt>
+                <dd>{{ batch.bottling_date.strftime('%d-%m-%Y') }}</dd>
+
+                <dt>{{ _('Cap Type') }}:</dt>
+                <dd>{{ batch.cap_type or '-' }}</dd>
+
+                <dt>{{ _('Storage Location') }}:</dt>
+                <dd>{{ batch.location or '-' }}</dd>
+
+                {% if batch.notes %}
+                <dt>{{ _('Notes') }}:</dt>
+                <dd class="notes">{{ batch.notes }}</dd>
+                {% endif %}
+            </dl>
+        </div>
+
+        <div class="detail-card">
+            <h2>{{ _('Brew Details') }}</h2>
+            <dl class="detail-list">
+                <dt>{{ _('Brew Name') }}:</dt>
+                <dd><strong>{{ batch.brew_name }}</strong></dd>
+
+                {% if batch.brew_style %}
+                <dt>{{ _('Style') }}:</dt>
+                <dd>{{ batch.brew_style }}</dd>
+                {% endif %}
+
+                {% if batch.date_brewed %}
+                <dt>{{ _('Brew Date') }}:</dt>
+                <dd>{{ batch.date_brewed.strftime('%d-%m-%Y') }}</dd>
+                {% endif %}
+
+                <dt>{{ _('ABV') }}:</dt>
+                <dd>
+                    {% if batch.actual_abv %}
+                        {{ "%.1f"|format(batch.actual_abv) }}%
+                    {% elif batch.estimated_abv %}
+                        ~{{ "%.1f"|format(batch.estimated_abv) }}%
+                    {% else %}
+                        -
+                    {% endif %}
+                </dd>
+
+                {% if batch.actual_og %}
+                <dt>{{ _('Original Gravity') }}:</dt>
+                <dd>{{ "%.3f"|format(batch.actual_og) }}</dd>
+                {% endif %}
+
+                {% if batch.actual_fg %}
+                <dt>{{ _('Final Gravity') }}:</dt>
+                <dd>{{ "%.3f"|format(batch.actual_fg) }}</dd>
+                {% endif %}
+
+                <dt>{{ _('Gluten Free') }}:</dt>
+                <dd>
+                    {% if batch.gluten_free %}
+                        <span class="badge badge-success">{{ _('Yes') }}</span>
+                    {% else %}
+                        <span class="badge badge-secondary">{{ _('No') }}</span>
+                    {% endif %}
+                </dd>
+            </dl>
+        </div>
+    </div>
+
+    <div class="stats-card">
+        <h2>📊 {{ _('Batch Statistics') }}</h2>
+        <div class="stats-grid">
+            <div class="stat-item">
+                <div class="stat-value">{{ batch.bottles_left }}</div>
+                <div class="stat-label">{{ _('Bottles Remaining') }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ batch.initial_quantity - batch.bottles_left }}</div>
+                <div class="stat-label">{{ _('Bottles Consumed') }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ "%.0f"|format((batch.bottles_left / batch.initial_quantity * 100) if batch.initial_quantity > 0 else 0) }}%</div>
+                <div class="stat-label">{{ _('Remaining Percentage') }}</div>
+            </div>
+            <div class="stat-item">
+                <div class="stat-value">{{ "%.2f"|format(batch.bottles_left * batch.bottle_size_liters) }}L</div>
+                <div class="stat-label">{{ _('Total Volume Left') }}</div>
+            </div>
+        </div>
+
+        <div class="progress-bar">
+            <div class="progress-fill" style="width: {{ (batch.bottles_left / batch.initial_quantity * 100) if batch.initial_quantity > 0 else 0 }}%"></div>
+        </div>
+    </div>
+</div>
+
+<style>
+.bottle-detail-page {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.actions {
+    display: flex;
+    gap: 10px;
+}
+
+.detail-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.detail-card {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.detail-card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 18px;
+    border-bottom: 2px solid #3498db;
+    padding-bottom: 10px;
+}
+
+.detail-list {
+    display: grid;
+    grid-template-columns: 140px 1fr;
+    gap: 12px;
+}
+
+.detail-list dt {
+    font-weight: 600;
+    color: #7f8c8d;
+}
+
+.detail-list dd {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.bottle-count strong {
+    font-size: 1.2em;
+    color: #2c3e50;
+}
+
+.notes {
+    white-space: pre-wrap;
+    background: #f8f9fa;
+    padding: 10px;
+    border-radius: 4px;
+}
+
+.badge {
+    display: inline-block;
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 0.85em;
+    font-weight: 600;
+    margin-left: 8px;
+}
+
+.badge-empty {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.badge-low {
+    background-color: #f39c12;
+    color: white;
+}
+
+.badge-full {
+    background-color: #27ae60;
+    color: white;
+}
+
+.badge-success {
+    background-color: #27ae60;
+    color: white;
+}
+
+.badge-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.stats-card {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.stats-card h2 {
+    margin-top: 0;
+    margin-bottom: 20px;
+    color: #2c3e50;
+    font-size: 18px;
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 20px;
+    margin-bottom: 20px;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-value {
+    font-size: 2em;
+    font-weight: bold;
+    color: #3498db;
+    margin-bottom: 5px;
+}
+
+.stat-label {
+    font-size: 0.9em;
+    color: #7f8c8d;
+}
+
+.progress-bar {
+    width: 100%;
+    height: 30px;
+    background-color: #ecf0f1;
+    border-radius: 15px;
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #3498db, #2ecc71);
+    transition: width 0.3s ease;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-warning {
+    background-color: #f39c12;
+    color: white;
+}
+
+.btn-warning:hover {
+    background-color: #e67e22;
+    color: white;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+    color: white;
+}
+
+@media (max-width: 768px) {
+    .detail-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
+{% endblock %}

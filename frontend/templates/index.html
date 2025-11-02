@@ -112,11 +112,60 @@
         </div>
         
         <div class="stat-card">
+            <h3>{{ _('Bottle Status Summary') }}</h3>
+            {% if bottle_batches %}
+            <div class="bottle-batches-list">
+                {% for batch in bottle_batches %}
+                <div class="bottle-batch-item">
+                    <div class="batch-info">
+                        <div class="batch-brew">
+                            <strong>{{ batch.brew_name or _('Unknown Brew') }}</strong>
+                            {% if batch.brew_style %}<span class="brew-style">({{ batch.brew_style }})</span>{% endif %}
+                            {% if batch.gluten_free %}
+                            <span class="gluten-free-icon-small" title="{{ _('Gluten Free') }}">🌾</span>
+                            {% endif %}
+                        </div>
+                        <div class="batch-details">
+                            <span class="bottle-size">{{ "%.2f"|format(batch.bottle_size_liters) }}L</span>
+                            <span class="bottle-count">
+                                {{ batch.bottles_left }}/{{ batch.initial_quantity }} {{ _('bottles') }}
+                            </span>
+                            {% if batch.abv %}
+                            <span class="abv">{{ "%.1f"|format(batch.abv) }}%</span>
+                            {% endif %}
+                        </div>
+                        {% if batch.location %}
+                        <div class="batch-location">
+                            <i class="bi bi-geo-alt"></i> {{ batch.location }}
+                        </div>
+                        {% endif %}
+                    </div>
+                    <div class="batch-actions">
+                        <a href="{{ url_for('bottle_batch_detail', batch_id=batch.id) }}" class="btn btn-sm btn-primary">{{ _('View') }}</a>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+            {% else %}
+            <p style="text-align: center; color: #666; padding: 2rem;">{{ _('No bottle batches available') }}</p>
+            <div style="text-align: center;">
+                <a href="{{ url_for('create_bottle_batch') }}" class="btn btn-primary">{{ _('Register New Bottle Batch') }}</a>
+            </div>
+            {% endif %}
+        </div>
+        
+        <div class="stat-card">
             <h3>{{ _('Quick Actions') }}</h3>
             <div class="actions">
-                <a href="{{ url_for('kegs') }}" class="btn btn-primary">{{ _('View All Kegs') }}</a>
-                <a href="{{ url_for('brews') }}" class="btn btn-secondary">{{ _('View Brews') }}</a>
-                <a href="{{ url_for('recipes') }}" class="btn btn-secondary">{{ _('View Recipes') }}</a>
+                {% if current_user.can_access('brews', 'edit') %}
+                <a href="{{ url_for('create_bottle_batch') }}" class="btn btn-success">{{ _('Register New Bottle Batch') }}</a>
+                {% endif %}
+                {% if current_user.can_access('expenses', 'view') %}
+                <a href="{{ url_for('create_expense') }}" class="btn btn-info">{{ _('Submit New Expense') }}</a>
+                {% endif %}
+                {% if current_user.can_access('recipes', 'edit') %}
+                <a href="{{ url_for('import_recipe') }}" class="btn btn-warning">{{ _('Import BeerXML') }}</a>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -484,6 +533,106 @@ function showDashboardMessage(message, type) {
     
     .task-actions .btn {
         text-align: center;
+    }
+}
+
+/* Bottle Batches List Styles */
+.bottle-batches-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.bottle-batch-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border: 1px solid #e0e0e0;
+    border-radius: 8px;
+    transition: all 0.2s ease;
+}
+
+.bottle-batch-item:hover {
+    background: #e9ecef;
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0,123,255,0.1);
+}
+
+.batch-info {
+    flex: 1;
+}
+
+.batch-brew {
+    margin-bottom: 0.25rem;
+}
+
+.batch-brew strong {
+    color: #2c3e50;
+    font-size: 0.95rem;
+}
+
+.brew-style {
+    color: #666;
+    font-size: 0.85rem;
+    margin-left: 0.25rem;
+}
+
+.batch-details {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 0.25rem;
+    font-size: 0.9rem;
+}
+
+.bottle-size {
+    color: #007bff;
+    font-weight: 600;
+}
+
+.bottle-count {
+    color: #28a745;
+    font-weight: 600;
+}
+
+.abv {
+    color: #fd7e14;
+    font-weight: 600;
+}
+
+.batch-location {
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.batch-location i {
+    margin-right: 0.25rem;
+}
+
+.batch-actions {
+    flex-shrink: 0;
+}
+
+.gluten-free-icon-small {
+    font-size: 0.9rem;
+    margin-left: 0.25rem;
+    vertical-align: middle;
+}
+
+@media (max-width: 768px) {
+    .bottle-batch-item {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .batch-actions {
+        margin-top: 0.5rem;
+        width: 100%;
+    }
+    
+    .batch-actions .btn {
+        width: 100%;
     }
 }
 </style>

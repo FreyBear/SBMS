@@ -1,0 +1,229 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Register Bottle Batch') }} - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="create-bottle-batch-page">
+    <div class="page-header">
+        <h1>🍾 {{ _('Register New Bottle Batch') }}</h1>
+    </div>
+
+    <div class="form-container">
+        <form method="POST" action="{{ url_for('create_bottle_batch') }}">
+            <div class="form-group">
+                <label for="brew_id">{{ _('Brew') }} *</label>
+                <select id="brew_id" name="brew_id" class="form-control" required>
+                    <option value="">{{ _('Select brew...') }}</option>
+                    {% for brew in brews %}
+                    <option value="{{ brew.id }}">
+                        {{ brew.name }} 
+                        {% if brew.style %}({{ brew.style }}){% endif %}
+                        - {{ brew.date_brewed.strftime('%d-%m-%Y') }}
+                        {% if brew.abv %}[{{ "%.1f"|format(brew.abv) }}%]{% endif %}
+                    </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="bottle_size_liters">{{ _('Bottle Size') }} ({{ _('Liters') }}) *</label>
+                    <select id="bottle_size_liters" name="bottle_size_liters" class="form-control" required>
+                        <option value="0.33">0.33L ({{ _('Small bottle') }})</option>
+                        <option value="0.5" selected>0.5L ({{ _('Standard bottle') }})</option>
+                        <option value="0.7">0.7L</option>
+                        <option value="0.75">0.75L ({{ _('Wine bottle') }})</option>
+                        <option value="1.0">1.0L</option>
+                    </select>
+                    <small class="help-text">{{ _('Or enter custom size') }}: 
+                        <input type="number" step="0.01" min="0.1" max="5" 
+                               style="width: 80px; padding: 4px;" 
+                               onchange="document.getElementById('bottle_size_liters').value = this.value">
+                    </small>
+                </div>
+
+                <div class="form-group">
+                    <label for="initial_quantity">{{ _('Number of Bottles') }} *</label>
+                    <input type="number" id="initial_quantity" name="initial_quantity" 
+                           class="form-control" required min="1" value="24">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="bottling_date">{{ _('Bottling Date') }} *</label>
+                    <input type="date" id="bottling_date" name="bottling_date" 
+                           class="form-control" required value="{{ today }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="cap_type">{{ _('Cap Type') }}</label>
+                    <select id="cap_type" name="cap_type" class="form-control">
+                        <option value="">{{ _('Not specified') }}</option>
+                        <option value="Crown Cap">{{ _('Crown Cap') }}</option>
+                        <option value="Cork">{{ _('Cork') }}</option>
+                        <option value="Swing-top">{{ _('Swing-top') }}</option>
+                        <option value="Screw Cap">{{ _('Screw Cap') }}</option>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-group">
+                <label for="location">{{ _('Storage Location') }}</label>
+                <input type="text" id="location" name="location" 
+                       class="form-control" placeholder="{{ _('e.g., Cellar, Storage Room, Fridge') }}">
+            </div>
+
+            <div class="form-group">
+                <label for="notes">{{ _('Notes') }}</label>
+                <textarea id="notes" name="notes" class="form-control" rows="3"
+                          placeholder="{{ _('Any additional information about this batch...') }}"></textarea>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> {{ _('Register Bottle Batch') }}
+                </button>
+                <a href="{{ url_for('bottles') }}" class="btn btn-secondary">
+                    {{ _('Cancel') }}
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="info-box">
+        <h3>💡 {{ _('Tips') }}</h3>
+        <ul>
+            <li>{{ _('Each bottle batch represents one bottling session of a specific brew') }}</li>
+            <li>{{ _('You can register multiple batches of different sizes from the same brew') }}</li>
+            <li>{{ _('The number of bottles will be tracked as you consume them') }}</li>
+            <li>{{ _('Common bottle sizes: 0.33L (beer), 0.5L (beer), 0.75L (wine)') }}</li>
+        </ul>
+    </div>
+</div>
+
+<style>
+.create-bottle-batch-page {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.page-header {
+    margin-bottom: 30px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #e0e0e0;
+}
+
+.page-header h1 {
+    margin: 0;
+    color: #2c3e50;
+}
+
+.form-container {
+    background: white;
+    padding: 30px;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 20px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+}
+
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: 600;
+    color: #2c3e50;
+}
+
+.form-control {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 14px;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #3498db;
+}
+
+.help-text {
+    display: block;
+    margin-top: 5px;
+    color: #7f8c8d;
+    font-size: 12px;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 30px;
+}
+
+.btn {
+    padding: 10px 20px;
+    border: none;
+    border-radius: 4px;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+}
+
+.btn-primary {
+    background-color: #3498db;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #2980b9;
+}
+
+.btn-secondary {
+    background-color: #95a5a6;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #7f8c8d;
+}
+
+.info-box {
+    background: #e8f4f8;
+    padding: 20px;
+    border-radius: 8px;
+    border-left: 4px solid #3498db;
+}
+
+.info-box h3 {
+    margin-top: 0;
+    color: #2c3e50;
+}
+
+.info-box ul {
+    margin: 10px 0 0 20px;
+    color: #34495e;
+}
+
+.info-box li {
+    margin-bottom: 8px;
+}
+</style>
+
+<script>
+// Set today's date as default
+document.getElementById('bottling_date').valueAsDate = new Date();
+</script>
+{% endblock %}

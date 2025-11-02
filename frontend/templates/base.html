@@ -20,6 +20,9 @@
                 <li><a href="{{ url_for('kegs') }}">{{ _('Kegs') }}</a></li>
                 {% endif %}
                 {% if current_user.can_access('brews', 'view') %}
+                <li><a href="{{ url_for('bottles') }}">{{ _('Bottles') }}</a></li>
+                {% endif %}
+                {% if current_user.can_access('brews', 'view') %}
                 <li><a href="{{ url_for('brews') }}">{{ _('Brews') }}</a></li>
                 {% endif %}
                 {% if current_user.can_access('recipes', 'view') %}
