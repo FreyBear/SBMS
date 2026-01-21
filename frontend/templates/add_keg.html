@@ -34,6 +34,15 @@
             </div>
 
             <div class="form-group">
+                <label for="empty_weight_kg">{{ _('Empty Weight') }} (kg):*</label>
+                <input type="number" id="empty_weight_kg" name="empty_weight_kg" 
+                       step="0.1" min="0" max="50" 
+                       placeholder="e.g., 3.7"
+                       required>
+                <small class="form-help">{{ _('Weight of the empty keg') }}</small>
+            </div>
+
+            <div class="form-group">
                 <label for="location">{{ _('Initial Location') }}:*</label>
                 <select id="location" name="location" required>
                     <option value="Storage">{{ _('Storage') }}</option>

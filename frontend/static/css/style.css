@@ -75,6 +75,20 @@ nav a:hover {
     box-shadow: 0 2px 8px rgba(0,0,0,0.2);
 }
 
+/* Settings icon styling */
+.nav-icon {
+    font-size: 1.3rem;
+    padding: 0.3rem 0.7rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.nav-icon:hover {
+    background-color: rgba(255, 255, 255, 0.25);
+    transform: translateY(-2px) rotate(90deg);
+}
+
 /* Main content */
 main {
     max-width: 1200px;

@@ -9,6 +9,7 @@ from datetime import datetime, date
 from decimal import Decimal
 import bcrypt
 import uuid
+import math
 from werkzeug.utils import secure_filename
 from werkzeug.datastructures import FileStorage
 from werkzeug.middleware.proxy_fix import ProxyFix
@@ -16,6 +17,7 @@ from auth import User, require_auth, require_permission
 from forms import LoginForm, ChangePasswordForm, CreateUserForm, EditUserForm, CreateExpenseForm, MarkPaidForm, RejectExpenseForm, DeleteExpenseForm, EditExpenseForm, CreateKitForm, EditKitForm, DeleteKitForm
 from i18n import init_babel, _, _l
 from beerxml_handler import BeerXMLHandler
+from mqtt_handler import MQTTHandler
 
 # Load environment variables
 load_dotenv()
@@ -105,6 +107,9 @@ def get_db_connection():
     except psycopg2.Error as e:
         print(f"Database connection error: {e}")
         return None
+
+# Initialize MQTT Handler (after get_db_connection is defined)
+mqtt_handler = MQTTHandler(get_db_connection)
 
 @app.before_request
 def force_https():
@@ -448,6 +453,16 @@ def add_keg():
         location = request.form.get('location', 'Storage')
         notes = request.form.get('notes', '')
         
+        # Get weight-related fields
+        empty_weight_kg = request.form.get('empty_weight_kg')
+        if empty_weight_kg:
+            empty_weight_kg = float(empty_weight_kg)
+        else:
+            empty_weight_kg = None
+        
+        # keg_size_liters will match volume_liters
+        keg_size_liters = volume_liters
+        
         with conn.cursor() as cur:
             # Check if keg number already exists (including historical kegs)
             cur.execute("SELECT id, historical FROM keg WHERE keg_number = %s", (keg_number,))
@@ -463,10 +478,11 @@ def add_keg():
             # Insert new keg
             cur.execute("""
                 INSERT INTO keg 
-                (keg_number, volume_liters, status, location, notes, historical, amount_left_liters, last_measured)
-                VALUES (%s, %s, 'Available/Cleaned', %s, %s, false, 0, CURRENT_DATE)
+                (keg_number, volume_liters, keg_size_liters, empty_weight_kg, 
+                 status, location, notes, historical, amount_left_liters, last_measured)
+                VALUES (%s, %s, %s, %s, 'Available/Cleaned', %s, %s, false, 0, CURRENT_DATE)
                 RETURNING id
-            """, (keg_number, volume_liters, location, notes))
+            """, (keg_number, volume_liters, keg_size_liters, empty_weight_kg, location, notes))
             
             keg_id = cur.fetchone()[0]
             
@@ -583,12 +599,41 @@ def update_keg(keg_id):
             
             gluten_free = request.form.get('gluten_free') == 'on'
             
+            # Handle weight-based or manual measurement
+            current_weight_kg = request.form.get('current_weight_kg')
+            measurement_source = 'manual'
+            
+            if current_weight_kg and current_weight_kg.strip():
+                # Weight was entered - use weight-based calculation
+                current_weight_kg = float(current_weight_kg)
+                
+                # Get empty weight from database
+                cur.execute("SELECT empty_weight_kg FROM keg WHERE id = %s", (keg_id,))
+                result = cur.fetchone()
+                empty_weight = result[0] if result else None
+                
+                if empty_weight is None:
+                    flash('Empty weight not configured for this keg', 'error')
+                    conn.close()
+                    return redirect(url_for('update_keg', keg_id=keg_id))
+                
+                # Calculate amount left with floor rounding to 0.1
+                raw_liters = current_weight_kg - empty_weight
+                amount_left_liters = math.floor(raw_liters * 10) / 10
+                amount_left_liters = max(0, amount_left_liters)  # Cannot be negative
+                measurement_source = 'weight'
+            else:
+                # No weight entered - use manual amount_left_liters
+                current_weight_kg = None
+                amount_left_liters = float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0
+            
             # Update the main keg record with latest values
             cur.execute("""
                 UPDATE keg SET
                     contents = %s,
                     status = %s,
                     amount_left_liters = %s,
+                    current_weight_kg = %s,
                     location = %s,
                     brew_id = %s,
                     abv = %s,
@@ -599,7 +644,8 @@ def update_keg(keg_id):
             """, (
                 request.form['contents'],
                 request.form['status'],
-                float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                amount_left_liters,
+                current_weight_kg,
                 request.form['location'],
                 brew_id,
                 abv,
@@ -612,17 +658,18 @@ def update_keg(keg_id):
             # Create a history entry for this update
             cur.execute("""
                 INSERT INTO keg_history 
-                (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes, measurement_source)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 keg_id,
                 update_date,
                 request.form['contents'],
                 request.form['status'],
-                float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0,
+                amount_left_liters,
                 request.form['location'],
                 request.form.get('arrangement', 'Normal operation'),
-                request.form['notes']
+                request.form['notes'],
+                measurement_source
             ))
             
             conn.commit()
@@ -4276,6 +4323,255 @@ def expense_image(expense_id, filename):
         conn.close()
     
     return redirect(url_for('expenses'))
+
+# ============================================================================
+# SETTINGS ROUTES
+# ============================================================================
+
+@app.route('/settings', methods=['GET', 'POST'])
+@require_permission('users', 'full')  # Admin only
+def settings():
+    """System settings page with MQTT configuration"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('index'))
+    
+    if request.method == 'POST':
+        try:
+            with conn.cursor() as cur:
+                # Get or create mqtt_config record
+                cur.execute("SELECT id FROM mqtt_config LIMIT 1")
+                config_id = cur.fetchone()
+                
+                # Prepare form data
+                enabled = request.form.get('enabled') == 'on'
+                broker_host = request.form['broker_host']
+                broker_port = int(request.form['broker_port'])
+                username = request.form.get('username', '')
+                password = request.form.get('password', '')
+                use_tls = request.form.get('use_tls') == 'on'
+                topic_prefix = request.form['topic_prefix']
+                
+                if config_id:
+                    # Update existing config
+                    # Only update password if a new one was provided
+                    if password:
+                        cur.execute("""
+                            UPDATE mqtt_config SET
+                                broker_host = %s,
+                                broker_port = %s,
+                                username = %s,
+                                password = %s,
+                                use_tls = %s,
+                                topic_prefix = %s,
+                                enabled = %s,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = %s
+                        """, (broker_host, broker_port, username, password, use_tls, 
+                              topic_prefix, enabled, config_id[0]))
+                    else:
+                        cur.execute("""
+                            UPDATE mqtt_config SET
+                                broker_host = %s,
+                                broker_port = %s,
+                                username = %s,
+                                use_tls = %s,
+                                topic_prefix = %s,
+                                enabled = %s,
+                                updated_at = CURRENT_TIMESTAMP
+                            WHERE id = %s
+                        """, (broker_host, broker_port, username, use_tls, 
+                              topic_prefix, enabled, config_id[0]))
+                else:
+                    # Insert new config
+                    cur.execute("""
+                        INSERT INTO mqtt_config 
+                        (broker_host, broker_port, username, password, use_tls, topic_prefix, enabled)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                    """, (broker_host, broker_port, username, password, use_tls, 
+                          topic_prefix, enabled))
+                
+                conn.commit()
+                flash(_('Settings saved successfully'), 'success')
+                
+                # Restart MQTT with new config
+                new_config = {
+                    'broker_host': broker_host,
+                    'broker_port': broker_port,
+                    'username': username if username else None,
+                    'password': password if password else None,
+                    'use_tls': use_tls,
+                    'topic_prefix': topic_prefix,
+                    'enabled': enabled
+                }
+                mqtt_handler.update_config(new_config)
+                
+        except (psycopg2.Error, ValueError) as e:
+            flash(f'Error saving settings: {e}', 'error')
+        finally:
+            conn.close()
+        
+        return redirect(url_for('settings'))
+    
+    # GET request - load settings
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM mqtt_config LIMIT 1")
+            config = cur.fetchone()
+            
+            if not config:
+                # Create default config
+                config = {
+                    'broker_host': '',
+                    'broker_port': 1883,
+                    'username': '',
+                    'password': '',
+                    'use_tls': False,
+                    'topic_prefix': 'brewery',
+                    'enabled': False
+                }
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        config = {}
+    finally:
+        conn.close()
+    
+    # Check MQTT connection status
+    mqtt_connected = mqtt_handler.is_connected()
+    
+    return render_template('settings.html', config=config, mqtt_connected=mqtt_connected)
+
+
+@app.route('/settings/mqtt/test', methods=['POST'])
+@require_permission('users', 'full')  # Admin only
+def test_mqtt_connection():
+    """Test MQTT connection without saving"""
+    broker_host = request.form.get('broker_host')
+    broker_port = int(request.form.get('broker_port', 1883))
+    username = request.form.get('username', '') or None
+    password = request.form.get('password', '') or None
+    use_tls = request.form.get('use_tls') == 'on'
+    
+    if not broker_host:
+        return jsonify({
+            'success': False,
+            'message': _('Broker host is required')
+        })
+    
+    try:
+        # Use the MQTT handler's test function
+        success, message = MQTTHandler.test_connection(
+            broker_host, broker_port, username, password, use_tls, timeout=10
+        )
+        
+        return jsonify({
+            'success': success,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'message': f'Connection test error: {str(e)}'
+        })
+
+
+# ============================================================================
+# MQTT API ENDPOINTS
+# ============================================================================
+
+@app.route('/api/mqtt/weight/<keg_number>')
+@login_required
+def get_mqtt_weight(keg_number):
+    """Get latest MQTT weight (single sensor for any keg)"""
+    # Check if MQTT is enabled
+    if not mqtt_handler.config.get('enabled', False):
+        return jsonify({
+            'success': False,
+            'message': 'MQTT is disabled',
+            'connected': False
+        })
+    
+    weight_data = mqtt_handler.get_latest_weight()
+    
+    if weight_data:
+        return jsonify({
+            'success': True,
+            'weight_kg': weight_data['weight_kg'],
+            'timestamp': weight_data['timestamp'],
+            'connected': mqtt_handler.is_connected()
+        })
+    else:
+        return jsonify({
+            'success': False,
+            'message': 'No weight data available',
+            'connected': mqtt_handler.is_connected()
+        })
+
+
+@app.route('/api/mqtt/status')
+@login_required
+def get_mqtt_status():
+    """Get MQTT connection status and latest weight"""
+    # If MQTT is disabled, return disconnected
+    if not mqtt_handler.config.get('enabled', False):
+        return jsonify({
+            'connected': False,
+            'weight': None
+        })
+    
+    return jsonify({
+        'connected': mqtt_handler.is_connected(),
+        'weight': mqtt_handler.get_latest_weight()
+    })
+
+
+# ============================================================================
+# APPLICATION STARTUP
+# ============================================================================
+
+def start_mqtt_if_enabled():
+    """Load MQTT config from database and start client if enabled"""
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("⚠️  Could not connect to database for MQTT config")
+            return
+        
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM mqtt_config LIMIT 1")
+            config = cur.fetchone()
+        
+        conn.close()
+        
+        if config and config.get('enabled'):
+            print("🚀 Starting MQTT client...")
+            mqtt_handler.update_config(dict(config))
+            if mqtt_handler.start():
+                print("✓ MQTT client started successfully")
+            else:
+                print("✗ Failed to start MQTT client")
+        else:
+            print("ℹ️  MQTT is disabled or not configured")
+    
+    except Exception as e:
+        print(f"⚠️  Error starting MQTT: {e}")
+
+
+def stop_mqtt():
+    """Stop MQTT client gracefully"""
+    try:
+        if mqtt_handler:
+            mqtt_handler.stop()
+            print("✓ MQTT client stopped")
+    except Exception as e:
+        print(f"⚠️  Error stopping MQTT: {e}")
+
+
+# MQTT will be started by Gunicorn post_fork hook in the first worker
+# See gunicorn.conf.py for the hook configuration
+
 
 if __name__ == '__main__':
     # This is only used for development/testing

@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
 "Report-Msgid-Bugs-To: EMAIL@ADDRESS\n"
-"POT-Creation-Date: 2025-11-02 16:05+0000\n"
+"POT-Creation-Date: 2026-01-20 22:40+0000\n"
 "PO-Revision-Date: 2025-10-19 13:21+0000\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language: nn\n"
@@ -36,12 +36,12 @@ msgstr "Databasefeil: %(error)s"
 msgid "You have been logged out successfully."
 msgstr "Du har blitt logga ut."
 
-#: backend/app.py:275 backend/app.py:3147 backend/app.py:3158
+#: backend/app.py:275 backend/app.py:3158 backend/app.py:3169
 #: frontend/templates/edit_user.html:133
 msgid "Change Password"
 msgstr "Endre Passord"
 
-#: backend/app.py:276 backend/app.py:3148 backend/app.py:3159
+#: backend/app.py:276 backend/app.py:3159 backend/app.py:3170
 #: frontend/templates/base.html:44
 msgid "Logout"
 msgstr "Logg Ut"
@@ -50,7 +50,7 @@ msgstr "Logg Ut"
 msgid "Only administrators can add kegs"
 msgstr "Berre administratorar kan legge til fat"
 
-#: backend/app.py:458
+#: backend/app.py:468
 #, python-format
 msgid ""
 "Keg #%(num)s exists but is marked as historical. Restore it instead of "
@@ -59,279 +59,279 @@ msgstr ""
 "Fat #%(num)s eksisterer, men er markert som historisk. Gjenopprett det i "
 "staden for å opprette eit nytt."
 
-#: backend/app.py:460
+#: backend/app.py:470
 #, python-format
 msgid "Keg #%(num)s already exists"
 msgstr "Fat #%(num)s eksisterer allereie"
 
-#: backend/app.py:481
+#: backend/app.py:492
 #, python-format
 msgid "Keg #%(num)s added successfully"
 msgstr "Fat #%(num)s lagt til"
 
-#: backend/app.py:629
+#: backend/app.py:640
 msgid "Keg updated successfully and history entry created"
 msgstr "Fat oppdatert og historikeoppføring oppretta"
 
-#: backend/app.py:702
+#: backend/app.py:713
 #, python-format
 msgid "Successfully marked %(count)d kegs as cleaned"
 msgstr "Merka %(count)d fat som vaska"
 
-#: backend/app.py:777
+#: backend/app.py:788
 #, python-format
 msgid "Successfully marked %(count)d kegs as empty"
 msgstr "Merka %(count)d fat som tomme"
 
-#: backend/app.py:793
+#: backend/app.py:804
 msgid "Only administrators can delete kegs"
 msgstr "Berre administratorar kan slette fat"
 
-#: backend/app.py:808
+#: backend/app.py:819
 msgid "Keg not found"
 msgstr "Fat ikkje funne"
 
-#: backend/app.py:812
+#: backend/app.py:823
 msgid "Keg is already marked as historical"
 msgstr "Fat er allereie markert som historisk"
 
-#: backend/app.py:835
+#: backend/app.py:846
 #, python-format
 msgid "Keg #%(num)s marked as historical"
 msgstr "Fat #%(num)s markert som historisk"
 
-#: backend/app.py:851
+#: backend/app.py:862
 msgid "Only administrators can edit or delete history entries"
 msgstr "Berre administratorar kan redigere eller slette historikkoppføringar"
 
-#: backend/app.py:889
+#: backend/app.py:900
 msgid "History entry deleted successfully"
 msgstr "Historikeoppføring sletta"
 
-#: backend/app.py:950
+#: backend/app.py:961
 msgid "History entry updated successfully"
 msgstr "Historikeoppføring oppdatert"
 
-#: backend/app.py:2598
+#: backend/app.py:2609
 msgid "You do not have permission to import recipes."
 msgstr ""
 
-#: backend/app.py:2604 backend/app.py:2610
+#: backend/app.py:2615 backend/app.py:2621
 #, fuzzy
 msgid "No file selected"
 msgstr "fat valde"
 
-#: backend/app.py:2614
+#: backend/app.py:2625
 msgid "File must be a BeerXML (.xml) file"
 msgstr ""
 
-#: backend/app.py:2624 backend/app.py:2669 backend/app.py:2728
+#: backend/app.py:2635 backend/app.py:2680 backend/app.py:2739
 msgid "Database connection error"
 msgstr ""
 
-#: backend/app.py:2634
+#: backend/app.py:2645
 #, fuzzy, python-format
 msgid "Successfully imported %(count)d recipe: %(names)s"
 msgid_plural "Successfully imported %(count)d recipes: %(names)s"
 msgstr[0] "Merka %(count)d fat som tomme"
 msgstr[1] ""
 
-#: backend/app.py:2647
+#: backend/app.py:2658
 #, python-format
 msgid "Import failed: %(error)s"
 msgstr ""
 
-#: backend/app.py:2654
+#: backend/app.py:2665
 msgid "Invalid file encoding. File must be UTF-8 encoded XML."
 msgstr ""
 
-#: backend/app.py:2657
+#: backend/app.py:2668
 #, python-format
 msgid "Error importing recipe: %(error)s"
 msgstr ""
 
-#: backend/app.py:2679
+#: backend/app.py:2690
 #, fuzzy
 msgid "Recipe not found"
 msgstr "Fat ikkje funne"
 
-#: backend/app.py:2702
+#: backend/app.py:2713
 msgid "Error exporting recipe"
 msgstr ""
 
-#: backend/app.py:2717
+#: backend/app.py:2728
 msgid "No recipes selected for export"
 msgstr ""
 
-#: backend/app.py:2723
+#: backend/app.py:2734
 #, fuzzy
 msgid "Invalid recipe selection"
 msgstr "Skildring"
 
-#: backend/app.py:2752
+#: backend/app.py:2763
 msgid "Error exporting recipes"
 msgstr ""
 
-#: backend/app.py:2895
+#: backend/app.py:2906
 msgid "You can only edit your own profile"
 msgstr ""
 
-#: backend/app.py:2942
+#: backend/app.py:2953
 msgid "Current password is required to change password"
 msgstr ""
 
-#: backend/app.py:2951
+#: backend/app.py:2962
 msgid "Current password is incorrect"
 msgstr ""
 
-#: backend/app.py:2965
+#: backend/app.py:2976
 msgid "Bank account must be exactly 11 digits"
 msgstr ""
 
-#: backend/app.py:3004
+#: backend/app.py:3015
 #, fuzzy
 msgid "Profile updated successfully!"
 msgstr "Fil lasta opp!"
 
-#: backend/app.py:3006 backend/app.py:3013
+#: backend/app.py:3017 backend/app.py:3024
 #, fuzzy
 msgid "Password changed successfully!"
 msgstr "Fil lasta opp!"
 
-#: backend/app.py:3007
+#: backend/app.py:3018
 msgid "Please log in again to see language change."
 msgstr ""
 
-#: backend/app.py:3011
+#: backend/app.py:3022
 #, fuzzy, python-brace-format
 msgid "User {} updated successfully!"
 msgstr "Historikeoppføring oppdatert"
 
-#: backend/app.py:3031
+#: backend/app.py:3042
 msgid "You cannot delete your own account"
 msgstr ""
 
-#: backend/app.py:3046 backend/app.py:3079
+#: backend/app.py:3057 backend/app.py:3090
 msgid "User not found"
 msgstr ""
 
-#: backend/app.py:3053
+#: backend/app.py:3064
 #, fuzzy, python-brace-format
 msgid "User {} ({}) deleted successfully"
 msgstr "Historikeoppføring sletta"
 
-#: backend/app.py:3091
+#: backend/app.py:3102
 msgid "New password is required"
 msgstr ""
 
-#: backend/app.py:3095 frontend/templates/reset_password.html:20
+#: backend/app.py:3106 frontend/templates/reset_password.html:20
 msgid "Password must be at least 6 characters long"
 msgstr ""
 
-#: backend/app.py:3099
+#: backend/app.py:3110
 msgid "Passwords do not match"
 msgstr ""
 
-#: backend/app.py:3107
+#: backend/app.py:3118
 #, python-brace-format
 msgid "Password reset successfully for user {}"
 msgstr ""
 
-#: backend/app.py:3142 backend/app.py:3153 frontend/templates/base.html:18
+#: backend/app.py:3153 backend/app.py:3164 frontend/templates/base.html:18
 msgid "Dashboard"
 msgstr "Kontrolltavle"
 
-#: backend/app.py:3143 backend/app.py:3154 frontend/templates/base.html:20
+#: backend/app.py:3154 backend/app.py:3165 frontend/templates/base.html:20
 #: frontend/templates/brews.html:25
 msgid "Kegs"
 msgstr "Fat"
 
-#: backend/app.py:3144 backend/app.py:3155 frontend/templates/base.html:26
+#: backend/app.py:3155 backend/app.py:3166 frontend/templates/base.html:26
 #: frontend/templates/kits.html:27 frontend/templates/recipes.html:55
 msgid "Brews"
 msgstr "Brygg"
 
-#: backend/app.py:3145 backend/app.py:3156 frontend/templates/base.html:29
+#: backend/app.py:3156 backend/app.py:3167 frontend/templates/base.html:29
 msgid "Recipes"
 msgstr "Oppskrifter"
 
-#: backend/app.py:3146 backend/app.py:3157 frontend/templates/base.html:38
+#: backend/app.py:3157 backend/app.py:3168 frontend/templates/base.html:38
 msgid "Users"
 msgstr "Brukarar"
 
-#: backend/app.py:3811
+#: backend/app.py:3822
 #, python-brace-format
 msgid "Expense submitted successfully with {} receipt(s): {}"
 msgstr ""
 
-#: backend/app.py:3814
+#: backend/app.py:3825
 #, fuzzy
 msgid "Expense submitted successfully"
 msgstr "Fil lasta opp!"
 
-#: backend/app.py:3847 backend/app.py:3895 backend/app.py:3937
-#: backend/app.py:3963 backend/app.py:4040 backend/app.py:4209
+#: backend/app.py:3858 backend/app.py:3906 backend/app.py:3948
+#: backend/app.py:3974 backend/app.py:4051 backend/app.py:4220
 msgid "Expense not found"
 msgstr ""
 
-#: backend/app.py:3851
+#: backend/app.py:3862
 msgid "Expense is not pending"
 msgstr ""
 
-#: backend/app.py:3862
+#: backend/app.py:3873
 msgid "Expense marked as paid successfully"
 msgstr ""
 
-#: backend/app.py:3899
+#: backend/app.py:3910
 msgid "Only pending expenses can be rejected"
 msgstr ""
 
-#: backend/app.py:3910
+#: backend/app.py:3921
 #, fuzzy
 msgid "Expense rejected successfully"
 msgstr "Historikeoppføring sletta"
 
-#: backend/app.py:3968
+#: backend/app.py:3979
 msgid "You can only delete your own expenses"
 msgstr ""
 
-#: backend/app.py:3973
+#: backend/app.py:3984
 msgid "Paid expenses cannot be deleted to maintain audit trail"
 msgstr ""
 
-#: backend/app.py:3996
+#: backend/app.py:4007
 #, fuzzy
 msgid "Expense deleted successfully"
 msgstr "Historikeoppføring sletta"
 
-#: backend/app.py:4045
+#: backend/app.py:4056
 msgid "You can only edit your own expenses"
 msgstr ""
 
-#: backend/app.py:4049
+#: backend/app.py:4060
 msgid "Only rejected expenses can be edited"
 msgstr ""
 
-#: backend/app.py:4149
+#: backend/app.py:4160
 #, python-brace-format
 msgid "Added {} new receipt(s): {}"
 msgstr ""
 
-#: backend/app.py:4152
+#: backend/app.py:4163
 #, python-brace-format
 msgid "Removed {} receipt(s): {}"
 msgstr ""
 
-#: backend/app.py:4156
+#: backend/app.py:4167
 #, python-brace-format
 msgid "Expense updated and resubmitted successfully. {}"
 msgstr ""
 
-#: backend/app.py:4159
+#: backend/app.py:4170
 msgid "Expense updated and resubmitted successfully"
 msgstr ""
 
-#: backend/app.py:4261
+#: backend/app.py:4272
 msgid "Image not found"
 msgstr ""
 
@@ -381,7 +381,7 @@ msgid "Optional: Additional details, temperatures, amounts, or instructions..."
 msgstr "Valfritt: Fleire detaljar, temperaturar, mengder eller instruksjonar..."
 
 #: frontend/templates/add_brew_task.html:52
-#: frontend/templates/add_dry_hop.html:72 frontend/templates/add_keg.html:54
+#: frontend/templates/add_dry_hop.html:72 frontend/templates/add_keg.html:74
 #: frontend/templates/create_bottle_batch.html:88
 #: frontend/templates/create_brew.html:136
 #: frontend/templates/create_expense.html:101
@@ -510,27 +510,63 @@ msgstr "Vennlegst skriv inn eit gyldig fatnummer (berre tal)"
 msgid "Unique identifier for this keg"
 msgstr "Unik identifikator for dette fatet"
 
-#: frontend/templates/add_keg.html:23 frontend/templates/kegs.html:90
+#: frontend/templates/add_keg.html:23
+#, fuzzy
+msgid "Keg Type"
+msgstr "Kit Type"
+
+#: frontend/templates/add_keg.html:25
+#, fuzzy
+msgid "Select keg type"
+msgstr "Vel type kit"
+
+#: frontend/templates/add_keg.html:26 frontend/templates/add_keg.html:27
+#: frontend/templates/edit_keg_history.html:8
+msgid "Keg"
+msgstr "Fat"
+
+#: frontend/templates/add_keg.html:26 frontend/templates/add_keg.html:27
+#, fuzzy
+msgid "empty"
+msgstr "Tomme"
+
+#: frontend/templates/add_keg.html:28
+msgid "Custom"
+msgstr ""
+
+#: frontend/templates/add_keg.html:30
+msgid "Select standard keg size or custom for other sizes"
+msgstr ""
+
+#: frontend/templates/add_keg.html:34 frontend/templates/kegs.html:90
 msgid "Size"
 msgstr "Storleik"
 
-#: frontend/templates/add_keg.html:23
+#: frontend/templates/add_keg.html:34
 msgid "liters"
 msgstr "liter"
 
-#: frontend/templates/add_keg.html:25
+#: frontend/templates/add_keg.html:36
 msgid "Select size"
 msgstr "Vel storleik"
 
-#: frontend/templates/add_keg.html:33
+#: frontend/templates/add_keg.html:44
 msgid "Total capacity of the keg"
 msgstr "Total kapasitet på fatet"
 
-#: frontend/templates/add_keg.html:37
+#: frontend/templates/add_keg.html:48
+msgid "Empty Weight"
+msgstr ""
+
+#: frontend/templates/add_keg.html:53
+msgid "Weight of the empty keg (tare weight)"
+msgstr ""
+
+#: frontend/templates/add_keg.html:57
 msgid "Initial Location"
 msgstr "Opphavleg plassering"
 
-#: frontend/templates/add_keg.html:39
+#: frontend/templates/add_keg.html:59
 #: frontend/templates/edit_keg_history.html:51
 #: frontend/templates/edit_keg_history.html:63 frontend/templates/kegs.html:166
 #: frontend/templates/kegs.html:206 frontend/templates/update_keg.html:50
@@ -538,19 +574,19 @@ msgstr "Opphavleg plassering"
 msgid "Storage"
 msgstr "Lager"
 
-#: frontend/templates/add_keg.html:40
+#: frontend/templates/add_keg.html:60
 #: frontend/templates/edit_keg_history.html:49 frontend/templates/kegs.html:167
 #: frontend/templates/kegs.html:207 frontend/templates/update_keg.html:48
 msgid "Brewery"
 msgstr "Bryggeri"
 
-#: frontend/templates/add_keg.html:41
+#: frontend/templates/add_keg.html:61
 #: frontend/templates/edit_keg_history.html:50 frontend/templates/kegs.html:168
 #: frontend/templates/kegs.html:208 frontend/templates/update_keg.html:49
 msgid "Cellar"
 msgstr "Kjeller"
 
-#: frontend/templates/add_keg.html:42
+#: frontend/templates/add_keg.html:62
 #: frontend/templates/edit_keg_history.html:53
 #: frontend/templates/edit_keg_history.html:62 frontend/templates/kegs.html:169
 #: frontend/templates/kegs.html:209 frontend/templates/update_keg.html:52
@@ -558,13 +594,13 @@ msgstr "Kjeller"
 msgid "Cleaning"
 msgstr "Reingjøring"
 
-#: frontend/templates/add_keg.html:43
+#: frontend/templates/add_keg.html:63
 #: frontend/templates/edit_keg_history.html:52 frontend/templates/kegs.html:170
 #: frontend/templates/kegs.html:210 frontend/templates/update_keg.html:51
 msgid "Bar"
 msgstr "Bar"
 
-#: frontend/templates/add_keg.html:48
+#: frontend/templates/add_keg.html:68
 #: frontend/templates/bottle_batch_detail.html:53
 #: frontend/templates/brew_detail.html:189
 #: frontend/templates/create_bottle_batch.html:78
@@ -588,18 +624,18 @@ msgstr "Bar"
 msgid "Notes"
 msgstr "Notat"
 
-#: frontend/templates/add_keg.html:48 frontend/templates/edit_brew.html:149
+#: frontend/templates/add_keg.html:68 frontend/templates/edit_brew.html:149
 #: frontend/templates/expenses.html:204 frontend/templates/expenses.html:210
 #: frontend/templates/kegs.html:175 frontend/templates/kegs.html:215
 #, fuzzy
 msgid "optional"
 msgstr "PLASSERING"
 
-#: frontend/templates/add_keg.html:50
+#: frontend/templates/add_keg.html:70
 msgid "e.g., New keg purchased from supplier X"
 msgstr "t.d., Nytt fat kjøpt frå leverandør X"
 
-#: frontend/templates/add_keg.html:55 frontend/templates/kegs.html:10
+#: frontend/templates/add_keg.html:75 frontend/templates/kegs.html:10
 msgid "Add Keg"
 msgstr "Legg til fat"
 
@@ -806,19 +842,19 @@ msgstr "Brygg Administrasjon"
 
 #: frontend/templates/bottles.html:12
 #: frontend/templates/create_bottle_batch.html:8
-#: frontend/templates/index.html:155 frontend/templates/index.html:167
+#: frontend/templates/index.html:152 frontend/templates/index.html:161
 msgid "Register New Bottle Batch"
 msgstr ""
 
 #: frontend/templates/bottles.html:28
 #: frontend/templates/edit_keg_history.html:46
-#: frontend/templates/index.html:253 frontend/templates/keg_detail.html:95
+#: frontend/templates/index.html:247 frontend/templates/keg_detail.html:95
 #: frontend/templates/kegs.html:102 frontend/templates/update_keg.html:45
 msgid "Location"
 msgstr "PLASSERING"
 
 #: frontend/templates/bottles.html:31 frontend/templates/brews.html:26
-#: frontend/templates/expenses.html:40 frontend/templates/index.html:285
+#: frontend/templates/expenses.html:40 frontend/templates/index.html:279
 #: frontend/templates/keg_detail.html:98 frontend/templates/kegs.html:107
 #: frontend/templates/kit_detail.html:158 frontend/templates/kits.html:28
 #: frontend/templates/recipe_detail.html:275 frontend/templates/recipes.html:56
@@ -1180,7 +1216,7 @@ msgstr "Kryss av dette viss brygget vart laga glutenfritt"
 
 #: frontend/templates/create_expense.html:3
 #: frontend/templates/create_expense.html:8 frontend/templates/expenses.html:11
-#: frontend/templates/index.html:170
+#: frontend/templates/index.html:164
 msgid "Submit New Expense"
 msgstr "Send Inn Ny Utgift"
 
@@ -1434,7 +1470,7 @@ msgid "Mash Efficiency (%)"
 msgstr ""
 
 #: frontend/templates/create_recipe.html:62 frontend/templates/expenses.html:35
-#: frontend/templates/index.html:284 frontend/templates/kit_detail.html:86
+#: frontend/templates/index.html:278 frontend/templates/kit_detail.html:86
 #: frontend/templates/recipe_detail.html:103
 #: frontend/templates/recipe_detail.html:370
 #: frontend/templates/reject_expense.html:30
@@ -1761,7 +1797,7 @@ msgstr ""
 
 #: frontend/templates/edit_expense.html:109
 #: frontend/templates/edit_keg_history.html:29
-#: frontend/templates/expenses.html:37 frontend/templates/index.html:251
+#: frontend/templates/expenses.html:37 frontend/templates/index.html:245
 #: frontend/templates/keg_detail.html:93 frontend/templates/kegs.html:96
 #: frontend/templates/kit_detail.html:157 frontend/templates/update_keg.html:28
 #: frontend/templates/users.html:26
@@ -1804,17 +1840,13 @@ msgstr ""
 msgid "Edit History Entry"
 msgstr "Rediger Historikeoppføring"
 
-#: frontend/templates/edit_keg_history.html:8
-msgid "Keg"
-msgstr "Fat"
-
 #: frontend/templates/edit_keg_history.html:17
 #: frontend/templates/keg_detail.html:91
 msgid "Date"
 msgstr "Dato"
 
 #: frontend/templates/edit_keg_history.html:23
-#: frontend/templates/index.html:250 frontend/templates/keg_detail.html:92
+#: frontend/templates/index.html:244 frontend/templates/keg_detail.html:92
 #: frontend/templates/kegs.html:93 frontend/templates/update_keg.html:23
 msgid "Contents"
 msgstr "INNHALD"
@@ -1830,7 +1862,7 @@ msgid "Available/Cleaned"
 msgstr "Vaska"
 
 #: frontend/templates/edit_keg_history.html:39
-#: frontend/templates/index.html:252 frontend/templates/keg_detail.html:94
+#: frontend/templates/index.html:246 frontend/templates/keg_detail.html:94
 #: frontend/templates/kegs.html:99 frontend/templates/update_keg.html:38
 msgid "Amount Left"
 msgstr "MENGD"
@@ -2018,16 +2050,16 @@ msgstr "Eksporter til CSV"
 msgid "Hide Paid"
 msgstr "Gøym Betalte"
 
-#: frontend/templates/expenses.html:29 frontend/templates/index.html:281
+#: frontend/templates/expenses.html:29 frontend/templates/index.html:275
 msgid "Submitted"
 msgstr "INNSENDT"
 
-#: frontend/templates/expenses.html:31 frontend/templates/index.html:282
+#: frontend/templates/expenses.html:31 frontend/templates/index.html:276
 #: frontend/templates/reject_expense.html:18
 msgid "User"
 msgstr "BRUKAR"
 
-#: frontend/templates/expenses.html:34 frontend/templates/index.html:283
+#: frontend/templates/expenses.html:34 frontend/templates/index.html:277
 #: frontend/templates/recipe_detail.html:120
 #: frontend/templates/recipe_detail.html:151
 #: frontend/templates/recipe_detail.html:186
@@ -2248,99 +2280,82 @@ msgstr "Ukjent kjelde"
 
 #: frontend/templates/index.html:150
 #, fuzzy
-msgid "View All Bottles"
-msgstr "Sjå Brygg"
-
-#: frontend/templates/index.html:153
-#, fuzzy
 msgid "No bottle batches available"
 msgstr "Innkjøp"
 
-#: frontend/templates/index.html:161
+#: frontend/templates/index.html:158
 msgid "Quick Actions"
 msgstr "Snøgghandlingar"
 
-#: frontend/templates/index.html:163
-msgid "View All Kegs"
-msgstr "Sjå Alle Fat"
-
-#: frontend/templates/index.html:164
-msgid "View Brews"
-msgstr "Sjå Brygg"
-
-#: frontend/templates/index.html:165
-msgid "View Recipes"
-msgstr "Sjå Oppskrifter"
-
-#: frontend/templates/index.html:173 frontend/templates/recipes.html:17
+#: frontend/templates/index.html:167 frontend/templates/recipes.html:17
 msgid "Import BeerXML"
 msgstr ""
 
 # Brew Tasks - New brew task system translations
-#: frontend/templates/index.html:182 frontend/templates/index.html:235
+#: frontend/templates/index.html:176 frontend/templates/index.html:229
 msgid "Upcoming Brew Schedule"
 msgstr "Komande Handlingar"
 
-#: frontend/templates/index.html:201
+#: frontend/templates/index.html:195
 msgid "Today"
 msgstr "I dag"
 
-#: frontend/templates/index.html:203
+#: frontend/templates/index.html:197
 msgid "Tomorrow"
 msgstr "I morgon"
 
-#: frontend/templates/index.html:205
+#: frontend/templates/index.html:199
 msgid "in"
 msgstr "om"
 
-#: frontend/templates/index.html:205
+#: frontend/templates/index.html:199
 msgid "days"
 msgstr "dagar"
 
-#: frontend/templates/index.html:207
+#: frontend/templates/index.html:201
 msgid "overdue"
 msgstr "forsinka"
 
-#: frontend/templates/index.html:210
+#: frontend/templates/index.html:204
 #, fuzzy
 msgid "No date set"
 msgstr "Notat"
 
-#: frontend/templates/index.html:222
+#: frontend/templates/index.html:216
 msgid "Complete Now"
 msgstr "Fullfør No"
 
-#: frontend/templates/index.html:225
+#: frontend/templates/index.html:219
 #, fuzzy
 msgid "View Brew"
 msgstr "Sjå Brygg"
 
-#: frontend/templates/index.html:237
+#: frontend/templates/index.html:231
 msgid "No brew tasks scheduled in the next 7 days."
 msgstr "Ingen bryggeoppgåver planlagt dei neste 7 dagane."
 
-#: frontend/templates/index.html:238
+#: frontend/templates/index.html:232
 #, fuzzy
 msgid "View Your Brews"
 msgstr "Sjå Brygg"
 
-#: frontend/templates/index.html:244
+#: frontend/templates/index.html:238
 msgid "Recent Keg Activity"
 msgstr "Nyleg Fat Aktivitet"
 
-#: frontend/templates/index.html:249 frontend/templates/kegs.html:87
+#: frontend/templates/index.html:243 frontend/templates/kegs.html:87
 msgid "Keg #"
 msgstr "FAT NR."
 
-#: frontend/templates/index.html:254 frontend/templates/kegs.html:105
+#: frontend/templates/index.html:248 frontend/templates/kegs.html:105
 msgid "Last Measured"
 msgstr "SIST MÅLT"
 
-#: frontend/templates/index.html:277
+#: frontend/templates/index.html:271
 msgid "Pending Expense Requests"
 msgstr ""
 
-#: frontend/templates/index.html:296
+#: frontend/templates/index.html:290
 #, fuzzy
 msgid "View All"
 msgstr "Sjå Alle Fat"
@@ -3183,4 +3198,16 @@ msgstr "SISTE INNLOGGING"
 
 #~ msgid "Cart"
 #~ msgstr "Kjeller"
+
+#~ msgid "View All Bottles"
+#~ msgstr "Sjå Brygg"
+
+#~ msgid "View All Kegs"
+#~ msgstr "Sjå Alle Fat"
+
+#~ msgid "View Brews"
+#~ msgstr "Sjå Brygg"
+
+#~ msgid "View Recipes"
+#~ msgstr "Sjå Oppskrifter"
 

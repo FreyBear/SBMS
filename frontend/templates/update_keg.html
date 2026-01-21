@@ -12,6 +12,9 @@
     </div>
 
     <form method="POST" class="form">
+        <!-- Hidden field for JavaScript calculations -->
+        <input type="hidden" id="empty_weight_kg" value="{{ keg.empty_weight_kg or '' }}">
+        
         <div class="form-grid">
             <div class="form-group">
                 <label for="update_date">{{ _('Update Date') }}:</label>
@@ -34,11 +37,42 @@
                 </select>
             </div>
 
+            <!-- Current Weight with Plato MQTT Button -->
+            <div class="form-group">
+                <label for="current_weight_kg">{{ _('Current Total Weight') }} (kg):</label>
+                <div class="weight-input-group">
+                    <input type="number" id="current_weight_kg" name="current_weight_kg" 
+                           value="{{ keg.current_weight_kg or '' }}" step="0.1" min="0" max="100"
+                           placeholder="e.g., 12.5" oninput="calculateFromWeight()">
+                    <button type="button" id="plato_button" class="btn-plato" onclick="useMQTTWeight()" disabled>
+                        <span class="plato-icon">📡</span>
+                        <span class="plato-status">Offline</span>
+                        <span class="plato-weight">--.- kg</span>
+                    </button>
+                </div>
+                <small class="form-help">{{ _('Total weight including keg and contents') }}</small>
+                
+                {% if keg.empty_weight_kg %}
+                <div class="weight-calculation" id="weight_calc_display" style="display: none;">
+                    <strong>{{ _('Calculation') }}:</strong>
+                    <span id="calc_current">0.0</span> kg - 
+                    <span id="calc_empty">{{ "%.1f"|format(keg.empty_weight_kg) }}</span> kg = 
+                    <span id="calc_result" class="calc-result">0.0</span> L
+                </div>
+                {% else %}
+                <div class="weight-warning">
+                    ⚠️ {{ _('Empty weight not configured for this keg.') }}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Amount Left (can be edited directly or calculated from weight) -->
             <div class="form-group">
                 <label for="amount_left_liters">{{ _('Amount Left') }} ({{ _('Liters') }}):</label>
                 <input type="number" id="amount_left_liters" name="amount_left_liters" 
                        value="{{ keg.amount_left_liters or 0 }}" step="0.1" min="0" 
                        max="{{ keg.volume_liters }}">
+                <small class="form-help">{{ _('Calculated from weight or enter manually') }}</small>
             </div>
 
             <div class="form-group">
@@ -418,6 +452,236 @@ document.addEventListener('DOMContentLoaded', function() {
     transform: translateY(-1px);
     box-shadow: 0 4px 8px rgba(0,0,0,0.2);
 }
+
+/* Weight measurement styles */
+/* Weight input with Plato button */
+.weight-input-group {
+    display: flex;
+    gap: 0.5rem;
+    align-items: stretch;
+}
+
+.weight-input-group input {
+    flex: 1;
+}
+
+.btn-plato {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.5rem 1rem;
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 100px;
+    font-size: 0.85rem;
+}
+
+.btn-plato:not(:disabled):hover {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-color: #4caf50;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76, 175, 80, 0.3);
+}
+
+.btn-plato:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+
+.btn-plato.online {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-color: #4caf50;
+}
+
+.btn-plato.online:not(:disabled):hover {
+    background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+    box-shadow: 0 4px 12px rgba(76, 175, 80, 0.4);
+}
+
+.plato-icon {
+    font-size: 1.5rem;
+    line-height: 1;
+}
+
+.plato-status {
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-top: 0.25rem;
+    color: #666;
+}
+
+.btn-plato.online .plato-status {
+    color: #2e7d32;
+}
+
+.btn-plato:disabled .plato-status {
+    color: #999;
+}
+
+.plato-weight {
+    font-size: 0.95rem;
+    font-weight: bold;
+    color: #333;
+    margin-top: 0.25rem;
+}
+
+.btn-plato.online .plato-weight {
+    color: #1b5e20;
+}
+
+.weight-calculation {
+    background: #f8f9fa;
+    border-left: 4px solid #3498db;
+    padding: 0.75rem;
+    margin-top: 0.5rem;
+    border-radius: 4px;
+    font-size: 0.9rem;
+}
+
+.weight-calculation strong {
+    display: block;
+    margin-bottom: 0.25rem;
+}
+    color: #666;
+}
+
+.calc-formula {
+    font-family: 'Courier New', monospace;
+    font-size: 1.1rem;
+    color: #2c3e50;
+}
+
+.calc-result {
+    color: #27ae60;
+    font-weight: bold;
+}
+
+.weight-warning {
+    background: #fff3cd;
+    color: #856404;
+    padding: 0.75rem;
+    border-radius: 4px;
+    border-left: 4px solid #ffc107;
+    margin-top: 0.5rem;
+}
 </style>
+
+<script>
+// Calculate amount left from weight (always round DOWN to 0.1)
+function calculateFromWeight() {
+    const currentWeight = parseFloat(document.getElementById('current_weight_kg').value);
+    const emptyWeight = parseFloat(document.getElementById('empty_weight_kg').value);
+    
+    if (isNaN(currentWeight) || isNaN(emptyWeight)) {
+        document.getElementById('weight_calc_display').style.display = 'none';
+        return;
+    }
+    
+    // Calculate raw liters
+    const rawLiters = currentWeight - emptyWeight;
+    
+    // Always round DOWN to 0.1 (floor to nearest 100g)
+    const amountLeft = Math.floor(rawLiters * 10) / 10;
+    
+    // Update display
+    document.getElementById('calc_current').textContent = currentWeight.toFixed(1);
+    document.getElementById('calc_empty').textContent = emptyWeight.toFixed(1);
+    document.getElementById('calc_result').textContent = Math.max(0, amountLeft).toFixed(1);
+    document.getElementById('weight_calc_display').style.display = 'block';
+    
+    // Update the amount_left_liters field automatically
+    document.getElementById('amount_left_liters').value = Math.max(0, amountLeft).toFixed(1);
+}
+
+// Use MQTT weight value from Plato button
+function useMQTTWeight() {
+    const platoButton = document.getElementById('plato_button');
+    const mqttWeight = platoButton.dataset.mqttWeight;
+    
+    if (mqttWeight && !platoButton.disabled) {
+        // Copy MQTT weight to input field
+        document.getElementById('current_weight_kg').value = parseFloat(mqttWeight).toFixed(1);
+        // Trigger calculation
+        calculateFromWeight();
+    } else {
+        alert('MQTT sensor offline or not configured.');
+    }
+}
+
+// Update Plato button with live MQTT data (will be called by WebSocket/MQTT client)
+function updatePlatoMqttWeight(weightKg, isOnline) {
+    const platoButton = document.getElementById('plato_button');
+    const statusSpan = platoButton.querySelector('.plato-status');
+    const weightSpan = platoButton.querySelector('.plato-weight');
+    
+    if (isOnline) {
+        platoButton.classList.add('online');
+        statusSpan.textContent = 'Online';
+        
+        if (weightKg !== null && weightKg !== undefined) {
+            // Has weight data - enable button
+            platoButton.disabled = false;
+            platoButton.dataset.mqttWeight = weightKg;
+            const formattedWeight = parseFloat(weightKg).toFixed(1).replace('.', ',');
+            weightSpan.textContent = formattedWeight + ' kg';
+        } else {
+            // Connected but no data yet
+            platoButton.disabled = true;
+            platoButton.dataset.mqttWeight = '';
+            weightSpan.textContent = '--,- kg';
+        }
+    } else {
+        // Offline
+        platoButton.classList.remove('online');
+        platoButton.disabled = true;
+        platoButton.dataset.mqttWeight = '';
+        statusSpan.textContent = 'Offline';
+        weightSpan.textContent = '--,- kg';
+    }
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    // If there's a current weight value, calculate immediately
+    const currentWeight = document.getElementById('current_weight_kg').value;
+    if (currentWeight) {
+        calculateFromWeight();
+    }
+    
+    // Poll for MQTT weight data every 2 seconds
+    const kegNumber = {{ keg.keg_number }};
+    
+    function updateMQTTWeight() {
+        fetch('/api/mqtt/weight/' + kegNumber)
+            .then(response => response.json())
+            .then(data => {
+                if (data.success && data.connected) {
+                    // MQTT is connected and has weight data
+                    updatePlatoMqttWeight(data.weight_kg, true);
+                } else if (data.connected) {
+                    // MQTT connected but no data yet
+                    updatePlatoMqttWeight(null, true);
+                } else {
+                    // MQTT offline
+                    updatePlatoMqttWeight(null, false);
+                }
+            })
+            .catch(error => {
+                console.error('Error fetching MQTT weight:', error);
+                updatePlatoMqttWeight(null, false);
+            });
+    }
+    
+    // Initial update
+    updateMQTTWeight();
+    
+    // Poll every 2 seconds
+    setInterval(updateMQTTWeight, 2000);
+});
+</script>
 
 {% endblock %}

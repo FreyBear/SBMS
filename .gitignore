@@ -56,3 +56,7 @@ Old_system/
 __pycache__/
 *.pyc
 *.pyo
+
+# Development plans (work in progress)
+WEIGHT_MQTT_PLAN.md
+*_PLAN.md

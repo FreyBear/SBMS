@@ -1,0 +1,467 @@
+{% extends "base.html" %}
+
+{% block title %}{{ _('Settings') }} - BROEN SBMS{% endblock %}
+
+{% block content %}
+<div class="settings-page">
+    <div class="page-header">
+        <h1>⚙️ {{ _('System Settings') }}</h1>
+    </div>
+
+    <!-- MQTT Configuration Section -->
+    <div class="settings-section">
+        <div class="section-header">
+            <h2>📡 {{ _('MQTT Broker Configuration') }}</h2>
+            <p class="section-description">{{ _('Configure MQTT broker for automatic weight sensor integration') }}</p>
+        </div>
+
+        <form method="POST" action="{{ url_for('settings') }}" class="settings-form">
+            <div class="form-grid">
+                <!-- Enable MQTT Toggle -->
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label class="toggle-label">
+                        <input type="checkbox" id="enabled" name="enabled" {% if config.enabled %}checked{% endif %}>
+                        <span class="toggle-slider"></span>
+                        <strong>{{ _('Enable MQTT Integration') }}</strong>
+                    </label>
+                    <small class="form-help">{{ _('Master switch to enable/disable all MQTT functionality') }}</small>
+                </div>
+
+                <!-- Broker Configuration -->
+                <div class="form-group">
+                    <label for="broker_host">{{ _('Broker Host') }}:</label>
+                    <input type="text" id="broker_host" name="broker_host" 
+                           value="{{ config.broker_host or '' }}" 
+                           placeholder="mqtt.example.com" required>
+                    <small class="form-help">{{ _('MQTT broker hostname or IP address') }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="broker_port">{{ _('Broker Port') }}:</label>
+                    <input type="number" id="broker_port" name="broker_port" 
+                           value="{{ config.broker_port or 1883 }}" 
+                           min="1" max="65535" required>
+                    <small class="form-help">{{ _('Default: 1883 (non-TLS) or 8883 (TLS)') }}</small>
+                </div>
+
+                <!-- Authentication -->
+                <div class="form-group">
+                    <label for="username">{{ _('Username') }}:</label>
+                    <input type="text" id="username" name="username" 
+                           value="{{ config.username or '' }}" 
+                           placeholder="{{ _('Leave empty if no auth required') }}">
+                </div>
+
+                <div class="form-group">
+                    <label for="password">{{ _('Password') }}:</label>
+                    <input type="password" id="password" name="password" 
+                           value="{{ config.password or '' }}" 
+                           placeholder="{{ _('••••••••') }}">
+                    <small class="form-help">{{ _('Password is stored encrypted') }}</small>
+                </div>
+
+                <!-- Security & Topics -->
+                <div class="form-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="use_tls" name="use_tls" {% if config.use_tls %}checked{% endif %}>
+                        <span>{{ _('Use TLS/SSL Encryption') }}</span>
+                    </label>
+                    <small class="form-help">{{ _('Recommended for production use') }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="topic_prefix">{{ _('Topic Prefix') }}:</label>
+                    <input type="text" id="topic_prefix" name="topic_prefix" 
+                           value="{{ config.topic_prefix or 'brewery' }}" 
+                           placeholder="brewery" required>
+                    <small class="form-help">{{ _('Sensor publishes to: {prefix}/keg/weight') }}</small>
+                </div>
+            </div>
+
+            <!-- Connection Status Display -->
+            <div class="connection-status" id="connection_status">
+                <div class="status-indicator">
+                    <span class="status-dot status-{{ 'online' if mqtt_connected else 'offline' }}"></span>
+                    <strong>{{ _('Status') }}:</strong>
+                    <span id="status_text">
+                        {% if mqtt_connected %}
+                            {{ _('Connected') }} ✓
+                        {% else %}
+                            {{ _('Disconnected') }}
+                        {% endif %}
+                    </span>
+                </div>
+                {% if mqtt_connected and config.enabled %}
+                <div class="status-details">
+                    <small>{{ _('Connected to') }}: {{ config.broker_host }}:{{ config.broker_port }}</small><br>
+                    <small>{{ _('Subscribed to') }}: <code>{{ config.topic_prefix }}/keg/weight</code></small>
+                </div>
+                {% elif config.enabled %}
+                <div class="status-details">
+                    <small style="color: #e67e22;">{{ _('Connecting...') }}</small>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Live Weight Data Monitor -->
+            {% if config.enabled %}
+            <div class="mqtt-monitor">
+                <h4>📊 {{ _('Latest Weight Reading') }}</h4>
+                <p class="monitor-help">
+                    {{ _('Shows the most recent weight measurement from your sensor') }}<br>
+                    <strong>{{ _('Topic') }}:</strong> <code>{{ config.topic_prefix }}/keg/weight</code><br>
+                    <strong>{{ _('Send value') }}:</strong> Just the weight in grams, e.g. <code>8123.12</code> or <code>12345,78</code>
+                </p>
+                <div id="weight_monitor" class="weight-monitor-display">
+                    <div class="monitor-empty">{{ _('No weight data received yet...') }}</div>
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Action Buttons -->
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="testConnection()">
+                    🔍 {{ _('Test Connection') }}
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    💾 {{ _('Save Settings') }}
+                </button>
+            </div>
+        </form>
+
+        <!-- Connection Test Result -->
+        <div id="test_result" class="test-result" style="display: none;">
+            <div class="alert" id="test_alert"></div>
+        </div>
+    </div>
+
+    <!-- Future Settings Sections -->
+    <div class="settings-placeholder">
+        <p style="color: #999; text-align: center; padding: 2rem;">
+            {{ _('Additional system settings will appear here') }}
+        </p>
+    </div>
+</div>
+
+<style>
+.settings-page {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+.settings-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.section-header {
+    margin-bottom: 2rem;
+    border-bottom: 2px solid #f0f0f0;
+    padding-bottom: 1rem;
+}
+
+.section-header h2 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.section-description {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.settings-form .form-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.toggle-label {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    cursor: pointer;
+}
+
+.toggle-label input[type="checkbox"] {
+    display: none;
+}
+
+.toggle-slider {
+    position: relative;
+    width: 50px;
+    height: 26px;
+    background: #ccc;
+    border-radius: 26px;
+    transition: background 0.3s;
+}
+
+.toggle-slider::before {
+    content: '';
+    position: absolute;
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    background: white;
+    top: 2px;
+    left: 2px;
+    transition: transform 0.3s;
+}
+
+.toggle-label input:checked + .toggle-slider {
+    background: #4caf50;
+}
+
+.toggle-label input:checked + .toggle-slider::before {
+    transform: translateX(24px);
+}
+
+.connection-status {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.status-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.status-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    display: inline-block;
+}
+
+.status-dot.status-online {
+    background: #4caf50;
+    box-shadow: 0 0 8px rgba(76, 175, 80, 0.5);
+}
+
+.status-dot.status-offline {
+    background: #999;
+}
+
+.status-details {
+    margin-top: 0.5rem;
+    padding-left: 1.7rem;
+    color: #666;
+}
+
+.test-result {
+    margin-top: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: auto;
+    margin: 0;
+}
+
+/* MQTT Monitor Styles */
+.mqtt-monitor {
+    background: #fff;
+    border: 2px solid #3498db;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.mqtt-monitor h4 {
+    margin: 0 0 0.5rem 0;
+    color: #2c3e50;
+}
+
+.monitor-help {
+    font-size: 0.9rem;
+    color: #666;
+    margin: 0.5rem 0 1rem 0;
+    line-height: 1.6;
+}
+
+.monitor-help code {
+    background: #f8f9fa;
+    padding: 2px 6px;
+    border-radius: 3px;
+    font-family: 'Courier New', monospace;
+    color: #2c3e50;
+}
+
+.weight-monitor-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.monitor-empty {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 2rem;
+    color: #999;
+    font-style: italic;
+}
+
+.weight-card {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border: 2px solid #4caf50;
+    border-radius: 8px;
+    padding: 1rem;
+    text-align: center;
+    transition: transform 0.2s;
+}
+
+.weight-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+}
+
+.weight-card-header {
+    font-size: 0.85rem;
+    color: #2e7d32;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.weight-card-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: #1b5e20;
+    margin: 0.5rem 0;
+}
+
+.weight-card-time {
+    font-size: 0.75rem;
+    color: #558b2f;
+    margin-top: 0.5rem;
+}
+
+@media (max-width: 768px) {
+    .settings-form .form-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .weight-monitor-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Test MQTT connection without saving
+async function testConnection() {
+    const testButton = event.target;
+    const originalText = testButton.innerHTML;
+    testButton.disabled = true;
+    testButton.innerHTML = '⏳ {{ _("Testing...") }}';
+
+    const formData = new FormData(document.querySelector('.settings-form'));
+    
+    try {
+        const response = await fetch('{{ url_for("test_mqtt_connection") }}', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        const testResult = document.getElementById('test_result');
+        const testAlert = document.getElementById('test_alert');
+        
+        testResult.style.display = 'block';
+        
+        if (result.success) {
+            testAlert.className = 'alert alert-success';
+            testAlert.innerHTML = '✓ ' + result.message;
+        } else {
+            testAlert.className = 'alert alert-error';
+            testAlert.innerHTML = '✗ ' + result.message;
+        }
+        
+        // Hide after 5 seconds
+        setTimeout(() => {
+            testResult.style.display = 'none';
+        }, 5000);
+        
+    } catch (error) {
+        const testResult = document.getElementById('test_result');
+        const testAlert = document.getElementById('test_alert');
+        testResult.style.display = 'block';
+        testAlert.className = 'alert alert-error';
+        testAlert.innerHTML = '✗ {{ _("Connection test failed") }}: ' + error.message;
+    }
+    
+    testButton.disabled = false;
+    testButton.innerHTML = originalText;
+}
+
+// Update connection status display
+function updateConnectionStatus() {
+    fetch('/api/mqtt/status')
+        .then(response => response.json())
+        .then(data => {
+            const statusDot = document.querySelector('.status-dot');
+            const statusText = document.getElementById('status_text');
+            
+            if (data.connected) {
+                statusDot.className = 'status-dot status-online';
+                statusText.innerHTML = '{{ _("Connected") }} ✓';
+            } else {
+                statusDot.className = 'status-dot status-offline';
+                statusText.textContent = '{{ _("Disconnected") }}';
+            }
+            
+            // Update weight monitor
+            updateWeightMonitor(data.weight);
+        })
+        .catch(error => {
+            console.error('Error fetching MQTT status:', error);
+        });
+}
+
+// Update weight monitor display
+function updateWeightMonitor(weight) {
+    const monitor = document.getElementById('weight_monitor');
+    if (!monitor) return;
+    
+    if (!weight) {
+        monitor.innerHTML = '<div class="monitor-empty">{{ _("No weight data received yet...") }}</div>';
+        return;
+    }
+    
+    // Display single weight reading
+    const weightKg = parseFloat(weight.weight_kg).toFixed(1).replace('.', ',');
+    const timestamp = new Date(weight.timestamp);
+    const timeStr = timestamp.toLocaleTimeString('no-NO');
+    
+    monitor.innerHTML = `
+        <div class="weight-card">
+            <div class="weight-card-value" style="font-size: 2.5rem;">${weightKg} kg</div>
+            <div class="weight-card-time">{{ _("Received") }}: ${timeStr}</div>
+        </div>
+    `;
+}
+
+// Poll status every 3 seconds
+document.addEventListener('DOMContentLoaded', function() {
+    updateConnectionStatus();
+    setInterval(updateConnectionStatus, 3000);
+});
+</script>
+
+{% endblock %}
