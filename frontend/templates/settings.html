@@ -107,7 +107,7 @@
             {% if config.enabled %}
             <div class="mqtt-monitor">
                 <h4>📊 {{ _('Latest Weight Reading') }}</h4>
-                <p class="monitor-help">
+                <p class="monitor-help" id="weight_help">
                     {{ _('Shows the most recent weight measurement from your sensor') }}<br>
                     <strong>{{ _('Topic') }}:</strong> <code>{{ config.topic_prefix }}/keg/weight</code><br>
                     <strong>{{ _('Send value') }}:</strong> Just the weight in grams, e.g. <code>8123.12</code> or <code>12345,78</code>
@@ -412,18 +412,59 @@ async function testConnection() {
 
 // Update connection status display
 function updateConnectionStatus() {
-    fetch('/api/mqtt/status')
+    // Add cache-busting parameter to prevent browser caching
+    fetch('/api/mqtt/status?' + new Date().getTime())
         .then(response => response.json())
         .then(data => {
             const statusDot = document.querySelector('.status-dot');
             const statusText = document.getElementById('status_text');
+            const statusIndicator = document.querySelector('.status-indicator');
+            const existingDetails = document.querySelector('.connection-status .status-details');
+            
+            // If MQTT is disabled, show disconnected without "Connecting..."
+            if (data.enabled === false) {
+                statusDot.className = 'status-dot status-offline';
+                statusText.textContent = '{{ _("Disconnected") }}';
+                // Remove any status details
+                if (existingDetails) {
+                    existingDetails.remove();
+                }
+                // Update weight monitor to show no data
+                updateWeightMonitor(null);
+                return;
+            }
             
             if (data.connected) {
                 statusDot.className = 'status-dot status-online';
                 statusText.innerHTML = '{{ _("Connected") }} ✓';
+                
+                // Update or create status details when connected
+                if (!existingDetails || existingDetails.textContent.includes('Connecting')) {
+                    // Remove old "Connecting..." message if it exists
+                    if (existingDetails) {
+                        existingDetails.remove();
+                    }
+                    // Add connected details
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'status-details';
+                    detailsDiv.innerHTML = '<small>{{ _("Connected to") }}: {{ config.broker_host }}:{{ config.broker_port }}</small><br>' +
+                                          '<small>{{ _("Subscribed to") }}: <code>{{ config.topic_prefix }}/keg/weight</code></small>';
+                    statusIndicator.parentElement.appendChild(detailsDiv);
+                }
             } else {
                 statusDot.className = 'status-dot status-offline';
                 statusText.textContent = '{{ _("Disconnected") }}';
+                
+                // Show "Connecting..." message when disconnected but enabled
+                if (!existingDetails || !existingDetails.textContent.includes('Connecting')) {
+                    if (existingDetails) {
+                        existingDetails.remove();
+                    }
+                    const detailsDiv = document.createElement('div');
+                    detailsDiv.className = 'status-details';
+                    detailsDiv.innerHTML = '<small style="color: #e67e22;">{{ _("Connecting...") }}</small>';
+                    statusIndicator.parentElement.appendChild(detailsDiv);
+                }
             }
             
             // Update weight monitor
@@ -431,18 +472,31 @@ function updateConnectionStatus() {
         })
         .catch(error => {
             console.error('Error fetching MQTT status:', error);
+            // On error, show as disconnected
+            const statusDot = document.querySelector('.status-dot');
+            const statusText = document.getElementById('status_text');
+            if (statusDot && statusText) {
+                statusDot.className = 'status-dot status-offline';
+                statusText.textContent = '{{ _("Disconnected") }}';
+            }
         });
 }
 
 // Update weight monitor display
 function updateWeightMonitor(weight) {
     const monitor = document.getElementById('weight_monitor');
+    const helpText = document.getElementById('weight_help');
     if (!monitor) return;
     
     if (!weight) {
         monitor.innerHTML = '<div class="monitor-empty">{{ _("No weight data received yet...") }}</div>';
+        // Show help text when no data
+        if (helpText) helpText.style.display = 'block';
         return;
     }
+    
+    // Hide help text when we have data
+    if (helpText) helpText.style.display = 'none';
     
     // Display single weight reading
     const weightKg = parseFloat(weight.weight_kg).toFixed(1).replace('.', ',');

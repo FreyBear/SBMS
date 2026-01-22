@@ -111,6 +111,20 @@ def get_db_connection():
 # Initialize MQTT Handler (after get_db_connection is defined)
 mqtt_handler = MQTTHandler(get_db_connection)
 
+# Load MQTT config for all workers (needed for is_connected() checks)
+# Only the worker with the lock will actually start the MQTT client
+try:
+    conn = get_db_connection()
+    if conn:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT * FROM mqtt_config LIMIT 1")
+            mqtt_config = cur.fetchone()
+            if mqtt_config:
+                mqtt_handler.config = dict(mqtt_config)
+        conn.close()
+except Exception as e:
+    print(f"⚠️  Could not load MQTT config: {e}")
+
 @app.before_request
 def force_https():
     """Handle HTTPS redirects when behind reverse proxy"""
@@ -481,10 +495,12 @@ def add_keg():
                 (keg_number, volume_liters, keg_size_liters, empty_weight_kg, 
                  status, location, notes, historical, amount_left_liters, last_measured)
                 VALUES (%s, %s, %s, %s, 'Available/Cleaned', %s, %s, false, 0, CURRENT_DATE)
-                RETURNING id
+                RETURNING id, keg_number
             """, (keg_number, volume_liters, keg_size_liters, empty_weight_kg, location, notes))
             
-            keg_id = cur.fetchone()[0]
+            result = cur.fetchone()
+            keg_id = result[0]
+            keg_number_returned = result[1]
             
             # Create initial history entry
             cur.execute("""
@@ -495,7 +511,7 @@ def add_keg():
             
             conn.commit()
             flash(_('Keg #%(num)s added successfully', num=keg_number), 'success')
-            return redirect(url_for('keg_detail', keg_id=keg_id))
+            return redirect(url_for('keg_detail', keg_number=keg_number_returned))
             
     except (psycopg2.Error, ValueError) as e:
         conn.rollback()
@@ -504,9 +520,9 @@ def add_keg():
     finally:
         conn.close()
 
-@app.route('/keg/<int:keg_id>')
+@app.route('/keg/<keg_number>')
 @require_permission('kegs', 'view')
-def keg_detail(keg_id):
+def keg_detail(keg_number):
     """View individual keg details"""
     conn = get_db_connection()
     if not conn:
@@ -521,8 +537,8 @@ def keg_detail(keg_id):
                 FROM keg k
                 LEFT JOIN brew b ON k.brew_id = b.id
                 LEFT JOIN recipe r ON b.recipe_id = r.id
-                WHERE k.id = %s
-            """, (keg_id,))
+                WHERE k.keg_number = %s
+            """, (keg_number,))
             keg = cur.fetchone()
             
             if keg:  # Only get history if keg exists
@@ -531,7 +547,7 @@ def keg_detail(keg_id):
                     SELECT * FROM keg_history 
                     WHERE keg_id = %s 
                     ORDER BY recorded_date DESC, created_timestamp DESC
-                """, (keg_id,))
+                """, (keg['id'],))
                 keg_history = cur.fetchall()
     except psycopg2.Error as e:
         flash(f'Database error: {e}', 'error')
@@ -546,9 +562,9 @@ def keg_detail(keg_id):
     
     return render_template('keg_detail.html', keg=keg, keg_history=keg_history)
 
-@app.route('/keg/<int:keg_id>/update', methods=['GET', 'POST'])
+@app.route('/keg/<keg_number>/update', methods=['GET', 'POST'])
 @require_permission('kegs', 'edit')
-def update_keg(keg_id):
+def update_keg(keg_number):
     """Update keg information and create history entry"""
     conn = get_db_connection()
     if not conn:
@@ -558,7 +574,7 @@ def update_keg(keg_id):
     if request.method == 'GET':
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM keg WHERE id = %s", (keg_id,))
+                cur.execute("SELECT * FROM keg WHERE keg_number = %s", (keg_number,))
                 keg = cur.fetchone()
                 
                 # Get all brews for dropdown
@@ -608,14 +624,15 @@ def update_keg(keg_id):
                 current_weight_kg = float(current_weight_kg)
                 
                 # Get empty weight from database
-                cur.execute("SELECT empty_weight_kg FROM keg WHERE id = %s", (keg_id,))
+                cur.execute("SELECT id, empty_weight_kg FROM keg WHERE keg_number = %s", (keg_number,))
                 result = cur.fetchone()
-                empty_weight = result[0] if result else None
+                keg_id = result[0] if result else None
+                empty_weight = float(result[1]) if result and result[1] is not None else None
                 
                 if empty_weight is None:
                     flash('Empty weight not configured for this keg', 'error')
                     conn.close()
-                    return redirect(url_for('update_keg', keg_id=keg_id))
+                    return redirect(url_for('update_keg', keg_number=keg_number))
                 
                 # Calculate amount left with floor rounding to 0.1
                 raw_liters = current_weight_kg - empty_weight
@@ -626,6 +643,15 @@ def update_keg(keg_id):
                 # No weight entered - use manual amount_left_liters
                 current_weight_kg = None
                 amount_left_liters = float(request.form['amount_left_liters']) if request.form['amount_left_liters'] else 0
+            
+            # Get keg_id for history entry
+            cur.execute("SELECT id FROM keg WHERE keg_number = %s", (keg_number,))
+            result = cur.fetchone()
+            if not result:
+                flash('Keg not found', 'error')
+                conn.close()
+                return redirect(url_for('kegs'))
+            keg_id = result[0]
             
             # Update the main keg record with latest values
             cur.execute("""
@@ -640,7 +666,7 @@ def update_keg(keg_id):
                     gluten_free = %s,
                     notes = %s,
                     last_measured = %s
-                WHERE id = %s
+                WHERE keg_number = %s
             """, (
                 request.form['contents'],
                 request.form['status'],
@@ -652,7 +678,7 @@ def update_keg(keg_id):
                 gluten_free,
                 request.form['notes'],
                 update_date,
-                keg_id
+                keg_number
             ))
             
             # Create a history entry for this update
@@ -679,7 +705,7 @@ def update_keg(keg_id):
     finally:
         conn.close()
     
-    return redirect(url_for('keg_detail', keg_id=keg_id))
+    return redirect(url_for('keg_detail', keg_number=keg_number))
 
 @app.route('/kegs/bulk_mark_cleaned', methods=['POST'])
 @require_permission('kegs', 'edit')
@@ -831,9 +857,9 @@ def bulk_mark_empty():
     
     return redirect(url_for('kegs'))
 
-@app.route('/keg/<int:keg_id>/delete', methods=['POST'])
+@app.route('/keg/<keg_number>/delete', methods=['POST'])
 @require_permission('kegs', 'edit')
-def delete_keg(keg_id):
+def delete_keg(keg_number):
     """Soft-delete a keg by marking it as historical - Admin only"""
     # Only admins can delete kegs
     if current_user.role_name != 'admin':
@@ -848,7 +874,7 @@ def delete_keg(keg_id):
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Get keg info before marking as historical
-            cur.execute("SELECT keg_number, historical FROM keg WHERE id = %s", (keg_id,))
+            cur.execute("SELECT id, keg_number, historical FROM keg WHERE keg_number = %s", (keg_number,))
             keg = cur.fetchone()
             
             if not keg:
@@ -859,6 +885,8 @@ def delete_keg(keg_id):
                 flash(_('Keg is already marked as historical'), 'error')
                 return redirect(url_for('kegs'))
             
+            keg_id = keg['id']
+            
             # Mark keg as historical (soft delete)
             cur.execute("""
                 UPDATE keg 
@@ -867,16 +895,16 @@ def delete_keg(keg_id):
                         WHEN notes IS NULL OR notes = '' THEN 'Marked as historical'
                         ELSE notes || ' - Marked as historical'
                     END
-                WHERE id = %s
-            """, (keg_id,))
+                WHERE keg_number = %s
+            """, (keg_number,))
             
             # Create history entry
             cur.execute("""
                 INSERT INTO keg_history 
                 (keg_id, recorded_date, status, amount_left_liters, location, arrangement, notes)
                 SELECT id, CURRENT_DATE, status, amount_left_liters, location, 'Keg marked as historical', 'Removed from active inventory'
-                FROM keg WHERE id = %s
-            """, (keg_id,))
+                FROM keg WHERE keg_number = %s
+            """, (keg_number,))
             
             conn.commit()
             flash(_('Keg #%(num)s marked as historical', num=keg['keg_number']), 'success')
@@ -889,44 +917,62 @@ def delete_keg(keg_id):
     
     return redirect(url_for('kegs'))
 
-@app.route('/keg/<int:keg_id>/history/<int:history_id>/edit', methods=['GET', 'POST'])
+@app.route('/keg/<keg_number>/history/<int:history_id>/edit', methods=['GET', 'POST'])
 @require_permission('kegs', 'edit')
-def edit_keg_history(keg_id, history_id):
+def edit_keg_history(keg_number, history_id):
     """Edit keg history entry - Admin only"""
     # Only admins can edit/delete history entries
     if current_user.role_name != 'admin':
         flash(_('Only administrators can edit or delete history entries'), 'error')
-        return redirect(url_for('keg_detail', keg_id=keg_id))
+        return redirect(url_for('keg_detail', keg_number=keg_number))
     
     conn = get_db_connection()
     if not conn:
         flash('Database connection error', 'error')
-        return redirect(url_for('keg_detail', keg_id=keg_id))
+        return redirect(url_for('keg_detail', keg_number=keg_number))
     
     if request.method == 'GET':
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # Get keg info
-                cur.execute("SELECT * FROM keg WHERE id = %s", (keg_id,))
+                cur.execute("SELECT * FROM keg WHERE keg_number = %s", (keg_number,))
                 keg = cur.fetchone()
                 
                 # Get history entry
-                cur.execute("SELECT * FROM keg_history WHERE id = %s AND keg_id = %s", (history_id, keg_id))
-                history_entry = cur.fetchone()
+                if keg:
+                    cur.execute("SELECT * FROM keg_history WHERE id = %s AND keg_id = %s", (history_id, keg['id']))
+                    history_entry = cur.fetchone()
+                else:
+                    history_entry = None
                 
         except psycopg2.Error as e:
             flash(f'Database error: {e}', 'error')
-            return redirect(url_for('keg_detail', keg_id=keg_id))
+            return redirect(url_for('keg_detail', keg_number=keg_number))
         finally:
             conn.close()
         
         if not keg or not history_entry:
             flash('Keg or history entry not found', 'error')
-            return redirect(url_for('keg_detail', keg_id=keg_id))
+            return redirect(url_for('keg_detail', keg_number=keg_number))
         
         return render_template('edit_keg_history.html', keg=keg, history_entry=history_entry)
     
     # POST request - update or delete history entry
+    # Get keg_id first
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id FROM keg WHERE keg_number = %s", (keg_number,))
+            keg = cur.fetchone()
+            if not keg:
+                flash('Keg not found', 'error')
+                conn.close()
+                return redirect(url_for('kegs'))
+            keg_id = keg['id']
+    except psycopg2.Error as e:
+        flash(f'Database error: {e}', 'error')
+        conn.close()
+        return redirect(url_for('kegs'))
+    
     if 'delete' in request.form:
         # Delete the history entry
         try:
@@ -1000,7 +1046,7 @@ def edit_keg_history(keg_id, history_id):
         finally:
             conn.close()
     
-    return redirect(url_for('keg_detail', keg_id=keg_id))
+    return redirect(url_for('keg_detail', keg_number=keg_number))
 
 # ============================================================================
 # BOTTLE BATCH ROUTES
@@ -4514,15 +4560,30 @@ def get_mqtt_weight(keg_number):
 @login_required
 def get_mqtt_status():
     """Get MQTT connection status and latest weight"""
-    # If MQTT is disabled, return disconnected
-    if not mqtt_handler.config.get('enabled', False):
+    # Check enabled status from database (most up-to-date)
+    enabled = False
+    try:
+        conn = get_db_connection()
+        if conn:
+            with conn.cursor() as cur:
+                cur.execute("SELECT enabled FROM mqtt_config LIMIT 1")
+                result = cur.fetchone()
+                if result:
+                    enabled = result[0]
+            conn.close()
+    except Exception:
+        pass
+    
+    if not enabled:
         return jsonify({
             'connected': False,
+            'enabled': False,
             'weight': None
         })
     
     return jsonify({
         'connected': mqtt_handler.is_connected(),
+        'enabled': True,
         'weight': mqtt_handler.get_latest_weight()
     })
 

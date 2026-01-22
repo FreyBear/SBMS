@@ -113,7 +113,7 @@
                 <td>
                     <input type="checkbox" class="keg-checkbox" value="{{ keg.id }}" data-keg-number="{{ keg.keg_number }}">
                 </td>
-                <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
+                <td><a href="{{ url_for('keg_detail', keg_number=keg.keg_number) }}">{{ keg.keg_number }}</a></td>
                 <td>{{ keg.volume_liters }}L</td>
                 <td>
                     {{ keg.contents or 'Empty' }}
@@ -129,8 +129,8 @@
                 <td>{{ keg.location or 'Unknown' }}</td>
                 <td>{{ keg.last_measured.strftime('%d-%m-%Y') if keg.last_measured else 'Never' }}</td>
                 <td>
-                    <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-info btn-sm">{{ _('View') }}</a>
-                    <a href="{{ url_for('update_keg', keg_id=keg.id) }}" class="btn btn-warning btn-sm">{{ _('Update') }}</a>
+                    <a href="{{ url_for('keg_detail', keg_number=keg.keg_number) }}" class="btn btn-info btn-sm">{{ _('View') }}</a>
+                    <a href="{{ url_for('update_keg', keg_number=keg.keg_number) }}" class="btn btn-warning btn-sm">{{ _('Update') }}</a>
                     {% if current_user.role_name == 'admin' %}
                     <button onclick="confirmDeleteKeg({{ keg.id }}, '{{ keg.keg_number }}')" class="btn btn-danger btn-sm">{{ _('Delete') }}</button>
                     {% endif %}
@@ -592,7 +592,7 @@ document.addEventListener('DOMContentLoaded', function() {
     // === Delete Keg Modal Functions ===
     window.confirmDeleteKeg = function(kegId, kegNumber) {
         document.getElementById('delete-keg-number').textContent = kegNumber;
-        document.getElementById('delete-keg-form').action = '/keg/' + kegId + '/delete';
+        document.getElementById('delete-keg-form').action = '/keg/' + kegNumber + '/delete';
         document.getElementById('deleteKegModal').style.display = 'flex';
     };
     

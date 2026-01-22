@@ -25,6 +25,10 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
   - Volume and content tracking
   - **Brew Linking**: Connect kegs to source brews with automatic ABV and gluten-free info
   - **Searchable Brew Selection**: Modal interface for easy brew selection with filtering
+  - **MQTT Weight Integration**: Automatic keg weight monitoring via MQTT broker
+    - Real-time weight updates from sensors (e.g., PLAATO Keg)
+    - Automatic calculation of remaining beer volume
+    - Live status monitoring in Settings page
   - Cleaning schedules and maintenance logs
   - Keg history with detailed tracking of usage patterns
 
@@ -63,6 +67,7 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 **Backend**: Python Flask with Gunicorn production WSGI server  
 **Database**: PostgreSQL with full ACID compliance and advanced data types  
 **Frontend**: Server-side rendered HTML templates with Jinja2 and modern CSS  
+**IoT Integration**: MQTT client (Paho) for real-time sensor data from weight sensors  
 **File Management**: Secure file upload and storage for expense receipts  
 **Internationalization**: Flask-Babel for multi-language support  
 **Authentication**: Flask-Login with role-based access control  
@@ -76,6 +81,7 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
   - Flask-Login (authentication)
   - Flask-Babel (internationalization)
   - psycopg2-binary 2.9.7 (PostgreSQL adapter)
+  - paho-mqtt 1.6.1 (MQTT client for IoT sensors)
   - python-dotenv 1.0.0 (environment management)
   - bcrypt (password hashing)
   - WTForms (form handling and validation)
@@ -174,6 +180,7 @@ When you clone and start SBMS, you get a **complete brewery management system** 
 ✅ **Default Admin Account**: Immediate access with `admin`/`admin123`  
 ✅ **All User Roles**: Pre-configured permission system for 5 user types  
 ✅ **Expense Management**: Full workflow from submission to reimbursement  
+✅ **MQTT Integration**: Real-time weight monitoring from IoT sensors (PLAATO Keg, etc.)  
 ✅ **Multi-language Support**: English and Norwegian interfaces  
 ✅ **File Upload System**: Secure receipt storage for expense management  
 ✅ **Sample Data**: Example recipes, brews, and keg configurations  

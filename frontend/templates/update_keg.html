@@ -7,7 +7,7 @@
     <div class="page-header">
         <h1>Update Keg #{{ keg.keg_number }}</h1>
         <div class="actions">
-            <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">Cancel</a>
+            <a href="{{ url_for('keg_detail', keg_number=keg.keg_number) }}" class="btn btn-secondary">Cancel</a>
         </div>
     </div>
 
@@ -141,7 +141,7 @@
             <button type="submit" class="btn btn-primary">
                 💾 {{ _('Update Keg') }}
             </button>
-            <a href="{{ url_for('keg_detail', keg_id=keg.id) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
+            <a href="{{ url_for('keg_detail', keg_number=keg.keg_number) }}" class="btn btn-secondary">{{ _('Cancel') }}</a>
         </div>
     </form>
 </div>

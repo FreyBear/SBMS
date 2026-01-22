@@ -96,11 +96,11 @@ class MQTTHandler:
         logger.info("Stopping MQTT client...")
         self.should_run = False
         
-        # Clear weight cache
+        # Clear weight cache from memory
         with self.lock:
             self.latest_weight = None
         
-        # Clear weight from database
+        # Clear weight and connection status from database immediately
         self._clear_weight_from_db()
         
         if self.client:
@@ -159,7 +159,7 @@ class MQTTHandler:
             self.client.tls_set()
         
         # Connect to broker
-        logger.info(f"Connecting to MQTT broker: {broker_host}:{broker_port} (ID: {self.client_id})")
+        logger.info(f"Connecting to MQTT broker {broker_host}:{broker_port} (ID: {self.client_id})")
         try:
             self.client.connect(broker_host, broker_port, keepalive=60)
         except Exception as e:
@@ -168,61 +168,77 @@ class MQTTHandler:
         
         # Start network loop in background (non-blocking, handles reconnections)
         self.client.loop_start()
+        logger.info("🔄 MQTT network loop started (Paho background thread)")
         
         # Keep thread alive while should_run is True
-        logger.info("MQTT network loop started")
+        connection_logged = False
+        heartbeat_counter = 0
         while self.should_run:
+            if self.connected and not connection_logged:
+                logger.info(f"✅ MQTT fully connected and ready")
+                connection_logged = True
+            elif not self.connected and connection_logged:
+                logger.warning(f"⚠️ MQTT connection lost")
+                connection_logged = False
+            
+            # Send heartbeat to database every 30 seconds to maintain connection status
+            heartbeat_counter += 1
+            if self.connected and heartbeat_counter >= 30:
+                self._update_connection_status(True)
+                heartbeat_counter = 0
+            
             time.sleep(1)
         
         # Clean shutdown
-        logger.info("MQTT loop ending...")
+        logger.info("🛑 MQTT loop ending, stopping network loop...")
     
     def _on_connect(self, client, userdata, flags, rc):
         """Callback when connected to broker"""
         if rc == 0:
             self.connected = True
-            print(f"[MQTT] ✅ _on_connect: self.connected set to TRUE (rc=0)", flush=True)
-            logger.info("✓ Connected to MQTT broker")
+            logger.info("Connected to MQTT broker")
+            
+            # Update connection status in database for cross-worker visibility
+            self._update_connection_status(True)
             
             # Subscribe to weight topic after connection
             topic_prefix = self.config.get('topic_prefix', 'brewery')
             topic = f"{topic_prefix}/keg/weight"
-            client.subscribe(topic)
-            logger.info(f"✓ Subscribed to topic: {topic}")
+            result, mid = client.subscribe(topic)
+            logger.info(f"Subscribed to topic: {topic}")
+            if result != 0:
+                logger.error(f"Subscription failed with code: {result}")
         else:
             self.connected = False
-            print(f"[MQTT] ❌ _on_connect: self.connected set to FALSE (rc={rc})", flush=True)
             error_messages = {
-                1: "Connection refused - incorrect protocol version",
-                2: "Connection refused - invalid client identifier",
-                3: "Connection refused - server unavailable",
-                4: "Connection refused - bad username or password",
-                5: "Connection refused - not authorized"
+                1: "Incorrect protocol version",
+                2: "Invalid client identifier",
+                3: "Server unavailable",
+                4: "Bad username or password",
+                5: "Not authorized"
             }
-            logger.error(f"✗ Connection failed: {error_messages.get(rc, f'Unknown error {rc}')}")
+            logger.error(f"Connection failed: {error_messages.get(rc, f'Unknown error {rc}')}")
     
     def _on_disconnect(self, client, userdata, rc):
         """Callback when disconnected from broker"""
         self.connected = False
-        print(f"[MQTT] 🔴 _on_disconnect: self.connected set to FALSE (rc={rc})", flush=True)
+        self._update_connection_status(False)
         if rc != 0:
-            logger.warning(f"Disconnected (code {rc}), auto-reconnecting...")
+            logger.warning(f"Disconnected unexpectedly (code {rc}), auto-reconnecting...")
         else:
             logger.info("Disconnected from MQTT broker")
     
     def _on_message(self, client, userdata, msg):
         """Callback when message received"""
         try:
-            logger.info(f"📩 Received message on topic: {msg.topic}")
-            
             # Parse message payload - expect plain number (grams)
             try:
                 payload_str = msg.payload.decode('utf-8').strip()
                 # Replace comma with dot for European decimal format
                 payload_str = payload_str.replace(',', '.')
                 weight_grams = float(payload_str)
-            except ValueError:
-                logger.warning(f"Invalid payload format: {msg.payload}")
+            except ValueError as e:
+                logger.warning(f"Invalid payload on {msg.topic}: {msg.payload}")
                 return
             
             # Convert grams to kg and round to 0.1 kg precision
@@ -236,7 +252,7 @@ class MQTTHandler:
                     'timestamp': timestamp
                 }
             
-            logger.info(f"📊 Weight received: {weight_kg} kg ({weight_grams} g)")
+            logger.info(f"Weight received: {weight_kg} kg")
             
             # Save to database for cross-worker access
             self._save_weight_to_db(weight_kg, timestamp)
@@ -249,6 +265,7 @@ class MQTTHandler:
         try:
             conn = self.db_connection_func()
             if not conn:
+                logger.error("Failed to get database connection")
                 return
             
             with conn.cursor() as cur:
@@ -262,10 +279,9 @@ class MQTTHandler:
                 """, (weight_kg, timestamp))
                 conn.commit()
         except Exception as e:
-            logger.debug(f"DB cache update failed (non-critical): {e}")
+            logger.error(f"DB cache update failed: {e}")
         finally:
             if conn:
-                conn.close()
                 conn.close()
     
     def _clear_weight_from_db(self):
@@ -281,6 +297,32 @@ class MQTTHandler:
                 logger.info("Cleared weight cache from database")
         except Exception as e:
             logger.debug(f"DB cache clear failed (non-critical): {e}")
+        finally:
+            if conn:
+                conn.close()
+    
+    def _update_connection_status(self, is_connected):
+        """Update connection status in database for cross-worker visibility"""
+        try:
+            conn = self.db_connection_func()
+            if not conn:
+                return
+            
+            with conn.cursor() as cur:
+                if is_connected:
+                    # Create or update entry with current timestamp
+                    cur.execute("""
+                        INSERT INTO mqtt_live_weight (id, weight_kg, timestamp, updated_at)
+                        VALUES (TRUE, 0.0, CURRENT_TIMESTAMP, CURRENT_TIMESTAMP)
+                        ON CONFLICT (id) DO UPDATE
+                        SET updated_at = CURRENT_TIMESTAMP
+                    """)
+                else:
+                    # Delete entry when disconnected
+                    cur.execute("DELETE FROM mqtt_live_weight")
+                conn.commit()
+        except Exception as e:
+            logger.debug(f"Connection status update failed (non-critical): {e}")
         finally:
             if conn:
                 conn.close()
@@ -309,30 +351,36 @@ class MQTTHandler:
             return self.latest_weight
     
     def is_connected(self):
-        """Check if MQTT client is connected (works across all workers)"""
-        # For workers that aren't running MQTT, check if we have recent data in the cache
-        if not self.thread or not self.thread.is_alive():
-            # This worker isn't running MQTT, check database cache for recent data
-            try:
-                conn = self.db_connection_func()
-                if conn:
-                    with conn.cursor() as cur:
-                        # Check if we have data updated within last 10 seconds
-                        cur.execute("""
-                            SELECT updated_at > (NOW() - INTERVAL '10 seconds') as is_recent
-                            FROM mqtt_live_weight
-                            LIMIT 1
-                        """)
-                        result = cur.fetchone()
+        """Check if MQTT client is connected - check database for cross-worker consistency"""
+        # Always check latest config from database for enabled status
+        try:
+            conn = self.db_connection_func()
+            if conn:
+                with conn.cursor() as cur:
+                    # Check if MQTT is enabled in database
+                    cur.execute("SELECT enabled FROM mqtt_config LIMIT 1")
+                    result = cur.fetchone()
+                    if not result or not result[0]:
                         conn.close()
-                        
-                        if result and result[0]:
-                            return True  # Recent data means MQTT is connected
-            except Exception:
-                pass
+                        return False  # MQTT is disabled
+                    
+                    # Connection is active if database was updated within last 90 seconds
+                    cur.execute("""
+                        SELECT EXISTS(
+                            SELECT 1 FROM mqtt_live_weight 
+                            WHERE updated_at > (NOW() - INTERVAL '90 seconds')
+                        )
+                    """)
+                    result = cur.fetchone()
+                    conn.close()
+                    return bool(result and result[0])
+        except Exception as e:
+            logger.debug(f"is_connected DB check failed: {e}")
+            # Fallback: if we're the MQTT worker, use our direct knowledge
+            if self.thread and self.thread.is_alive():
+                return self.connected and self.config.get('enabled', False)
         
-        # For the MQTT worker, return the actual connection state
-        return self.connected
+        return False
     
     @staticmethod
     def test_connection(broker_host, broker_port, username=None, password=None, use_tls=False, timeout=10):

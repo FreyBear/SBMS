@@ -251,7 +251,7 @@
             <tbody>
                 {% for keg in recent_kegs %}
                 <tr>
-                    <td><a href="{{ url_for('keg_detail', keg_id=keg.id) }}">{{ keg.keg_number }}</a></td>
+                    <td><a href="{{ url_for('keg_detail', keg_number=keg.keg_number) }}">{{ keg.keg_number }}</a></td>
                     <td>{{ keg.contents or 'Empty'|translate_status }}</td>
                     <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status|translate_status }}</span></td>
                     <td>{{ "%.1f"|format(keg.amount_left_liters) }}L</td>
