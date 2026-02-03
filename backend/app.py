@@ -4398,6 +4398,7 @@ def settings():
                 password = request.form.get('password', '')
                 use_tls = request.form.get('use_tls') == 'on'
                 topic_prefix = request.form['topic_prefix']
+                plaato_keg_id = request.form.get('plaato_keg_id', '').strip() or None
                 
                 if config_id:
                     # Update existing config
@@ -4411,11 +4412,12 @@ def settings():
                                 password = %s,
                                 use_tls = %s,
                                 topic_prefix = %s,
+                                plaato_keg_id = %s,
                                 enabled = %s,
                                 updated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
                         """, (broker_host, broker_port, username, password, use_tls, 
-                              topic_prefix, enabled, config_id[0]))
+                              topic_prefix, plaato_keg_id, enabled, config_id[0]))
                     else:
                         cur.execute("""
                             UPDATE mqtt_config SET
@@ -4424,19 +4426,20 @@ def settings():
                                 username = %s,
                                 use_tls = %s,
                                 topic_prefix = %s,
+                                plaato_keg_id = %s,
                                 enabled = %s,
                                 updated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
                         """, (broker_host, broker_port, username, use_tls, 
-                              topic_prefix, enabled, config_id[0]))
+                              topic_prefix, plaato_keg_id, enabled, config_id[0]))
                 else:
                     # Insert new config
                     cur.execute("""
                         INSERT INTO mqtt_config 
-                        (broker_host, broker_port, username, password, use_tls, topic_prefix, enabled)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        (broker_host, broker_port, username, password, use_tls, topic_prefix, plaato_keg_id, enabled)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
                     """, (broker_host, broker_port, username, password, use_tls, 
-                          topic_prefix, enabled))
+                          topic_prefix, plaato_keg_id, enabled))
                 
                 conn.commit()
                 flash(_('Settings saved successfully'), 'success')
@@ -4449,6 +4452,7 @@ def settings():
                     'password': password if password else None,
                     'use_tls': use_tls,
                     'topic_prefix': topic_prefix,
+                    'plaato_keg_id': plaato_keg_id,
                     'enabled': enabled
                 }
                 mqtt_handler.update_config(new_config)
@@ -4474,7 +4478,8 @@ def settings():
                     'username': '',
                     'password': '',
                     'use_tls': False,
-                    'topic_prefix': 'brewery',
+                    'topic_prefix': 'plaato',
+                    'plaato_keg_id': '',
                     'enabled': False
                 }
     except psycopg2.Error as e:

@@ -4,6 +4,7 @@ Handles connection to MQTT broker and processes weight updates from keg sensors
 """
 
 import json
+import math
 import threading
 import time
 import logging
@@ -201,11 +202,17 @@ class MQTTHandler:
             # Update connection status in database for cross-worker visibility
             self._update_connection_status(True)
             
-            # Subscribe to weight topic after connection
-            topic_prefix = self.config.get('topic_prefix', 'brewery')
-            topic = f"{topic_prefix}/keg/weight"
+            # Subscribe to Plaato keg topic after connection
+            topic_prefix = self.config.get('topic_prefix', 'plaato')
+            plaato_keg_id = self.config.get('plaato_keg_id')
+            
+            if not plaato_keg_id:
+                logger.warning("⚠️ No Plaato Keg ID configured - cannot subscribe to topic")
+                return
+            
+            topic = f"{topic_prefix}/keg/{plaato_keg_id}"
             result, mid = client.subscribe(topic)
-            logger.info(f"Subscribed to topic: {topic}")
+            logger.info(f"📡 Subscribed to Plaato topic: {topic}")
             if result != 0:
                 logger.error(f"Subscription failed with code: {result}")
         else:
@@ -229,20 +236,33 @@ class MQTTHandler:
             logger.info("Disconnected from MQTT broker")
     
     def _on_message(self, client, userdata, msg):
-        """Callback when message received"""
+        """Callback when message received from Plaato keg"""
         try:
-            # Parse message payload - expect plain number (grams)
+            # Parse JSON payload from Plaato keg
             try:
                 payload_str = msg.payload.decode('utf-8').strip()
-                # Replace comma with dot for European decimal format
-                payload_str = payload_str.replace(',', '.')
-                weight_grams = float(payload_str)
-            except ValueError as e:
-                logger.warning(f"Invalid payload on {msg.topic}: {msg.payload}")
+                data = json.loads(payload_str)
+            except (ValueError, json.JSONDecodeError) as e:
+                logger.warning(f"Invalid JSON payload on {msg.topic}: {msg.payload[:100]}")
                 return
             
-            # Convert grams to kg and round to 0.1 kg precision
-            weight_kg = round(weight_grams / 1000.0, 1)
+            # Extract total_weight field (already in kg)
+            if 'total_weight' not in data:
+                logger.warning(f"Missing 'total_weight' field in Plaato message: {data.keys()}")
+                return
+            
+            try:
+                weight_kg_raw = float(data['total_weight'])
+            except (ValueError, TypeError) as e:
+                logger.warning(f"Invalid total_weight value: {data.get('total_weight')}")
+                return
+            
+            # Round to 0.1 kg precision (floor function as per spec)
+            weight_kg = math.floor(weight_kg_raw * 10) / 10.0
+            
+            # Log received data for debugging
+            keg_id = data.get('id', 'unknown')
+            logger.info(f"📊 Plaato keg {keg_id}: total_weight={weight_kg_raw} kg → {weight_kg} kg (floored)")
             
             # Store in memory cache for Plato button
             timestamp = datetime.now().isoformat()
@@ -252,7 +272,7 @@ class MQTTHandler:
                     'timestamp': timestamp
                 }
             
-            logger.info(f"Weight received: {weight_kg} kg")
+            logger.info(f"✅ Weight updated: {weight_kg} kg")
             
             # Save to database for cross-worker access
             self._save_weight_to_db(weight_kg, timestamp)
@@ -339,12 +359,19 @@ class MQTTHandler:
                     conn.close()
                     
                     if result:
+                        # Convert timestamp to ISO string for JSON serialization
+                        timestamp = result[1]
+                        if hasattr(timestamp, 'isoformat'):
+                            timestamp = timestamp.isoformat()
+                        elif not isinstance(timestamp, str):
+                            timestamp = str(timestamp)
+                        
                         return {
-                            'weight_kg': result[0],
-                            'timestamp': result[1]
+                            'weight_kg': float(result[0]),
+                            'timestamp': timestamp
                         }
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error fetching weight from database: {e}")
         
         # Fallback to memory (only works for MQTT worker)
         with self.lock:

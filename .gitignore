@@ -60,3 +60,4 @@ __pycache__/
 # Development plans (work in progress)
 WEIGHT_MQTT_PLAN.md
 *_PLAN.md
+MQTT_INTEGRATION.md

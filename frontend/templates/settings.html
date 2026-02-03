@@ -72,9 +72,19 @@
                 <div class="form-group">
                     <label for="topic_prefix">{{ _('Topic Prefix') }}:</label>
                     <input type="text" id="topic_prefix" name="topic_prefix" 
-                           value="{{ config.topic_prefix or 'brewery' }}" 
-                           placeholder="brewery" required>
-                    <small class="form-help">{{ _('Sensor publishes to: {prefix}/keg/weight') }}</small>
+                           value="{{ config.topic_prefix or 'plaato' }}" 
+                           placeholder="plaato" required>
+                    <small class="form-help">{{ _('Default: plaato') }}</small>
+                </div>
+
+                <div class="form-group" style="grid-column: 1 / -1;">
+                    <label for="plaato_keg_id">{{ _('Plaato Keg ID') }}:</label>
+                    <input type="text" id="plaato_keg_id" name="plaato_keg_id" 
+                           value="{{ config.plaato_keg_id or '' }}" 
+                           placeholder="11111111111111111111111111111111" 
+                           pattern="[a-fA-F0-9]{32}" 
+                           title="32 hexadecimal characters">
+                    <small class="form-help">{{ _('32-character hex ID from your Plaato keg sensor (e.g., 11111111111111111111111111111111)') }}</small>
                 </div>
             </div>
 
@@ -94,7 +104,11 @@
                 {% if mqtt_connected and config.enabled %}
                 <div class="status-details">
                     <small>{{ _('Connected to') }}: {{ config.broker_host }}:{{ config.broker_port }}</small><br>
-                    <small>{{ _('Subscribed to') }}: <code>{{ config.topic_prefix }}/keg/weight</code></small>
+                    {% if config.plaato_keg_id %}
+                    <small>{{ _('Subscribed to') }}: <code>{{ config.topic_prefix }}/keg/{{ config.plaato_keg_id }}</code></small>
+                    {% else %}
+                    <small style="color: #e67e22;">{{ _('⚠️ Plaato Keg ID not configured') }}</small>
+                    {% endif %}
                 </div>
                 {% elif config.enabled %}
                 <div class="status-details">
@@ -108,9 +122,13 @@
             <div class="mqtt-monitor">
                 <h4>📊 {{ _('Latest Weight Reading') }}</h4>
                 <p class="monitor-help" id="weight_help">
-                    {{ _('Shows the most recent weight measurement from your sensor') }}<br>
-                    <strong>{{ _('Topic') }}:</strong> <code>{{ config.topic_prefix }}/keg/weight</code><br>
-                    <strong>{{ _('Send value') }}:</strong> Just the weight in grams, e.g. <code>8123.12</code> or <code>12345,78</code>
+                    {{ _('Shows the most recent weight measurement from your Plaato keg sensor') }}<br>
+                    {% if config.plaato_keg_id %}
+                    <strong>{{ _('Topic') }}:</strong> <code>{{ config.topic_prefix }}/keg/{{ config.plaato_keg_id }}</code><br>
+                    {% else %}
+                    <strong style="color: #e67e22;">{{ _('⚠️ Configure Plaato Keg ID above first') }}</strong><br>
+                    {% endif %}
+                    <strong>{{ _('Format') }}:</strong> Expects JSON with <code>"total_weight"</code> field in kg
                 </p>
                 <div id="weight_monitor" class="weight-monitor-display">
                     <div class="monitor-empty">{{ _('No weight data received yet...') }}</div>
