@@ -3008,6 +3008,43 @@ msgstr "OPPRETTA"
 msgid "Last Login"
 msgstr "SISTE INNLOGGING"
 
+#: frontend/templates/kegs.html
+msgid "Batch Update"
+msgstr "Masseoppdater"
+
+#: frontend/templates/kegs.html
+msgid "Batch Update Kegs"
+msgstr "Masseoppdater Fat"
+
+#: frontend/templates/kegs.html
+msgid "kegs will be updated"
+msgstr "fat vil bli oppdaterte"
+
+#: frontend/templates/kegs.html
+msgid "optional \u2013 leave blank to keep existing"
+msgstr "valfri \u2013 lat stå for å behalde eksisterande"
+
+#: frontend/templates/kegs.html
+msgid "Keep existing location"
+msgstr "Behald eksisterande lokasjon"
+
+#: frontend/templates/kegs.html
+msgid "Amount Left per Keg"
+msgstr "Mengde Igjen per Fat"
+
+#: frontend/templates/kegs.html
+msgid ""
+"Enter current weight (kg) or amount left (liters) for each keg. Weight "
+"takes priority and is auto-calculated. Leave blank to keep existing value."
+msgstr ""
+"Skriv inn noverande vekt (kg) eller mengde igjen (liter) for kvart fat. "
+"Vekt vert prioritert og rekna automatisk. La stå for å behalde "
+"eksisterande verdi."
+
+#: backend/app.py
+msgid "Successfully updated %(count)d kegs"
+msgstr "Oppdaterte %(count)d fat"
+
 #~ msgid "Paid"
 #~ msgstr "Betalt"
 

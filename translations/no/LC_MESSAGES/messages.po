@@ -3007,6 +3007,43 @@ msgstr "Opprettet"
 msgid "Last Login"
 msgstr "Siste Innlogging"
 
+#: frontend/templates/kegs.html
+msgid "Batch Update"
+msgstr "Masseoppdater"
+
+#: frontend/templates/kegs.html
+msgid "Batch Update Kegs"
+msgstr "Masseoppdater Fat"
+
+#: frontend/templates/kegs.html
+msgid "kegs will be updated"
+msgstr "fat vil bli oppdatert"
+
+#: frontend/templates/kegs.html
+msgid "optional \u2013 leave blank to keep existing"
+msgstr "valgfri \u2013 la stå for å beholde eksisterende"
+
+#: frontend/templates/kegs.html
+msgid "Keep existing location"
+msgstr "Behold eksisterende lokasjon"
+
+#: frontend/templates/kegs.html
+msgid "Amount Left per Keg"
+msgstr "Mengde Igjen per Fat"
+
+#: frontend/templates/kegs.html
+msgid ""
+"Enter current weight (kg) or amount left (liters) for each keg. Weight "
+"takes priority and is auto-calculated. Leave blank to keep existing value."
+msgstr ""
+"Skriv inn nåværende vekt (kg) eller mengde igjen (liter) for hvert fat. "
+"Vekt prioriteres og beregnes automatisk. La stå for å beholde eksisterende "
+"verdi."
+
+#: backend/app.py
+msgid "Successfully updated %(count)d kegs"
+msgstr "Oppdaterte %(count)d fat"
+
 #~ msgid "Are you sure you want to delete user"
 #~ msgstr "Er du sikker på at du vil slette brukeren"
 
