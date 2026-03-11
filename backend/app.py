@@ -18,6 +18,7 @@ from forms import LoginForm, ChangePasswordForm, CreateUserForm, EditUserForm, C
 from i18n import init_babel, _, _l
 from beerxml_handler import BeerXMLHandler
 from mqtt_handler import MQTTHandler
+from gcal_handler import GCalHandler
 
 # Load environment variables
 load_dotenv()
@@ -110,6 +111,9 @@ def get_db_connection():
 
 # Initialize MQTT Handler (after get_db_connection is defined)
 mqtt_handler = MQTTHandler(get_db_connection)
+
+# Initialize Google Calendar Handler
+gcal = GCalHandler()
 
 # Load MQTT config for all workers (needed for is_connected() checks)
 # Only the worker with the lock will actually start the MQTT client
@@ -857,6 +861,111 @@ def bulk_mark_empty():
     
     return redirect(url_for('kegs'))
 
+@app.route('/kegs/batch_update', methods=['POST'])
+@require_permission('kegs', 'edit')
+def batch_update_kegs():
+    """Batch update multiple kegs: amount left, location (optional) and notes"""
+    conn = get_db_connection()
+    if not conn:
+        flash('Database connection error', 'error')
+        return redirect(url_for('kegs'))
+
+    try:
+        keg_ids_str = request.form.get('keg_ids', '')
+        location = request.form.get('location', '').strip()
+        notes = request.form.get('notes', '').strip()
+
+        if not keg_ids_str:
+            flash('No kegs selected', 'error')
+            return redirect(url_for('kegs'))
+
+        keg_ids = [int(kid.strip()) for kid in keg_ids_str.split(',') if kid.strip()]
+        if not keg_ids:
+            flash('No valid keg IDs provided', 'error')
+            return redirect(url_for('kegs'))
+
+        update_date = datetime.now().date()
+        updated_count = 0
+
+        with conn.cursor() as cur:
+            for keg_id in keg_ids:
+                # Fetch current keg data (status, contents, empty_weight_kg)
+                cur.execute("""
+                    SELECT keg_number, status, contents, location AS cur_location,
+                           empty_weight_kg, amount_left_liters
+                    FROM keg WHERE id = %s
+                """, (keg_id,))
+                keg = cur.fetchone()
+                if not keg:
+                    continue
+
+                (keg_number, status, contents, cur_location,
+                 empty_weight_kg, cur_amount) = keg
+
+                # Determine amount_left_liters for this keg
+                measurement_source = 'manual'
+                current_weight_field = request.form.get(f'current_weight_{keg_id}', '').strip()
+                amount_field = request.form.get(f'amount_left_{keg_id}', '').strip()
+
+                if current_weight_field:
+                    current_weight_kg = float(current_weight_field)
+                    if empty_weight_kg is not None:
+                        raw_liters = current_weight_kg - float(empty_weight_kg)
+                        amount_left_liters = math.floor(raw_liters * 10) / 10
+                        amount_left_liters = max(0, amount_left_liters)
+                        measurement_source = 'weight'
+                    else:
+                        # No empty weight configured – skip weight-based calc, use liters
+                        amount_left_liters = float(amount_field) if amount_field else float(cur_amount or 0)
+                elif amount_field:
+                    amount_left_liters = float(amount_field)
+                else:
+                    amount_left_liters = float(cur_amount or 0)
+
+                # Use provided location or keep existing
+                new_location = location if location else cur_location
+
+                # Update main keg record (status and contents unchanged)
+                cur.execute("""
+                    UPDATE keg SET
+                        amount_left_liters = %s,
+                        location = %s,
+                        notes = %s,
+                        last_measured = %s
+                    WHERE id = %s
+                """, (amount_left_liters, new_location, notes, update_date, keg_id))
+
+                # Create history entry
+                cur.execute("""
+                    INSERT INTO keg_history
+                    (keg_id, recorded_date, contents, status, amount_left_liters,
+                     location, arrangement, notes, measurement_source)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """, (
+                    keg_id,
+                    update_date,
+                    contents,
+                    status,
+                    amount_left_liters,
+                    new_location,
+                    'Batch update',
+                    notes,
+                    measurement_source
+                ))
+
+                updated_count += 1
+
+        conn.commit()
+        flash(_('Successfully updated %(count)d kegs', count=updated_count), 'success')
+
+    except (psycopg2.Error, ValueError) as e:
+        conn.rollback()
+        flash(f'Error during batch update: {e}', 'error')
+    finally:
+        conn.close()
+
+    return redirect(url_for('kegs'))
+
 @app.route('/keg/<keg_number>/delete', methods=['POST'])
 @require_permission('kegs', 'edit')
 def delete_keg(keg_number):
@@ -1558,15 +1667,27 @@ def add_brew_task(brew_id):
             if form.validate_on_submit():
                 cur.execute("""
                     INSERT INTO brew_task (brew_id, scheduled_date, action, notes)
-                    VALUES (%s, %s, %s, %s)
+                    VALUES (%s, %s, %s, %s) RETURNING id
                 """, (
                     brew_id,
                     form.scheduled_date.data,
                     form.action.data,
                     form.notes.data
                 ))
-                
+                task_id = cur.fetchone()['id']
                 conn.commit()
+
+                # Sync to Google Calendar
+                event_id = gcal.create_event(
+                    brew['name'], form.action.data, form.notes.data, form.scheduled_date.data
+                )
+                if event_id:
+                    cur.execute(
+                        "UPDATE brew_task SET google_calendar_event_id = %s WHERE id = %s",
+                        (event_id, task_id)
+                    )
+                    conn.commit()
+
                 flash('Brew task added successfully!', 'success')
                 return redirect(url_for('brew_detail', brew_id=brew_id))
     
@@ -1640,6 +1761,28 @@ def edit_brew_task(task_id):
                 ))
                 
                 conn.commit()
+
+                # Sync to Google Calendar
+                event_id      = brew_task.get('google_calendar_event_id')
+                was_completed = brew_task['is_completed']
+                now_completed = form.is_completed.data
+                if now_completed and not was_completed:
+                    gcal.complete_event(
+                        event_id, brew_task['brew_name'],
+                        form.action.data, form.notes.data, form.scheduled_date.data
+                    )
+                elif not now_completed and was_completed:
+                    gcal.uncomplete_event(
+                        event_id, brew_task['brew_name'],
+                        form.action.data, form.notes.data, form.scheduled_date.data
+                    )
+                else:
+                    gcal.update_event(
+                        event_id, brew_task['brew_name'],
+                        form.action.data, form.notes.data, form.scheduled_date.data,
+                        completed=now_completed
+                    )
+
                 flash('Brew task updated successfully!', 'success')
                 return redirect(url_for('brew_detail', brew_id=brew_task['brew_id']))
     
@@ -1662,20 +1805,27 @@ def delete_brew_task(task_id):
     
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Get brew_id before deleting
-            cur.execute("SELECT brew_id FROM brew_task WHERE id = %s", (task_id,))
+            # Get brew_id and GCal event_id before deleting
+            cur.execute(
+                "SELECT brew_id, google_calendar_event_id FROM brew_task WHERE id = %s",
+                (task_id,)
+            )
             result = cur.fetchone()
-            
+
             if not result:
                 flash('Brew task not found', 'error')
                 return redirect(url_for('brews'))
-            
-            brew_id = result['brew_id']
-            
+
+            brew_id  = result['brew_id']
+            event_id = result['google_calendar_event_id']
+
             # Delete the task
             cur.execute("DELETE FROM brew_task WHERE id = %s", (task_id,))
             conn.commit()
-            
+
+            # Sync to Google Calendar
+            gcal.delete_event(event_id)
+
             flash('Brew task deleted successfully!', 'success')
             return redirect(url_for('brew_detail', brew_id=brew_id))
     
@@ -1756,23 +1906,36 @@ def api_add_brew_task():
         
         # Verify brew exists
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            cur.execute("SELECT id FROM brew WHERE id = %s", (brew_id,))
-            if not cur.fetchone():
+            cur.execute("SELECT id, name FROM brew WHERE id = %s", (brew_id,))
+            brew = cur.fetchone()
+            if not brew:
                 return jsonify({'success': False, 'message': 'Brew not found'}), 404
-            
+
             # Insert new brew task
             cur.execute("""
                 INSERT INTO brew_task 
                 (brew_id, scheduled_date, action, notes)
-                VALUES (%s, %s, %s, %s)
+                VALUES (%s, %s, %s, %s) RETURNING id
             """, (
                 brew_id,
                 data.get('scheduled_date'),
                 data.get('action'),
                 data.get('notes')
             ))
-            
+            task_id = cur.fetchone()['id']
             conn.commit()
+
+            # Sync to Google Calendar
+            event_id = gcal.create_event(
+                brew['name'], data.get('action'), data.get('notes'), data.get('scheduled_date')
+            )
+            if event_id:
+                cur.execute(
+                    "UPDATE brew_task SET google_calendar_event_id = %s WHERE id = %s",
+                    (event_id, task_id)
+                )
+                conn.commit()
+
             return jsonify({'success': True, 'message': 'Brew task added successfully'})
             
     except psycopg2.Error as e:
@@ -1793,11 +1956,16 @@ def api_edit_brew_task(task_id):
         data = request.get_json()
         
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
-            # Verify brew task exists
-            cur.execute("SELECT id FROM brew_task WHERE id = %s", (task_id,))
-            if not cur.fetchone():
+            # Get task with brew name for GCal sync
+            cur.execute("""
+                SELECT bt.*, b.name as brew_name
+                FROM brew_task bt JOIN brew b ON bt.brew_id = b.id
+                WHERE bt.id = %s
+            """, (task_id,))
+            task = cur.fetchone()
+            if not task:
                 return jsonify({'success': False, 'message': 'Brew task not found'}), 404
-            
+
             # Update brew task
             cur.execute("""
                 UPDATE brew_task 
@@ -1810,8 +1978,15 @@ def api_edit_brew_task(task_id):
                 data.get('notes'),
                 task_id
             ))
-            
             conn.commit()
+
+            # Sync to Google Calendar
+            gcal.update_event(
+                task['google_calendar_event_id'], task['brew_name'],
+                data.get('action'), data.get('notes'), data.get('scheduled_date'),
+                completed=task['is_completed']
+            )
+
             return jsonify({'success': True, 'message': 'Brew task updated successfully'})
             
     except psycopg2.Error as e:
@@ -1831,12 +2006,21 @@ def api_delete_brew_task(task_id):
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Verify and delete brew task
-            cur.execute("DELETE FROM brew_task WHERE id = %s RETURNING id", (task_id,))
-            if cur.fetchone():
-                conn.commit()
-                return jsonify({'success': True, 'message': 'Brew task deleted successfully'})
-            else:
+            cur.execute(
+                "SELECT google_calendar_event_id FROM brew_task WHERE id = %s", (task_id,)
+            )
+            task = cur.fetchone()
+            if not task:
                 return jsonify({'success': False, 'message': 'Brew task not found'}), 404
+
+            event_id = task['google_calendar_event_id']
+            cur.execute("DELETE FROM brew_task WHERE id = %s", (task_id,))
+            conn.commit()
+
+            # Sync to Google Calendar
+            gcal.delete_event(event_id)
+
+            return jsonify({'success': True, 'message': 'Brew task deleted successfully'})
             
     except psycopg2.Error as e:
         conn.rollback()
@@ -1859,13 +2043,16 @@ def api_complete_brew_task(task_id):
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             # Get scheduled date for comparison
             cur.execute("""
-                SELECT scheduled_date FROM brew_task WHERE id = %s
+                SELECT bt.scheduled_date, bt.google_calendar_event_id, bt.action, bt.notes,
+                       b.name as brew_name
+                FROM brew_task bt JOIN brew b ON bt.brew_id = b.id
+                WHERE bt.id = %s
             """, (task_id,))
-            
+
             result = cur.fetchone()
             if not result:
                 return jsonify({'success': False, 'message': 'Brew task not found'}), 404
-            
+
             scheduled_date = result['scheduled_date']
             completed_date_obj = datetime.strptime(completed_date, '%Y-%m-%d').date()
             
@@ -1882,7 +2069,13 @@ def api_complete_brew_task(task_id):
             """, (completed_date, task_id))
             
             conn.commit()
-            
+
+            # Sync to Google Calendar
+            gcal.complete_event(
+                result['google_calendar_event_id'], result['brew_name'],
+                result['action'], result['notes'], result['scheduled_date']
+            )
+
             response = {'success': True, 'message': 'Brew task marked as completed'}
             if warning:
                 response['warning'] = warning
@@ -1905,18 +2098,32 @@ def api_uncomplete_brew_task(task_id):
     
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            # Fetch task details for GCal sync before updating
+            cur.execute("""
+                SELECT bt.scheduled_date, bt.google_calendar_event_id, bt.action, bt.notes,
+                       b.name as brew_name
+                FROM brew_task bt JOIN brew b ON bt.brew_id = b.id
+                WHERE bt.id = %s
+            """, (task_id,))
+            task = cur.fetchone()
+            if not task:
+                return jsonify({'success': False, 'message': 'Brew task not found'}), 404
+
             # Update brew task to not completed
             cur.execute("""
                 UPDATE brew_task 
                 SET is_completed = FALSE, completed_date = NULL, updated_date = CURRENT_TIMESTAMP
-                WHERE id = %s RETURNING id
+                WHERE id = %s
             """, (task_id,))
-            
-            if cur.fetchone():
-                conn.commit()
-                return jsonify({'success': True, 'message': 'Brew task completion undone'})
-            else:
-                return jsonify({'success': False, 'message': 'Brew task not found'}), 404
+            conn.commit()
+
+            # Sync to Google Calendar
+            gcal.uncomplete_event(
+                task['google_calendar_event_id'], task['brew_name'],
+                task['action'], task['notes'], task['scheduled_date']
+            )
+
+            return jsonify({'success': True, 'message': 'Brew task completion undone'})
             
     except psycopg2.Error as e:
         conn.rollback()

@@ -248,7 +248,7 @@ function filterBrews() {
     rows.forEach(row => {
         const searchText = row.getAttribute('data-search-text');
         if (searchText.includes(searchValue)) {
-            row.style.display = '';
+            row.style.display = 'table-row';
         } else {
             row.style.display = 'none';
         }

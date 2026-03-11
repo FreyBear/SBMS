@@ -576,7 +576,7 @@ function togglePaidExpenses() {
     const isVisible = firstPaidRow && window.getComputedStyle(firstPaidRow).display !== 'none';
     
     paidRows.forEach(row => {
-        row.style.display = isVisible ? 'none' : '';
+        row.style.display = isVisible ? 'none' : 'table-row';
     });
     
     // Update button text and icon

@@ -70,6 +70,9 @@
                 <button id="bulk-mark-empty" class="btn btn-warning" style="background-color: #ff9800; border-color: #ff9800;">
                     ○ {{ _('Mark as Empty') }}
                 </button>
+                <button id="bulk-batch-update" class="btn btn-success">
+                    ✎ {{ _('Batch Update') }}
+                </button>
                 <button id="bulk-clear-selection" class="btn btn-secondary">
                     {{ _('Clear Selection') }}
                 </button>
@@ -227,6 +230,68 @@
         </div>
     </div>
     
+    <!-- Batch Update Modal -->
+    <div id="batchUpdateModal" class="modal" style="display: none;">
+        <div class="modal-content" style="max-width: 800px; width: 95%;">
+            <div class="modal-header">
+                <h2>{{ _('Batch Update Kegs') }}</h2>
+                <button type="button" class="close-modal" onclick="closeBatchUpdateModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <p><strong><span id="batch-selected-count">0</span> {{ _('kegs will be updated') }}</strong></p>
+
+                <form id="batch-update-form" method="POST" action="{{ url_for('batch_update_kegs') }}">
+
+                    <div class="form-group">
+                        <label for="batch-location">{{ _('Location') }} <small style="font-weight:normal;color:#666;">({{ _('optional – leave blank to keep existing') }})</small>:</label>
+                        <select id="batch-location" name="location">
+                            <option value="">— {{ _('Keep existing location') }} —</option>
+                            <option value="Brewery">{{ _('Brewery') }}</option>
+                            <option value="Cellar">{{ _('Cellar') }}</option>
+                            <option value="Storage">{{ _('Storage') }}</option>
+                            <option value="Bar">{{ _('Bar') }}</option>
+                            <option value="Cleaning">{{ _('Cleaning') }}</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="batch-notes">{{ _('Notes') }}:</label>
+                        <textarea id="batch-notes" name="notes" rows="2"
+                            placeholder="{{ _('e.g., Back from tasting event dd.mm.yyyy') }}"
+                            style="width:100%;"></textarea>
+                    </div>
+
+                    <h4 style="margin: 15px 0 6px;">{{ _('Amount Left per Keg') }}</h4>
+                    <p style="color:#666;font-size:0.85rem;margin-bottom:8px;">
+                        {{ _('Enter current weight (kg) or amount left (liters) for each keg. Weight takes priority and is auto-calculated. Leave blank to keep existing value.') }}
+                    </p>
+
+                    <div style="overflow-x:auto;">
+                        <table id="batch-update-table" style="width:100%;border-collapse:collapse;font-size:0.9rem;">
+                            <thead>
+                                <tr style="background:#f0f0f0;">
+                                    <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">{{ _('Keg #') }}</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;">{{ _('Contents') }}</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;min-width:190px;">{{ _('Weight') }} (kg)</th>
+                                    <th style="padding:8px;text-align:left;border-bottom:2px solid #ddd;min-width:120px;">{{ _('Amount Left') }} (L)</th>
+                                </tr>
+                            </thead>
+                            <tbody id="batch-update-rows">
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <input type="hidden" name="keg_ids" id="batch-keg-ids">
+
+                    <div class="form-actions" style="margin-top:20px;display:flex;gap:10px;justify-content:flex-end;">
+                        <button type="button" onclick="closeBatchUpdateModal()" class="btn btn-secondary">{{ _('Cancel') }}</button>
+                        <button type="submit" class="btn btn-success">✎ {{ _('Batch Update') }}</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
     <!-- Delete Keg Confirmation Modal -->
     <div id="deleteKegModal" class="modal" style="display: none;">
         <div class="modal-content" style="max-width: 450px;">
@@ -380,6 +445,17 @@
 </style>
 
 <script>
+// Keg data map for batch update modal (id -> keg details)
+const kegDataMap = {};
+{% for keg in kegs %}
+kegDataMap[{{ keg.id }}] = {
+    keg_number: {{ keg.keg_number }},
+    contents: {{ keg.contents | tojson }},
+    empty_weight_kg: {{ keg.empty_weight_kg | tojson }},
+    amount_left_liters: {{ keg.amount_left_liters or 0 }}
+};
+{% endfor %}
+
 document.addEventListener('DOMContentLoaded', function() {
     const table = document.getElementById('kegsTable');
     if (!table) return;
@@ -579,16 +655,170 @@ document.addEventListener('DOMContentLoaded', function() {
         // Open modal
         document.getElementById('bulkEmptyModal').style.display = 'flex';
     });
-    
+
+    // Batch Update button
+    // Polling intervals per keg id: { kegId: intervalId }
+    const batchMqttPollers = {};
+
+    function batchStopAllPollers() {
+        Object.values(batchMqttPollers).forEach(id => clearInterval(id));
+        Object.keys(batchMqttPollers).forEach(k => delete batchMqttPollers[k]);
+    }
+
+    function batchStartPoller(kegId, kegNumber) {
+        function poll() {
+            fetch('/api/mqtt/weight/' + kegNumber)
+                .then(r => r.json())
+                .then(data => {
+                    const btn = document.getElementById('batch-plato-' + kegId);
+                    if (!btn) return;
+                    const statusSpan = btn.querySelector('.plato-status');
+                    const weightSpan = btn.querySelector('.plato-weight');
+
+                    if (data.connected && data.weight_kg !== null && data.weight_kg !== undefined) {
+                        btn.classList.add('online');
+                        btn.disabled = false;
+                        btn.dataset.mqttWeight = data.weight_kg;
+                        statusSpan.textContent = 'Online';
+                        weightSpan.textContent = parseFloat(data.weight_kg).toFixed(1).replace('.', ',') + ' kg';
+                    } else if (data.connected) {
+                        btn.classList.add('online');
+                        btn.disabled = true;
+                        btn.dataset.mqttWeight = '';
+                        statusSpan.textContent = 'Online';
+                        weightSpan.textContent = '--,- kg';
+                    } else {
+                        btn.classList.remove('online');
+                        btn.disabled = true;
+                        btn.dataset.mqttWeight = '';
+                        statusSpan.textContent = 'Offline';
+                        weightSpan.textContent = '--,- kg';
+                    }
+                })
+                .catch(() => {
+                    const btn = document.getElementById('batch-plato-' + kegId);
+                    if (!btn) return;
+                    btn.classList.remove('online');
+                    btn.disabled = true;
+                    btn.dataset.mqttWeight = '';
+                    btn.querySelector('.plato-status').textContent = 'Offline';
+                    btn.querySelector('.plato-weight').textContent = '--,- kg';
+                });
+        }
+        poll(); // immediate first call
+        batchMqttPollers[kegId] = setInterval(poll, 2000);
+    }
+
+    document.getElementById('bulk-batch-update').addEventListener('click', function() {
+        const checkedBoxes = document.querySelectorAll('.keg-checkbox:checked');
+        if (checkedBoxes.length === 0) return;
+
+        batchStopAllPollers();
+
+        const kegIds = Array.from(checkedBoxes).map(cb => cb.value);
+
+        document.getElementById('batch-selected-count').textContent = kegIds.length;
+        document.getElementById('batch-keg-ids').value = kegIds.join(',');
+        document.getElementById('batch-location').value = '';
+        document.getElementById('batch-notes').value = '';
+
+        // Build per-keg rows
+        const tbody = document.getElementById('batch-update-rows');
+        tbody.innerHTML = '';
+
+        kegIds.forEach(id => {
+            const keg = kegDataMap[id];
+            if (!keg) return;
+
+            const hasEmptyWeight = keg.empty_weight_kg !== null && keg.empty_weight_kg !== undefined;
+
+            const weightCell = `
+                <div style="display:flex;gap:6px;align-items:center;">
+                    <input type="number" id="weight_${id}" name="current_weight_${id}"
+                           step="0.1" min="0" max="100" placeholder="—"
+                           style="width:75px;"
+                           oninput="batchCalcLiters(${id})"
+                           ${!hasEmptyWeight ? 'title="No empty weight configured for this keg"' : ''}>
+                    <button type="button" id="batch-plato-${id}"
+                            class="btn-plato"
+                            onclick="batchUseMqttWeight(${id})"
+                            disabled
+                            title="Click to use live MQTT weight">
+                        <span class="plato-icon">📡</span>
+                        <span class="plato-status">Offline</span>
+                        <span class="plato-weight">--,- kg</span>
+                    </button>
+                </div>
+                ${hasEmptyWeight
+                    ? `<small style="color:#666;">Empty: ${parseFloat(keg.empty_weight_kg).toFixed(1)} kg</small>`
+                    : '<small style="color:#aaa;">No empty weight set</small>'}`;
+
+            const litersCell = `
+                <input type="number" id="liters_${id}" name="amount_left_${id}"
+                       step="0.1" min="0"
+                       value="${parseFloat(keg.amount_left_liters).toFixed(1)}"
+                       style="width:80px;">`;
+
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #eee';
+            tr.innerHTML = `
+                <td style="padding:8px;font-weight:bold;">Keg #${keg.keg_number}</td>
+                <td style="padding:8px;color:#555;">${keg.contents || '<em style="color:#aaa;">Empty</em>'}</td>
+                <td style="padding:8px;">${weightCell}</td>
+                <td style="padding:8px;">${litersCell}</td>
+            `;
+            tbody.appendChild(tr);
+
+            // Start live polling for this keg
+            batchStartPoller(id, keg.keg_number);
+        });
+
+        document.getElementById('batchUpdateModal').style.display = 'flex';
+    });
+
+    // Copy live MQTT weight into the weight input and calculate liters
+    window.batchUseMqttWeight = function(kegId) {
+        const btn = document.getElementById('batch-plato-' + kegId);
+        if (!btn || btn.disabled) return;
+        const mqttWeight = btn.dataset.mqttWeight;
+        if (!mqttWeight) return;
+        const wInput = document.getElementById('weight_' + kegId);
+        if (wInput) {
+            wInput.value = parseFloat(mqttWeight).toFixed(1);
+            batchCalcLiters(kegId);
+        }
+    };
+
+    // Calculate liters from weight for a single keg row
+    window.batchCalcLiters = function(kegId) {
+        const keg = kegDataMap[kegId];
+        if (!keg || keg.empty_weight_kg === null || keg.empty_weight_kg === undefined) return;
+
+        const wInput = document.getElementById('weight_' + kegId);
+        const lInput = document.getElementById('liters_' + kegId);
+        if (!wInput || !lInput) return;
+
+        const w = parseFloat(wInput.value);
+        if (isNaN(w)) return;
+
+        const raw = w - parseFloat(keg.empty_weight_kg);
+        lInput.value = Math.max(0, Math.floor(raw * 10) / 10).toFixed(1);
+    };
+
     // === Bulk Actions Modal Functions ===
     window.closeBulkCleanedModal = function() {
         document.getElementById('bulkCleanedModal').style.display = 'none';
     };
-    
+
     window.closeBulkEmptyModal = function() {
         document.getElementById('bulkEmptyModal').style.display = 'none';
     };
-    
+
+    window.closeBatchUpdateModal = function() {
+        batchStopAllPollers();
+        document.getElementById('batchUpdateModal').style.display = 'none';
+    };
+
     // === Delete Keg Modal Functions ===
     window.confirmDeleteKeg = function(kegId, kegNumber) {
         document.getElementById('delete-keg-number').textContent = kegNumber;
@@ -615,6 +845,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (e.target === deleteModal) {
             closeDeleteKegModal();
         }
+        if (e.target === document.getElementById('batchUpdateModal')) {
+            closeBatchUpdateModal();
+        }
     });
 
     // Status and Size filtering functionality
@@ -634,28 +867,29 @@ document.addEventListener('DOMContentLoaded', function() {
         let totalAmount = 0;
         
         rows.forEach(row => {
-            const statusCell = row.querySelector('td:nth-child(5)');  // Status column (5th column including checkbox)
+            const rowStatus = row.getAttribute('data-status');  // 'full', 'started', 'available-cleaned', 'empty'
             const kegSize = parseFloat(row.getAttribute('data-size'));
-            
-            if (statusCell) {
-                const statusText = statusCell.textContent.trim();
+
+            if (rowStatus !== null) {
                 let showByStatus = false;
                 let showBySize = false;
-                
-                // Check status filter
-                if ((statusText.includes('Full') || statusText.includes('Fullt')) && showFull) showByStatus = true;
-                if ((statusText.includes('Started') || statusText.includes('Påbegynt')) && showStarted) showByStatus = true;
-                if ((statusText.includes('Available/Cleaned') || statusText.includes('Vasket')) && showAvailable) showByStatus = true;
-                if ((statusText.includes('Empty') || statusText.includes('Tomt')) && showEmpty) showByStatus = true;
-                
-                // Check size filter - only show if size matches one of the checked options
+
+                // Check status filter using data-status attribute (reliable across all browsers/locales)
+                if (rowStatus === 'full' && showFull) showByStatus = true;
+                if (rowStatus === 'started' && showStarted) showByStatus = true;
+                if (rowStatus === 'available-cleaned' && showAvailable) showByStatus = true;
+                if (rowStatus === 'empty' && showEmpty) showByStatus = true;
+
+                // Check size filter
                 if (kegSize === 9 && showSize9) showBySize = true;
                 if (kegSize === 19 && showSize19) showBySize = true;
-                
+                if (kegSize !== 9 && kegSize !== 19) showBySize = true;
+
                 // Show row only if BOTH filters match
                 const showRow = showByStatus && showBySize;
-                
-                row.style.display = showRow ? '' : 'none';
+
+                // Use explicit 'table-row' instead of '' to avoid Safari/iOS display bug
+                row.style.display = showRow ? 'table-row' : 'none';
                 if (showRow) {
                     visibleCount++;
                     // Calculate total amount left from visible rows (column 6 = Amount Left)
@@ -816,6 +1050,51 @@ document.addEventListener('DOMContentLoaded', function() {
 .data-table .status-empty {
     background-color: #424242 !important;
 }
+
+/* Batch update – MQTT Plato button (same style as update_keg.html) */
+.btn-plato {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 0.4rem 0.8rem;
+    background: linear-gradient(135deg, #f5f5f5, #e0e0e0);
+    border: 2px solid #ccc;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 90px;
+    font-size: 0.85rem;
+}
+.btn-plato:disabled {
+    cursor: not-allowed;
+    opacity: 0.6;
+}
+.btn-plato.online {
+    background: linear-gradient(135deg, #e8f5e9, #c8e6c9);
+    border-color: #4caf50;
+}
+.btn-plato:not(:disabled):hover {
+    background: linear-gradient(135deg, #c8e6c9, #a5d6a7);
+    border-color: #4caf50;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(76,175,80,0.3);
+}
+.btn-plato .plato-icon  { font-size: 1.3rem; line-height: 1; }
+.btn-plato .plato-status {
+    font-size: 0.7rem;
+    font-weight: bold;
+    margin-top: 0.2rem;
+    color: #555;
+}
+.btn-plato.online .plato-status { color: #2e7d32; }
+.btn-plato .plato-weight {
+    font-size: 0.9rem;
+    font-weight: bold;
+    color: #1b3a1f;
+    margin-top: 0.2rem;
+}
+.btn-plato.online .plato-weight { color: #1b5e20; }
 </style>
 
 {% endblock %}
