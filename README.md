@@ -8,6 +8,7 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 
 ### 🍺 **Brewery Operations**
 - **Recipe Management**: Store and organize your brewing recipes with styles and detailed notes
+  - **BeerXML Import**: Import recipes from any BeerXML-compatible brewing software (BeerSmith, Brewer's Friend, etc.)
 - **Kit Management**: Comprehensive brewing kit tracking system including:
   - Support for multiple kit types (Fresh Wort, Cider, Red Wine, White Wine, Rose Wine, Sparkling Wine, Mead)
   - Kit information management (manufacturer, style, ABV, volume, cost)
@@ -31,6 +32,8 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
     - Live status monitoring in Settings page
   - Cleaning schedules and maintenance logs
   - Keg history with detailed tracking of usage patterns
+  - **Batch Update**: Update weight, liters, location, and notes across multiple kegs simultaneously
+  - **Batch MQTT Refresh**: Fetch live sensor weights for multiple kegs in a single operation
 
 ### 💰 **Expense Management**
 - **Expense Submission**: Easy expense reporting with receipt upload (JPG, PNG, PDF)
@@ -40,8 +43,18 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 - **Reimbursement Integration**: Bank account management for easy reimbursements
 - **Audit Trail**: Complete tracking of who approved/rejected expenses and when
 - **Edit & Resubmit**: Rejected expenses can be edited and resubmitted
+- **Expense Categories**: Classify expenses into categories (Raw Materials, Equipment, Packaging, Cleaning, Transport, Events, Other) with color-coded chips
+- **CSV Export**: Export filtered expense lists to CSV with full Nordic character support (UTF-8 BOM)
+- **Responsive Design**: Mobile-friendly expense table with combined smart columns
 
-### 👥 **User Management**
+### � **Google Calendar Integration**
+- **Automatic Sync**: Brew tasks are automatically synced to Google Calendar when created, updated, or completed
+- **Service Account Auth**: Uses Google Service Account for server-side authentication (no OAuth flow required)
+- **Color-coded Events**: Active tasks appear in yellow (Banana), completed tasks in grey (Graphite)
+- **Easy Toggle**: Enable/disable via `GOOGLE_CALENDAR_ENABLED` environment variable — no code changes needed
+- **Supported Operations**: Create, update, complete, uncomplete, and delete calendar events matching brew task lifecycle
+
+### �👥 **User Management**
 - **Role-based Security**: Five user roles with different permission levels:
   - **Admin**: Full system access and management
   - **Economy**: Financial management and expense approval
@@ -74,6 +87,7 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
 **Containerization**: Docker Compose for isolated, reproducible environments  
 **Production Server**: Gunicorn for multi-threaded, production-ready deployment  
 **Reverse Proxy Support**: Configured for Nginx Proxy Manager and HTTPS  
+**Google Calendar API**: Server-side sync via google-auth and googleapiclient  
 
 **Core Dependencies**:
   - Flask 2.3.3 (web framework)
@@ -85,6 +99,7 @@ A simple, stable, and easy-to-use management system for small breweries. SBMS is
   - python-dotenv 1.0.0 (environment management)
   - bcrypt (password hashing)
   - WTForms (form handling and validation)
+  - google-auth / google-api-python-client (Google Calendar sync)
 
 **Security Features**:  
   - Production-ready Gunicorn WSGI server
@@ -182,6 +197,8 @@ When you clone and start SBMS, you get a **complete brewery management system** 
 ✅ **Expense Management**: Full workflow from submission to reimbursement  
 ✅ **MQTT Integration**: Real-time weight monitoring from IoT sensors (PLAATO Keg, etc.)  
 ✅ **Multi-language Support**: English and Norwegian interfaces  
+✅ **Google Calendar Sync**: Optional brew task sync to Google Calendar (Service Account)  
+✅ **BeerXML Import**: Import recipes from BeerSmith, Brewer's Friend, and other tools  
 ✅ **File Upload System**: Secure receipt storage for expense management  
 ✅ **Sample Data**: Example recipes, brews, and keg configurations  
 ✅ **Production Ready**: Containerized with PostgreSQL, Flask, and Gunicorn  
@@ -273,7 +290,14 @@ The `.env` file contains sensitive configuration for your SBMS system. Here’s 
    - Backup path: Make sure the path exists and is writable.
    - HTTPS: For production, set `ENABLE_HTTPS=true` and follow [Let's Encrypt](https://letsencrypt.org/) for free SSL certificates.
 
-4. **Do not share your `.env` file!**
+4. **Configure Google Calendar** (optional):
+   - Create a Google Cloud project and enable the Google Calendar API
+   - Create a Service Account and download the JSON key
+   - Share your Google Calendar with the Service Account email
+   - Base64-encode the JSON key: `base64 -w 0 service_account.json`
+   - Set `GOOGLE_CALENDAR_ENABLED=true`, `GOOGLE_CALENDAR_ID`, and `GOOGLE_SERVICE_ACCOUNT_JSON_B64` in `.env`
+
+5. **Do not share your `.env` file!**
    - Never commit `.env` to GitHub or share it publicly.
 
 ### More Resources
@@ -318,6 +342,9 @@ SBMS/
 │   ├── auth.py              # Authentication and authorization
 │   ├── forms.py             # WTForms for all user inputs
 │   ├── i18n.py              # Internationalization setup
+│   ├── gcal_handler.py      # Google Calendar integration (Service Account)
+│   ├── beerxml_handler.py   # BeerXML recipe import handler
+│   ├── mqtt_handler.py      # MQTT broker connection and weight handling
 │   ├── requirements.txt     # Python dependencies (includes Gunicorn)
 │   ├── gunicorn.conf.py     # Production server configuration
 │   ├── Dockerfile           # Backend container config (production-ready)
