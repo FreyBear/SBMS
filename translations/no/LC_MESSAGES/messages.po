@@ -3044,6 +3044,38 @@ msgstr ""
 msgid "Successfully updated %(count)d kegs"
 msgstr "Oppdaterte %(count)d fat"
 
+#: backend/forms.py frontend/templates/expenses.html
+msgid "Category"
+msgstr "Kategori"
+
+#: backend/forms.py
+msgid "Raw Materials"
+msgstr "Råvarer"
+
+#: backend/forms.py
+msgid "Equipment"
+msgstr "Utstyr"
+
+#: backend/forms.py
+msgid "Packaging"
+msgstr "Emballasje"
+
+#: backend/forms.py
+msgid "Cleaning"
+msgstr "Rengjøring"
+
+#: backend/forms.py
+msgid "Transport"
+msgstr "Transport"
+
+#: backend/forms.py
+msgid "Events"
+msgstr "Arrangementer"
+
+#: backend/forms.py frontend/templates/expenses.html
+msgid "Other"
+msgstr "Annet"
+
 #~ msgid "Are you sure you want to delete user"
 #~ msgstr "Er du sikker på at du vil slette brukeren"
 

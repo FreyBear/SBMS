@@ -3847,7 +3847,7 @@ def expenses():
                 # Economy and Admin view
                 cur.execute("""
                     SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
-                           e.status, e.paid_date, e.rejection_reason, e.rejected_date,
+                           e.status, e.paid_date, e.rejection_reason, e.rejected_date, e.category,
                            u.full_name, u.username, u.bank_account,
                            p.full_name as paid_by_name, r.full_name as rejected_by_name,
                            COUNT(ei.id) as receipt_count
@@ -3869,7 +3869,7 @@ def expenses():
                 # Brewer view - only their own expenses
                 cur.execute("""
                     SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
-                           e.status, e.paid_date, e.rejection_reason, e.rejected_date,
+                           e.status, e.paid_date, e.rejection_reason, e.rejected_date, e.category,
                            u.full_name, u.username, u.bank_account,
                            p.full_name as paid_by_name, r.full_name as rejected_by_name,
                            COUNT(ei.id) as receipt_count
@@ -3941,7 +3941,7 @@ def export_expenses():
             
             query = f"""
                 SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
-                       e.status, e.paid_date, e.rejection_reason, e.rejected_date,
+                       e.status, e.paid_date, e.rejection_reason, e.rejected_date, e.category,
                        u.full_name, u.username, u.bank_account,
                        p.full_name as paid_by_name, r.full_name as rejected_by_name,
                        COUNT(ei.id) as receipt_count
@@ -3975,16 +3975,16 @@ def export_expenses():
     # Write header
     if current_user.can_access('expenses', 'full'):
         writer.writerow([
-            'Submitted Date', 'User', 'Bank Account', 'Amount (NOK)', 
-            'Description', 'Purchase Date', 'Status', 'Paid Date', 
+            'Submitted Date', 'User', 'Bank Account', 'Amount (NOK)',
+            'Description', 'Category', 'Purchase Date', 'Status', 'Paid Date',
             'Paid By', 'Rejection Reason', 'Receipts'
         ])
     else:
         writer.writerow([
-            'Submitted Date', 'Amount (NOK)', 'Description', 
-            'Purchase Date', 'Status', 'Paid Date', 'Receipts'
+            'Submitted Date', 'Amount (NOK)', 'Description',
+            'Category', 'Purchase Date', 'Status', 'Paid Date', 'Receipts'
         ])
-    
+
     # Write data
     total_amount = 0
     for expense in expenses_list:
@@ -4008,6 +4008,7 @@ def export_expenses():
                 bank_account,
                 f"{expense['amount']:.2f}",
                 expense['description'],
+                expense.get('category') or 'Other',
                 purchase,
                 expense['status'],
                 paid,
@@ -4020,6 +4021,7 @@ def export_expenses():
                 submitted,
                 f"{expense['amount']:.2f}",
                 expense['description'],
+                expense.get('category') or 'Other',
                 purchase,
                 expense['status'],
                 paid,
@@ -4029,9 +4031,9 @@ def export_expenses():
     # Add total row
     if expenses_list:
         if current_user.can_access('expenses', 'full'):
-            writer.writerow(['', '', 'TOTAL:', f"{total_amount:.2f}", '', '', '', '', '', '', ''])
+            writer.writerow(['', '', 'TOTAL:', f"{total_amount:.2f}", '', '', '', '', '', '', '', ''])
         else:
-            writer.writerow(['', f"{total_amount:.2f}", '', '', '', '', ''])
+            writer.writerow(['', f"{total_amount:.2f}", '', '', '', '', '', ''])
     
     # Convert string to bytes for send_file
     output.write(text_stream.getvalue().encode('utf-8'))
@@ -4072,13 +4074,14 @@ def create_expense():
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
                 # Insert expense
                 cur.execute("""
-                    INSERT INTO expenses (user_id, amount, description, purchase_date)
-                    VALUES (%s, %s, %s, %s)
+                    INSERT INTO expenses (user_id, amount, description, category, purchase_date)
+                    VALUES (%s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     current_user.id,
                     form.amount.data,
                     form.description.data,
+                    form.category.data,
                     form.purchase_date.data
                 ))
                 
@@ -4330,7 +4333,7 @@ def edit_expense(expense_id):
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.status, e.rejection_reason
+                SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.category, e.status, e.rejection_reason
                 FROM expenses e
                 WHERE e.id = %s
             """, (expense_id,))
@@ -4409,13 +4412,14 @@ def edit_expense(expense_id):
                 # Update expense and reset status to Pending
                 cur.execute("""
                     UPDATE expenses 
-                    SET amount = %s, description = %s, purchase_date = %s, 
+                    SET amount = %s, description = %s, category = %s, purchase_date = %s, 
                         status = 'Pending', rejection_reason = NULL, rejected_by = NULL, rejected_date = NULL,
                         submitted_date = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (
                     form.amount.data,
                     form.description.data,
+                    form.category.data,
                     form.purchase_date.data,
                     expense_id
                 ))
@@ -4470,6 +4474,7 @@ def edit_expense(expense_id):
     # Populate form with current values
     if request.method == 'GET':
         form.amount.data = expense['amount']
+        form.category.data = expense['category'] or 'Other'
         form.description.data = expense['description']
         form.purchase_date.data = expense['purchase_date']
     

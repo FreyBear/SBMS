@@ -3045,6 +3045,38 @@ msgstr ""
 msgid "Successfully updated %(count)d kegs"
 msgstr "Oppdaterte %(count)d fat"
 
+#: backend/forms.py frontend/templates/expenses.html
+msgid "Category"
+msgstr "Kategori"
+
+#: backend/forms.py
+msgid "Raw Materials"
+msgstr "Råvarer"
+
+#: backend/forms.py
+msgid "Equipment"
+msgstr "Utstyr"
+
+#: backend/forms.py
+msgid "Packaging"
+msgstr "Emballasje"
+
+#: backend/forms.py
+msgid "Cleaning"
+msgstr "Reingjering"
+
+#: backend/forms.py
+msgid "Transport"
+msgstr "Transport"
+
+#: backend/forms.py
+msgid "Events"
+msgstr "Arrangement"
+
+#: backend/forms.py frontend/templates/expenses.html
+msgid "Other"
+msgstr "Anna"
+
 #~ msgid "Paid"
 #~ msgstr "Betalt"
 

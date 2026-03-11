@@ -23,156 +23,130 @@
 
     {% if expenses %}
     <div class="table-container">
-        <table class="data-table">
+        <table class="data-table expense-table">
             <thead>
                 <tr>
-                    <th>{{ _('Submitted') }}</th>
-                    {% if current_user.can_access('expenses', 'full') %}
-                    <th>{{ _('User') }}</th>
-                    <th>{{ _('Bank Account') }}</th>
-                    {% endif %}
-                    <th>{{ _('Amount') }}</th>
                     <th>{{ _('Description') }}</th>
-                    <th>{{ _('Purchase Date') }}</th>
-                    <th>{{ _('Status') }}</th>
-                    <th>{{ _('Receipts') }}</th>
+                    <th class="col-amount">{{ _('Amount') }}</th>
+                    <th class="col-date">{{ _('Date') }}</th>
+                    {% if current_user.can_access('expenses', 'full') %}
+                    <th class="col-user">{{ _('User') }}</th>
+                    {% endif %}
+                    <th class="col-status">{{ _('Status') }}</th>
                     {% if current_user.can_access('expenses', 'full') or current_user.can_access('expenses', 'edit') %}
-                    <th>{{ _('Actions') }}</th>
+                    <th class="col-actions">{{ _('Actions') }}</th>
                     {% endif %}
                 </tr>
             </thead>
             <tbody>
                 {% for expense in expenses %}
                 <tr data-status="{{ expense.status }}">
-                    <td>{{ expense.submitted_date.strftime('%d-%m-%Y %H:%M') }}</td>
+                    {# ── Description + meta ── #}
+                    <td data-label="{{ _('Description') }}">
+                        <div class="desc-main">{{ expense.description }}</div>
+                        <div class="desc-meta">
+                            <span class="cat-chip cat-{{ (expense.category or 'Other')|lower|replace(' ', '-') }}">
+                                {{ _(expense.category) if expense.category else _('Other') }}
+                            </span>
+                            {% if expense.receipt_count > 0 %}
+                            <a href="{{ url_for('expense_receipts', expense_id=expense.id) }}" class="receipt-chip" title="{{ _('View receipts') }}">
+                                📎 {{ expense.receipt_count }}
+                            </a>
+                            {% endif %}
+                            <span class="submitted-meta">{{ expense.submitted_date.strftime('%d.%m.%Y') }}</span>
+                        </div>
+                    </td>
+
+                    {# ── Amount ── #}
+                    <td class="amount col-amount" data-label="{{ _('Amount') }}">
+                        {{ "%.2f"|format(expense.amount) }}<span class="currency"> NOK</span>
+                    </td>
+
+                    {# ── Purchase date ── #}
+                    <td class="col-date" data-label="{{ _('Date') }}">
+                        {{ expense.purchase_date.strftime('%d.%m.%Y') }}
+                    </td>
+
+                    {# ── User + bank (admin only) ── #}
                     {% if current_user.can_access('expenses', 'full') %}
-                    <td>{{ expense.full_name or expense.username }}</td>
-                    <td>
+                    <td class="col-user" data-label="{{ _('User') }}">
+                        <div class="user-name">{{ expense.full_name or expense.username }}</div>
                         {% if expense.bank_account %}
-                            {{ expense.bank_account[:4] }}.{{ expense.bank_account[4:6] }}.{{ expense.bank_account[6:] }}
+                        <div class="bank-account">{{ expense.bank_account[:4] }}.{{ expense.bank_account[4:6] }}.{{ expense.bank_account[6:] }}</div>
                         {% else %}
-                            <span class="text-muted">{{ _('Not set') }}</span>
+                        <div class="bank-account text-muted">{{ _('No account') }}</div>
                         {% endif %}
                     </td>
                     {% endif %}
-                    <td class="amount">{{ "%.2f"|format(expense.amount) }} NOK</td>
-                    <td class="description">
-                        <div class="description-text">{{ expense.description }}</div>
-                    </td>
-                    <td>{{ expense.purchase_date.strftime('%d-%m-%Y') }}</td>
-                    <td>
+
+                    {# ── Status ── #}
+                    <td class="col-status" data-label="{{ _('Status') }}">
                         <span class="status-badge status-{{ expense.status.lower() }}">
                             {{ expense.status|translate_status }}
                         </span>
                         {% if expense.status == 'Paid' and expense.paid_date %}
-                        <div class="paid-info">
-                            <small>{{ 'Paid'|translate_status }}: {{ expense.paid_date.strftime('%d-%m-%Y') }}</small>
-                            {% if expense.paid_by_name %}
-                            <small>{{ _('by') }} {{ expense.paid_by_name }}</small>
-                            {% endif %}
+                        <div class="status-meta">
+                            <small>{{ expense.paid_date.strftime('%d.%m.%Y') }}</small>
+                            {% if expense.paid_by_name %}<small>{{ _('by') }} {{ expense.paid_by_name }}</small>{% endif %}
                         </div>
                         {% elif expense.status == 'Rejected' and expense.rejected_date %}
-                        <div class="rejected-info">
-                            <small>{{ 'Rejected'|translate_status }}: {{ expense.rejected_date.strftime('%d-%m-%Y') }}</small>
-                            {% if expense.rejected_by_name %}
-                            <small>{{ _('by') }} {{ expense.rejected_by_name }}</small>
-                            {% endif %}
+                        <div class="status-meta">
+                            <small>{{ expense.rejected_date.strftime('%d.%m.%Y') }}</small>
                             {% if expense.rejection_reason %}
-                            <div class="rejection-reason">
-                                <strong>{{ _('Reason') }}:</strong> {{ expense.rejection_reason[:50] }}{% if expense.rejection_reason|length > 50 %}...{% endif %}
-                            </div>
+                            <small class="rejection-snippet" title="{{ expense.rejection_reason }}">
+                                {{ expense.rejection_reason[:40] }}{% if expense.rejection_reason|length > 40 %}…{% endif %}
+                            </small>
                             {% endif %}
                         </div>
                         {% endif %}
                     </td>
-                    <td>
-                        <div class="receipt-links">
-                            {% if expense.receipt_count > 0 %}
-                            <a href="{{ url_for('expense_receipts', expense_id=expense.id) }}" class="receipt-link">
-                                📎 {{ expense.receipt_count }} {{ _('receipt(s)') }}
-                            </a>
-                            {% else %}
-                            <span class="no-receipts">{{ _('No receipts') }}</span>
-                            {% endif %}
-                        </div>
-                    </td>
+
+                    {# ── Actions ── #}
                     {% if current_user.can_access('expenses', 'full') %}
-                    <td class="actions">
-                        {% if expense.status == 'Pending' %}
+                    <td class="col-actions" data-label="{{ _('Actions') }}">
                         <div class="action-buttons">
-                            <form method="POST" action="{{ url_for('mark_expense_paid', expense_id=expense.id) }}" 
-                                  style="display: inline-block;"
+                            {% if expense.status == 'Pending' %}
+                            <form method="POST" action="{{ url_for('mark_expense_paid', expense_id=expense.id) }}"
                                   onsubmit="return confirm('{{ _('Mark this expense as paid?') }}')">
                                 <button type="submit" class="btn btn-sm btn-success">{{ _('Mark Paid') }}</button>
                             </form>
-                            <a href="{{ url_for('reject_expense', expense_id=expense.id) }}" 
+                            <a href="{{ url_for('reject_expense', expense_id=expense.id) }}"
                                class="btn btn-sm btn-warning">{{ _('Reject') }}</a>
-                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
-                                  style="display: inline-block;"
-                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
-                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
-                            </form>
-                        </div>
-                        {% else %}
-                        <div class="action-buttons">
-                            {% if expense.status == 'Rejected' %}
-                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
-                               class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
+                            {% elif expense.status == 'Rejected' %}
+                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}"
+                               class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
                             {% endif %}
-                            {# Admin users can delete any expense, including paid ones #}
-                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
-                                  style="display: inline-block;"
+                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}"
                                   onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
                                 <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
                             </form>
                         </div>
-                        {% endif %}
                     </td>
                     {% elif current_user.can_access('expenses', 'edit') %}
-                    <td class="actions">
-                        {% if expense.status == 'Rejected' and expense.user_id == current_user.id %}
+                    <td class="col-actions" data-label="{{ _('Actions') }}">
                         <div class="action-buttons">
-                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
-                               class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
-                            {% if expense.status != 'Paid' %}
-                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
-                                  style="display: inline-block;"
-                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
-                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
-                            </form>
+                            {% if expense.user_id == current_user.id %}
+                                {% if expense.status == 'Rejected' %}
+                                <a href="{{ url_for('edit_expense', expense_id=expense.id) }}"
+                                   class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
+                                {% endif %}
+                                {% if expense.status != 'Paid' %}
+                                <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}"
+                                      onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
+                                    <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
+                                </form>
+                                {% endif %}
                             {% endif %}
                         </div>
-                        {% elif expense.status == 'Pending' and expense.user_id == current_user.id %}
-                        <div class="action-buttons">
-                            {% if expense.status != 'Paid' %}
-                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
-                                  style="display: inline-block;"
-                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
-                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
-                            </form>
-                            {% endif %}
-                        </div>
-                        {% else %}
-                        <span class="text-muted">{{ _('No actions available') }}</span>
-                        {% endif %}
                     </td>
                     {% else %}
-                    <td class="actions">
-                        {% if expense.status == 'Rejected' and expense.user_id == current_user.id %}
+                    <td class="col-actions" data-label="{{ _('Actions') }}">
                         <div class="action-buttons">
-                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}" 
-                               class="btn btn-sm btn-primary" style="color: white !important;">{{ _('Edit & Resubmit') }}</a>
-                            {% if expense.status != 'Paid' %}
-                            <form method="POST" action="{{ url_for('delete_expense', expense_id=expense.id) }}" 
-                                  style="display: inline-block;"
-                                  onsubmit="return confirm('{{ _('Are you sure you want to delete this expense? This action cannot be undone.') }}')">
-                                <button type="submit" class="btn btn-sm btn-danger">{{ _('Delete') }}</button>
-                            </form>
+                            {% if expense.status == 'Rejected' and expense.user_id == current_user.id %}
+                            <a href="{{ url_for('edit_expense', expense_id=expense.id) }}"
+                               class="btn btn-sm btn-primary">{{ _('Edit') }}</a>
                             {% endif %}
                         </div>
-                        {% else %}
-                        <span class="text-muted">{{ _('No actions available') }}</span>
-                        {% endif %}
                     </td>
                     {% endif %}
                 </tr>
@@ -226,6 +200,7 @@
 </div>
 
 <style>
+/* ─── Page layout ─────────────────────────────────────────────── */
 .expenses-page {
     max-width: 1200px;
     margin: 0 auto;
@@ -236,16 +211,16 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 30px;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 24px;
     padding-bottom: 15px;
     border-bottom: 2px solid #e0e0e0;
 }
+.page-header h1 { margin: 0; color: #2c3e50; }
+.page-header .actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-.page-header h1 {
-    margin: 0;
-    color: #2c3e50;
-}
-
+/* ─── Table container ─────────────────────────────────────────── */
 .table-container {
     overflow-x: auto;
     background: white;
@@ -253,145 +228,125 @@
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
-.data-table {
+.expense-table {
     width: 100%;
     border-collapse: collapse;
-    margin: 0;
 }
-
-.data-table th,
-.data-table td {
-    padding: 12px 15px;
+.expense-table th,
+.expense-table td {
+    padding: 10px 12px;
     text-align: left;
-    border-bottom: 1px solid #e0e0e0;
+    border-bottom: 1px solid #eee;
+    vertical-align: top;
 }
+.expense-table tbody tr:hover { background: #f8f9fa; }
 
-/* Removed - using main CSS gradient headers */
+/* column widths */
+.col-amount  { white-space: nowrap; width: 110px; }
+.col-date    { white-space: nowrap; width: 95px; }
+.col-user    { width: 150px; }
+.col-status  { width: 130px; }
+.col-actions { width: 120px; white-space: nowrap; }
 
-.data-table tr:hover {
-    background-color: #f8f9fa;
-}
-
-.amount {
-    font-weight: 600;
-    color: #27ae60;
-}
-
-.description-text {
-    max-width: 200px;
+/* ─── Description cell ────────────────────────────────────────── */
+.desc-main {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    max-width: 340px;
+}
+.desc-meta {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 6px;
+    margin-top: 5px;
+}
+.submitted-meta {
+    font-size: 0.72rem;
+    color: #aaa;
 }
 
-.status-badge {
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-size: 12px;
+/* ─── Category chips ──────────────────────────────────────────── */
+.cat-chip {
+    display: inline-block;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-size: 0.72rem;
     font-weight: 600;
     text-transform: uppercase;
+    letter-spacing: 0.03em;
 }
+.cat-chip.cat-raw-materials  { background:#fff3e0; color:#e65100; }
+.cat-chip.cat-equipment      { background:#e8eaf6; color:#3949ab; }
+.cat-chip.cat-packaging      { background:#e0f2f1; color:#00695c; }
+.cat-chip.cat-cleaning       { background:#f3e5f5; color:#6a1b9a; }
+.cat-chip.cat-transport      { background:#e3f2fd; color:#0d47a1; }
+.cat-chip.cat-events         { background:#fce4ec; color:#880e4f; }
+.cat-chip.cat-other          { background:#f5f5f5; color:#616161; }
 
-.status-pending {
-    background-color: #f39c12;
-    color: white;
+/* ─── Receipt chip ────────────────────────────────────────────── */
+.receipt-chip {
+    display: inline-block;
+    padding: 2px 7px;
+    background: #e3f2fd;
+    color: #1565c0;
+    border-radius: 10px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    text-decoration: none;
 }
+.receipt-chip:hover { background: #bbdefb; }
 
-.status-paid {
-    background-color: #27ae60;
-    color: white;
+/* ─── Amount ──────────────────────────────────────────────────── */
+.amount { font-weight: 700; color: #2e7d32; font-size: 0.95rem; }
+.currency { font-size: 0.75rem; font-weight: 400; color: #666; }
+
+/* ─── User cell ───────────────────────────────────────────────── */
+.user-name  { font-size: 0.9rem; font-weight: 600; color: #2c3e50; }
+.bank-account { font-size: 0.75rem; color: #888; margin-top: 2px; font-family: monospace; }
+
+/* ─── Status ──────────────────────────────────────────────────── */
+.status-badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 20px;
+    font-size: 0.72rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
 }
+.status-pending  { background:#fff3e0; color:#e65100; border:1px solid #ffcc80; }
+.status-paid     { background:#e8f5e9; color:#2e7d32; border:1px solid #a5d6a7; }
+.status-rejected { background:#fce4ec; color:#c62828; border:1px solid #ef9a9a; }
 
-.status-rejected {
-    background-color: #e74c3c;
-    color: white;
-}
-
-.paid-info {
-    margin-top: 5px;
-}
-
-.paid-info small {
+.status-meta { margin-top: 4px; }
+.status-meta small {
     display: block;
-    color: #7f8c8d;
-    font-size: 11px;
+    font-size: 0.72rem;
+    color: #888;
+    line-height: 1.4;
 }
+.rejection-snippet { color: #c62828 !important; font-style: italic; }
 
-.rejected-info {
-    margin-top: 5px;
-}
-
-.rejected-info small {
-    display: block;
-    color: #7f8c8d;
-    font-size: 11px;
-}
-
-.rejection-reason {
-    margin-top: 5px;
-    padding: 5px;
-    background-color: #ffe6e6;
-    border-radius: 3px;
-    font-size: 11px;
-    color: #d32f2f;
-}
-
+/* ─── Action buttons ─── use system standard btn btn-sm ─────── */
 .action-buttons {
     display: flex;
-    gap: 5px;
     flex-wrap: wrap;
+    align-items: center;
+    gap: 4px;
 }
-
+/* Make form invisible to layout so the button aligns like a link */
 .action-buttons form {
     margin: 0;
+    display: contents;
 }
 
-.btn-warning {
-    background-color: #f39c12;
-    color: white;
-}
-
-.btn-warning:hover {
-    background-color: #e67e22;
-}
-
-.btn-danger {
-    background-color: #e74c3c;
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #c0392b;
-}
-
-.receipt-count {
-    font-size: 12px;
-    color: #3498db;
-    cursor: pointer;
-}
-
-.receipt-link {
-    color: #3498db;
-    text-decoration: none;
-    font-size: 12px;
-    font-weight: 500;
-}
-
-.receipt-link:hover {
-    text-decoration: underline;
-    color: #2980b9;
-}
-
-.no-receipts {
-    color: #95a5a6;
-    font-size: 12px;
-    font-style: italic;
-}
-
-.text-muted {
-    color: #7f8c8d;
-}
-
+/* ─── Misc ────────────────────────────────────────────────────── */
+.text-muted { color: #9e9e9e; font-size: 0.8rem; }
 .empty-state {
     text-align: center;
     padding: 60px 20px;
@@ -399,21 +354,10 @@
     border-radius: 8px;
     box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
+.empty-state h3 { color: #9e9e9e; margin-bottom: 8px; }
+.empty-state p  { color: #bdbdbd; margin-bottom: 24px; }
 
-.empty-state h3 {
-    margin-bottom: 10px;
-    color: #7f8c8d;
-}
-
-.empty-state p {
-    margin-bottom: 30px;
-    color: #95a5a6;
-}
-
-.actions form {
-    margin: 0;
-}
-
+/* ─── Shared button styles (page-header + modal) ──────────────── */
 .btn {
     display: inline-block;
     padding: 8px 16px;
@@ -425,126 +369,99 @@
     font-weight: 500;
     transition: background-color 0.2s;
 }
+.btn-primary   { background:#3498db; color:white; }
+.btn-primary:hover { background:#2980b9; color:white; }
+.btn-success   { background:#27ae60; color:white; }
+.btn-success:hover { background:#219a52; }
+.btn-secondary { background:#95a5a6; color:white; }
+.btn-secondary:hover { background:#7f8c8d; color:white; }
 
-.btn-primary {
-    background-color: #3498db;
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #2980b9;
-    color: white;
-}
-
-.btn-success {
-    background-color: #27ae60;
-    color: white;
-}
-
-.btn-success:hover {
-    background-color: #219a52;
-}
-
-.page-header .actions {
-    display: flex;
-    gap: 10px;
-}
-
-/* Export Modal Styles */
+/* ─── Export modal ────────────────────────────────────────────── */
 .modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    position: fixed; top:0; left:0; width:100%; height:100%;
+    background: rgba(0,0,0,0.5); z-index:1000;
+    display: flex; align-items:center; justify-content:center;
 }
-
 .modal-content {
-    background: white;
-    border-radius: 8px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    max-width: 500px;
-    width: 90%;
-    max-height: 90vh;
-    overflow-y: auto;
+    background: white; border-radius:8px;
+    box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    max-width: 500px; width:90%; max-height:90vh; overflow-y:auto;
 }
-
 .modal-header {
-    padding: 20px;
-    border-bottom: 1px solid #e0e0e0;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
+    padding: 20px; border-bottom:1px solid #e0e0e0;
+    display:flex; justify-content:space-between; align-items:center;
 }
-
-.modal-header h2 {
-    margin: 0;
-    font-size: 20px;
-}
-
+.modal-header h2 { margin:0; font-size:20px; }
 .close-modal {
-    background: none;
-    border: none;
-    font-size: 28px;
-    cursor: pointer;
-    color: #95a5a6;
-    padding: 0;
-    width: 30px;
-    height: 30px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
+    background:none; border:none; font-size:28px; cursor:pointer;
+    color:#bbb; padding:0; width:30px; height:30px;
+    display:flex; align-items:center; justify-content:center;
 }
+.close-modal:hover { color:#666; }
+.modal-body { padding:20px; }
+.form-group { margin-bottom:18px; }
+.form-group label { display:block; margin-bottom:5px; font-weight:500; color:#2c3e50; }
+.form-control { width:100%; padding:9px; border:1px solid #ddd; border-radius:4px; font-size:14px; }
+.form-control:focus { outline:none; border-color:#3498db; }
+.help-text { display:block; margin-top:4px; color:#9e9e9e; font-size:12px; }
+.form-actions { display:flex; gap:10px; justify-content:flex-end; margin-top:18px; }
 
-.close-modal:hover {
-    color: #7f8c8d;
-}
+/* ─── Mobile: card layout ─────────────────────────────────────── */
+@media (max-width: 700px) {
+    .table-container { box-shadow: none; background: transparent; }
 
-.modal-body {
-    padding: 20px;
-}
+    .expense-table thead { display: none; }
 
-.form-group {
-    margin-bottom: 20px;
-}
+    .expense-table tbody tr {
+        display: block;
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 4px rgba(0,0,0,0.12);
+        margin-bottom: 12px;
+        padding: 12px 14px;
+        border: none;
+    }
 
-.form-group label {
-    display: block;
-    margin-bottom: 5px;
-    font-weight: 500;
-    color: #2c3e50;
-}
+    .expense-table td {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+        padding: 5px 0;
+        border: none;
+        border-bottom: 1px solid #f0f0f0;
+        font-size: 0.88rem;
+    }
+    .expense-table td:last-child { border-bottom: none; padding-bottom: 0; }
 
-.form-control {
-    width: 100%;
-    padding: 10px;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 14px;
-}
+    .expense-table td::before {
+        content: attr(data-label);
+        font-weight: 700;
+        color: #888;
+        font-size: 0.72rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        min-width: 90px;
+        padding-top: 2px;
+    }
 
-.form-control:focus {
-    outline: none;
-    border-color: #3498db;
-}
+    /* description card: stacked, no side-by-side */
+    .expense-table td[data-label="{{ _('Description') }}"] {
+        flex-direction: column;
+        gap: 4px;
+    }
+    .expense-table td[data-label="{{ _('Description') }}"]::before { display: none; }
+    .desc-main { max-width: 100%; -webkit-line-clamp: 3; font-size: 0.9rem; font-weight: 600; }
 
-.help-text {
-    display: block;
-    margin-top: 5px;
-    color: #7f8c8d;
-    font-size: 12px;
-}
+    .col-amount  { width: auto; }
+    .col-date    { width: auto; }
+    .col-user    { width: auto; }
+    .col-status  { width: auto; align-items: center; }
+    .col-actions { width: auto; white-space: normal; }
 
-.form-actions {
-    display: flex;
-    gap: 10px;
-    justify-content: flex-end;
-    margin-top: 20px;
+    .action-buttons { justify-content: flex-end; }
+
+    /* hide submitted date meta on mobile (already shown on card implicitly) */
+    .submitted-meta { display: none; }
 }
 </style>
 

@@ -66,11 +66,22 @@ class EditUserForm(FlaskForm):
     ])
     submit = SubmitField('Update User')
 
+EXPENSE_CATEGORIES = [
+    ('Raw Materials', _l('Raw Materials')),
+    ('Equipment',     _l('Equipment')),
+    ('Packaging',     _l('Packaging')),
+    ('Cleaning',      _l('Cleaning')),
+    ('Transport',     _l('Transport')),
+    ('Events',        _l('Events')),
+    ('Other',         _l('Other')),
+]
+
 class CreateExpenseForm(FlaskForm):
     amount = DecimalField(_l('Amount (NOK)'), validators=[
         DataRequired(),
         NumberRange(min=0.01, message='Amount must be greater than 0')
     ], places=2)
+    category = SelectField(_l('Category'), validators=[DataRequired()], choices=EXPENSE_CATEGORIES)
     description = TextAreaField(_l('Description'), validators=[
         DataRequired(),
         Length(min=10, max=500, message='Description must be between 10 and 500 characters')
@@ -96,21 +107,22 @@ class DeleteExpenseForm(FlaskForm):
     submit = SubmitField('Delete Expense')
 
 class EditExpenseForm(FlaskForm):
-    amount = DecimalField('Amount (NOK)', validators=[
+    amount = DecimalField(_l('Amount (NOK)'), validators=[
         DataRequired(),
         NumberRange(min=0.01, message='Amount must be greater than 0')
     ], places=2)
-    description = TextAreaField('Description', validators=[
+    category = SelectField(_l('Category'), validators=[DataRequired()], choices=EXPENSE_CATEGORIES)
+    description = TextAreaField(_l('Description'), validators=[
         DataRequired(),
         Length(min=10, max=500, message='Description must be between 10 and 500 characters')
     ])
-    purchase_date = DateField('Purchase Date', validators=[DataRequired()])
-    receipts = MultipleFileField('Receipt Images', validators=[
+    purchase_date = DateField(_l('Purchase Date'), validators=[DataRequired()])
+    receipts = MultipleFileField(_l('Receipt Images'), validators=[
         Optional(),
         FileAllowed(['jpg', 'jpeg', 'png', 'pdf'], 'Only JPG, PNG, and PDF files are allowed')
     ])
-    remove_attachments = HiddenField('Remove Attachments')
-    submit = SubmitField('Update Expense')
+    remove_attachments = HiddenField(_l('Remove Attachments'))
+    submit = SubmitField(_l('Update Expense'))
 
 class CreateKitForm(FlaskForm):
     name = StringField(_l('Kit Name'), validators=[
