@@ -26,6 +26,7 @@
         <table class="data-table expense-table">
             <thead>
                 <tr>
+                    <th class="col-bilagsnr">{{ _('Nr') }}</th>
                     <th>{{ _('Description') }}</th>
                     <th class="col-amount">{{ _('Amount') }}</th>
                     <th class="col-date">{{ _('Date') }}</th>
@@ -41,6 +42,11 @@
             <tbody>
                 {% for expense in expenses %}
                 <tr data-status="{{ expense.status }}">
+                    {# ── Bilagsnr ── #}
+                    <td class="col-bilagsnr" data-label="{{ _('Nr') }}">
+                        <span class="bilagsnr">{% if expense.bilag_nr %}{{ expense.bilag_nr }}-{{ expense.bilag_year }}{% endif %}</span>
+                    </td>
+
                     {# ── Description + meta ── #}
                     <td data-label="{{ _('Description') }}">
                         <div class="desc-main">{{ expense.description }}</div>
@@ -242,11 +248,20 @@
 .expense-table tbody tr:hover { background: #f8f9fa; }
 
 /* column widths */
+.col-bilagsnr { white-space: nowrap; width: 95px; }
 .col-amount  { white-space: nowrap; width: 110px; }
 .col-date    { white-space: nowrap; width: 95px; }
 .col-user    { width: 150px; }
 .col-status  { width: 130px; }
 .col-actions { width: 120px; white-space: nowrap; }
+
+.bilagsnr {
+    font-family: monospace;
+    font-size: 0.82rem;
+    color: #546e7a;
+    font-weight: 600;
+    letter-spacing: 0.02em;
+}
 
 /* ─── Description cell ────────────────────────────────────────── */
 .desc-main {
@@ -373,6 +388,10 @@
 .btn-primary:hover { background:#2980b9; color:white; }
 .btn-success   { background:#27ae60; color:white; }
 .btn-success:hover { background:#219a52; }
+.btn-warning   { background:#f39c12; color:white; }
+.btn-warning:hover { background:#e08e0b; color:white; }
+.btn-danger    { background:#e74c3c; color:white; }
+.btn-danger:hover  { background:#c0392b; color:white; }
 .btn-secondary { background:#95a5a6; color:white; }
 .btn-secondary:hover { background:#7f8c8d; color:white; }
 
@@ -394,11 +413,19 @@
 .modal-header h2 { margin:0; font-size:20px; }
 .close-modal {
     background:none; border:none; font-size:28px; cursor:pointer;
-    color:#bbb; padding:0; width:30px; height:30px;
+    color:#bbb !important; padding:0; width:30px; height:30px;
     display:flex; align-items:center; justify-content:center;
+    box-shadow: none !important;
 }
-.close-modal:hover { color:#666; }
+.close-modal:hover { color:#666 !important; }
 .modal-body { padding:20px; }
+.modal-body form {
+    background: none;
+    padding: 0;
+    border-radius: 0;
+    box-shadow: none;
+    margin-bottom: 0;
+}
 .form-group { margin-bottom:18px; }
 .form-group label { display:block; margin-bottom:5px; font-weight:500; color:#2c3e50; }
 .form-control { width:100%; padding:9px; border:1px solid #ddd; border-radius:4px; font-size:14px; }

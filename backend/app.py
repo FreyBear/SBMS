@@ -657,6 +657,10 @@ def update_keg(keg_number):
                 return redirect(url_for('kegs'))
             keg_id = result[0]
             
+            # Parse empty_weight_kg from form (may have been updated by user)
+            empty_weight_kg_form = request.form.get('empty_weight_kg')
+            empty_weight_kg_value = float(empty_weight_kg_form) if empty_weight_kg_form and empty_weight_kg_form.strip() else None
+
             # Update the main keg record with latest values
             cur.execute("""
                 UPDATE keg SET
@@ -664,6 +668,7 @@ def update_keg(keg_number):
                     status = %s,
                     amount_left_liters = %s,
                     current_weight_kg = %s,
+                    empty_weight_kg = %s,
                     location = %s,
                     brew_id = %s,
                     abv = %s,
@@ -676,6 +681,7 @@ def update_keg(keg_number):
                 request.form['status'],
                 amount_left_liters,
                 current_weight_kg,
+                empty_weight_kg_value,
                 request.form['location'],
                 brew_id,
                 abv,
@@ -3846,8 +3852,9 @@ def expenses():
             if current_user.can_access('expenses', 'full'):
                 # Economy and Admin view
                 cur.execute("""
-                    SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
+                    SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date,
                            e.status, e.paid_date, e.rejection_reason, e.rejected_date, e.category,
+                           e.bilag_nr, e.bilag_year,
                            u.full_name, u.username, u.bank_account,
                            p.full_name as paid_by_name, r.full_name as rejected_by_name,
                            COUNT(ei.id) as receipt_count
@@ -3857,8 +3864,8 @@ def expenses():
                     LEFT JOIN users r ON e.rejected_by = r.id
                     LEFT JOIN expense_images ei ON e.id = ei.expense_id
                     GROUP BY e.id, e.user_id, u.full_name, u.username, u.bank_account, p.full_name, r.full_name
-                    ORDER BY 
-                        CASE 
+                    ORDER BY
+                        CASE
                             WHEN e.status = 'Pending' THEN 1
                             WHEN e.status = 'Rejected' THEN 2
                             WHEN e.status = 'Paid' THEN 3
@@ -3868,8 +3875,9 @@ def expenses():
             else:
                 # Brewer view - only their own expenses
                 cur.execute("""
-                    SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
+                    SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date,
                            e.status, e.paid_date, e.rejection_reason, e.rejected_date, e.category,
+                           e.bilag_nr, e.bilag_year,
                            u.full_name, u.username, u.bank_account,
                            p.full_name as paid_by_name, r.full_name as rejected_by_name,
                            COUNT(ei.id) as receipt_count
@@ -3880,8 +3888,8 @@ def expenses():
                     LEFT JOIN expense_images ei ON e.id = ei.expense_id
                     WHERE e.user_id = %s
                     GROUP BY e.id, e.user_id, u.full_name, u.username, u.bank_account, p.full_name, r.full_name
-                    ORDER BY 
-                        CASE 
+                    ORDER BY
+                        CASE
                             WHEN e.status = 'Pending' THEN 1
                             WHEN e.status = 'Rejected' THEN 2
                             WHEN e.status = 'Paid' THEN 3
@@ -3940,8 +3948,9 @@ def export_expenses():
                 where_sql = "WHERE " + " AND ".join(where_clauses)
             
             query = f"""
-                SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date, 
+                SELECT e.id, e.user_id, e.amount, e.description, e.purchase_date, e.submitted_date,
                        e.status, e.paid_date, e.rejection_reason, e.rejected_date, e.category,
+                       e.bilag_nr, e.bilag_year,
                        u.full_name, u.username, u.bank_account,
                        p.full_name as paid_by_name, r.full_name as rejected_by_name,
                        COUNT(ei.id) as receipt_count
@@ -3975,13 +3984,13 @@ def export_expenses():
     # Write header
     if current_user.can_access('expenses', 'full'):
         writer.writerow([
-            'Submitted Date', 'User', 'Bank Account', 'Amount (NOK)',
+            'Bilagsnr', 'Submitted Date', 'User', 'Bank Account', 'Amount (NOK)',
             'Description', 'Category', 'Purchase Date', 'Status', 'Paid Date',
             'Paid By', 'Rejection Reason', 'Receipts'
         ])
     else:
         writer.writerow([
-            'Submitted Date', 'Amount (NOK)', 'Description',
+            'Bilagsnr', 'Submitted Date', 'Amount (NOK)', 'Description',
             'Category', 'Purchase Date', 'Status', 'Paid Date', 'Receipts'
         ])
 
@@ -4001,8 +4010,12 @@ def export_expenses():
             ba = expense['bank_account']
             bank_account = f"{ba[:4]}.{ba[4:6]}.{ba[6:]}"
         
+        # Format bilagsnr for display
+        bilagsnr = f'="{expense["bilag_nr"]}-{expense["bilag_year"]}"' if expense.get('bilag_nr') else ''
+
         if current_user.can_access('expenses', 'full'):
             writer.writerow([
+                bilagsnr,
                 submitted,
                 expense['full_name'] or expense['username'],
                 bank_account,
@@ -4018,6 +4031,7 @@ def export_expenses():
             ])
         else:
             writer.writerow([
+                bilagsnr,
                 submitted,
                 f"{expense['amount']:.2f}",
                 expense['description'],
@@ -4027,16 +4041,16 @@ def export_expenses():
                 paid,
                 expense['receipt_count']
             ])
-    
+
     # Add total row
     if expenses_list:
         if current_user.can_access('expenses', 'full'):
-            writer.writerow(['', '', 'TOTAL:', f"{total_amount:.2f}", '', '', '', '', '', '', '', ''])
+            writer.writerow(['', '', '', 'TOTAL:', f"{total_amount:.2f}", '', '', '', '', '', '', '', ''])
         else:
-            writer.writerow(['', f"{total_amount:.2f}", '', '', '', '', '', ''])
+            writer.writerow(['', '', f"{total_amount:.2f}", '', '', '', '', '', ''])
     
     # Convert string to bytes for send_file
-    output.write(text_stream.getvalue().encode('utf-8'))
+    output.write(text_stream.getvalue().encode('utf-8-sig'))
     output.seek(0)
     
     # Generate filename with date range
@@ -4072,19 +4086,31 @@ def create_expense():
         
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                # Generate next bilag_nr for this year (within same transaction)
+                from datetime import date
+                current_year = date.today().year
+                cur.execute("""
+                    SELECT COALESCE(MAX(bilag_nr), 0) + 1 AS next_nr
+                    FROM expenses
+                    WHERE bilag_year = %s
+                """, (current_year,))
+                next_nr = cur.fetchone()['next_nr']
+
                 # Insert expense
                 cur.execute("""
-                    INSERT INTO expenses (user_id, amount, description, category, purchase_date)
-                    VALUES (%s, %s, %s, %s, %s)
+                    INSERT INTO expenses (user_id, amount, description, category, purchase_date, bilag_nr, bilag_year)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s)
                     RETURNING id
                 """, (
                     current_user.id,
                     form.amount.data,
                     form.description.data,
                     form.category.data,
-                    form.purchase_date.data
+                    form.purchase_date.data,
+                    next_nr,
+                    current_year
                 ))
-                
+
                 expense_id = cur.fetchone()['id']
                 
                 # Handle file uploads

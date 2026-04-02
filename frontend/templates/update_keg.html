@@ -12,8 +12,7 @@
     </div>
 
     <form method="POST" class="form">
-        <!-- Hidden field for JavaScript calculations -->
-        <input type="hidden" id="empty_weight_kg" value="{{ keg.empty_weight_kg or '' }}">
+        <!-- Hidden field for JavaScript calculations – value also exposed as editable input below -->
         
         <div class="form-grid">
             <div class="form-group">
@@ -35,6 +34,15 @@
                     <option value="Available/Cleaned" {% if keg.status == 'Available/Cleaned' %}selected{% endif %}>{{ _('Available/Cleaned') }}</option>
                     <option value="Empty" {% if keg.status == 'Empty' %}selected{% endif %}>{{ _('Empty') }}</option>
                 </select>
+            </div>
+
+            <div class="form-group">
+                <label for="empty_weight_kg">{{ _('Empty Keg Weight') }} (kg):</label>
+                <input type="number" id="empty_weight_kg" name="empty_weight_kg"
+                       value="{{ keg.empty_weight_kg or '' }}"
+                       step="0.001" min="0" max="50"
+                       placeholder="e.g., 4.700">
+                <small>{{ _('Tare weight of the keg itself, used to calculate amount left from total weight') }}</small>
             </div>
 
             <!-- Current Weight with Plato MQTT Button -->
@@ -60,8 +68,11 @@
                     <span id="calc_result" class="calc-result">0.0</span> L
                 </div>
                 {% else %}
-                <div class="weight-warning">
-                    ⚠️ {{ _('Empty weight not configured for this keg.') }}
+                <div class="weight-calculation" id="weight_calc_display" style="display: none;">
+                    <strong>{{ _('Calculation') }}:</strong>
+                    <span id="calc_current">0.0</span> kg - 
+                    <span id="calc_empty">-</span> kg = 
+                    <span id="calc_result" class="calc-result">0.0</span> L
                 </div>
                 {% endif %}
             </div>
