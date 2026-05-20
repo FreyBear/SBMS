@@ -4637,6 +4637,8 @@ def settings():
                 use_tls = request.form.get('use_tls') == 'on'
                 topic_prefix = request.form['topic_prefix']
                 plaato_keg_id = request.form.get('plaato_keg_id', '').strip() or None
+                calibration_factor = float(request.form.get('calibration_factor', '1.0'))
+                calibration_offset_kg = float(request.form.get('calibration_offset_kg', '0.0'))
                 
                 if config_id:
                     # Update existing config
@@ -4651,11 +4653,13 @@ def settings():
                                 use_tls = %s,
                                 topic_prefix = %s,
                                 plaato_keg_id = %s,
+                                calibration_factor = %s,
+                                calibration_offset_kg = %s,
                                 enabled = %s,
                                 updated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
                         """, (broker_host, broker_port, username, password, use_tls, 
-                              topic_prefix, plaato_keg_id, enabled, config_id[0]))
+                              topic_prefix, plaato_keg_id, calibration_factor, calibration_offset_kg, enabled, config_id[0]))
                     else:
                         cur.execute("""
                             UPDATE mqtt_config SET
@@ -4665,19 +4669,21 @@ def settings():
                                 use_tls = %s,
                                 topic_prefix = %s,
                                 plaato_keg_id = %s,
+                                calibration_factor = %s,
+                                calibration_offset_kg = %s,
                                 enabled = %s,
                                 updated_at = CURRENT_TIMESTAMP
                             WHERE id = %s
                         """, (broker_host, broker_port, username, use_tls, 
-                              topic_prefix, plaato_keg_id, enabled, config_id[0]))
+                              topic_prefix, plaato_keg_id, calibration_factor, calibration_offset_kg, enabled, config_id[0]))
                 else:
                     # Insert new config
                     cur.execute("""
                         INSERT INTO mqtt_config 
-                        (broker_host, broker_port, username, password, use_tls, topic_prefix, plaato_keg_id, enabled)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                        (broker_host, broker_port, username, password, use_tls, topic_prefix, plaato_keg_id, calibration_factor, calibration_offset_kg, enabled)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                     """, (broker_host, broker_port, username, password, use_tls, 
-                          topic_prefix, plaato_keg_id, enabled))
+                          topic_prefix, plaato_keg_id, calibration_factor, calibration_offset_kg, enabled))
                 
                 conn.commit()
                 flash(_('Settings saved successfully'), 'success')
@@ -4691,6 +4697,8 @@ def settings():
                     'use_tls': use_tls,
                     'topic_prefix': topic_prefix,
                     'plaato_keg_id': plaato_keg_id,
+                    'calibration_factor': calibration_factor,
+                    'calibration_offset_kg': calibration_offset_kg,
                     'enabled': enabled
                 }
                 mqtt_handler.update_config(new_config)
@@ -4718,6 +4726,8 @@ def settings():
                     'use_tls': False,
                     'topic_prefix': 'plaato',
                     'plaato_keg_id': '',
+                    'calibration_factor': 1.0,
+                    'calibration_offset_kg': 0.0,
                     'enabled': False
                 }
     except psycopg2.Error as e:
@@ -4764,6 +4774,73 @@ def test_mqtt_connection():
             'success': False,
             'message': f'Connection test error: {str(e)}'
         })
+
+
+@app.route('/settings/mqtt/tare', methods=['POST'])
+@require_permission('users', 'full')  # Admin only
+def tare_mqtt_weight():
+    """Set offset so the current live MQTT weight reads 0.0 kg (tare)."""
+    weight_data = mqtt_handler.get_latest_weight()
+    if not weight_data:
+        return jsonify({
+            'success': False,
+            'message': _('No live weight available to tare')
+        })
+
+    try:
+        current_weight = float(weight_data['weight_kg'])
+    except (TypeError, ValueError, KeyError):
+        return jsonify({
+            'success': False,
+            'message': _('Invalid live weight received')
+        })
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({
+            'success': False,
+            'message': _('Database connection error')
+        })
+
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, calibration_offset_kg FROM mqtt_config LIMIT 1")
+            config = cur.fetchone()
+
+            if not config:
+                return jsonify({
+                    'success': False,
+                    'message': _('MQTT settings not configured')
+                })
+
+            current_offset = float(config.get('calibration_offset_kg') or 0.0)
+            new_offset = current_offset - current_weight
+
+            cur.execute(
+                """
+                UPDATE mqtt_config
+                SET calibration_offset_kg = %s,
+                    updated_at = CURRENT_TIMESTAMP
+                WHERE id = %s
+                """,
+                (new_offset, config['id'])
+            )
+            conn.commit()
+
+            return jsonify({
+                'success': True,
+                'message': _('Tare applied. Current displayed weight is now zeroed.'),
+                'new_offset': new_offset,
+                'previous_weight': current_weight
+            })
+
+    except (psycopg2.Error, ValueError) as e:
+        return jsonify({
+            'success': False,
+            'message': f"{_('Failed to apply tare')}: {str(e)}"
+        })
+    finally:
+        conn.close()
 
 
 # ============================================================================

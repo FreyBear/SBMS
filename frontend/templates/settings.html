@@ -86,6 +86,22 @@
                            title="32 hexadecimal characters">
                     <small class="form-help">{{ _('32-character hex ID from your Plaato keg sensor (e.g., 11111111111111111111111111111111)') }}</small>
                 </div>
+
+                <div class="form-group">
+                    <label for="calibration_factor">{{ _('Calibration Factor') }}:</label>
+                    <input type="number" id="calibration_factor" name="calibration_factor"
+                           value="{{ config.calibration_factor if config.calibration_factor is not none else 1.0 }}"
+                           step="any" required>
+                    <small class="form-help">{{ _('Multiplier for incoming weight. 1.0 means unchanged.') }}</small>
+                </div>
+
+                <div class="form-group">
+                    <label for="calibration_offset_kg">{{ _('Calibration Offset (kg)') }}:</label>
+                    <input type="number" id="calibration_offset_kg" name="calibration_offset_kg"
+                           value="{{ config.calibration_offset_kg if config.calibration_offset_kg is not none else 0.0 }}"
+                           step="any" required>
+                    <small class="form-help">{{ _('Decimal offset added after factor to compensate for zero drift.') }}</small>
+                </div>
             </div>
 
             <!-- Connection Status Display -->
@@ -140,6 +156,9 @@
             <div class="form-actions">
                 <button type="button" class="btn btn-secondary" onclick="testConnection()">
                     🔍 {{ _('Test Connection') }}
+                </button>
+                <button type="button" class="btn btn-secondary" onclick="tareWeight()">
+                    ⚖️ {{ _('Tare / Zero Weight') }}
                 </button>
                 <button type="submit" class="btn btn-primary">
                     💾 {{ _('Save Settings') }}
@@ -426,6 +445,56 @@ async function testConnection() {
     
     testButton.disabled = false;
     testButton.innerHTML = originalText;
+}
+
+// Auto-tare: set offset so current displayed weight becomes 0.0 kg
+async function tareWeight() {
+    const tareButton = event.target;
+    const originalText = tareButton.innerHTML;
+    tareButton.disabled = true;
+    tareButton.innerHTML = '⏳ {{ _("Applying tare...") }}';
+
+    try {
+        const response = await fetch('{{ url_for("tare_mqtt_weight") }}', {
+            method: 'POST'
+        });
+
+        const result = await response.json();
+        const testResult = document.getElementById('test_result');
+        const testAlert = document.getElementById('test_alert');
+
+        testResult.style.display = 'block';
+
+        if (result.success) {
+            testAlert.className = 'alert alert-success';
+            testAlert.innerHTML = '✓ ' + result.message;
+
+            const offsetInput = document.getElementById('calibration_offset_kg');
+            if (offsetInput && result.new_offset !== undefined) {
+                offsetInput.value = Number(result.new_offset).toFixed(6);
+            }
+
+            // Refresh status/monitor right away
+            updateConnectionStatus();
+        } else {
+            testAlert.className = 'alert alert-error';
+            testAlert.innerHTML = '✗ ' + result.message;
+        }
+
+        setTimeout(() => {
+            testResult.style.display = 'none';
+        }, 5000);
+
+    } catch (error) {
+        const testResult = document.getElementById('test_result');
+        const testAlert = document.getElementById('test_alert');
+        testResult.style.display = 'block';
+        testAlert.className = 'alert alert-error';
+        testAlert.innerHTML = '✗ {{ _("Tare failed") }}: ' + error.message;
+    }
+
+    tareButton.disabled = false;
+    tareButton.innerHTML = originalText;
 }
 
 // Update connection status display

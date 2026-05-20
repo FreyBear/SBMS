@@ -256,13 +256,21 @@ class MQTTHandler:
             except (ValueError, TypeError) as e:
                 logger.warning(f"Invalid total_weight value: {data.get('total_weight')}")
                 return
+
+            # Apply configurable calibration from settings: calibrated = raw * factor + offset
+            calibration_factor, calibration_offset_kg = self._get_calibration_values()
+            weight_kg_calibrated = (weight_kg_raw * calibration_factor) + calibration_offset_kg
             
             # Round to 0.1 kg precision (floor function as per spec)
-            weight_kg = math.floor(weight_kg_raw * 10) / 10.0
+            weight_kg = math.floor(weight_kg_calibrated * 10) / 10.0
             
             # Log received data for debugging
             keg_id = data.get('id', 'unknown')
-            logger.info(f"📊 Plaato keg {keg_id}: total_weight={weight_kg_raw} kg → {weight_kg} kg (floored)")
+            logger.info(
+                f"📊 Plaato keg {keg_id}: total_weight={weight_kg_raw} kg, "
+                f"factor={calibration_factor}, offset={calibration_offset_kg} kg "
+                f"→ calibrated={weight_kg_calibrated} kg → {weight_kg} kg (floored)"
+            )
             
             # Store in memory cache for Plato button
             timestamp = datetime.now().isoformat()
@@ -279,6 +287,37 @@ class MQTTHandler:
             
         except Exception as e:
             logger.error(f"Error processing message: {e}")
+
+    def _get_config_float(self, key, default):
+        """Safely parse a numeric config value from mqtt_config."""
+        try:
+            value = self.config.get(key, default)
+            if value is None:
+                return float(default)
+            return float(value)
+        except (TypeError, ValueError):
+            logger.warning(f"Invalid MQTT config value for {key}: {self.config.get(key)}. Using default {default}.")
+            return float(default)
+
+    def _get_calibration_values(self):
+        """Get latest calibration settings from DB, fallback to in-memory config."""
+        factor = self._get_config_float('calibration_factor', 1.0)
+        offset = self._get_config_float('calibration_offset_kg', 0.0)
+
+        try:
+            conn = self.db_connection_func()
+            if conn:
+                with conn.cursor() as cur:
+                    cur.execute("SELECT calibration_factor, calibration_offset_kg FROM mqtt_config LIMIT 1")
+                    result = cur.fetchone()
+                    if result:
+                        factor = float(result[0]) if result[0] is not None else factor
+                        offset = float(result[1]) if result[1] is not None else offset
+                conn.close()
+        except Exception as e:
+            logger.debug(f"Could not refresh calibration values from DB: {e}")
+
+        return factor, offset
     
     def _save_weight_to_db(self, weight_kg, timestamp):
         """Save weight to database as cache for other workers"""
