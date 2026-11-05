@@ -3,6 +3,10 @@
 # SBMS Backup Script
 # Creates comprehensive backups of database and uploaded files
 
+# Ensure we always run from the SBMS project root directory
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+cd "$SCRIPT_DIR" || exit 1
+
 # Configuration
 BACKUP_DIR="./backups"
 DATE=$(date +"%Y%m%d_%H%M%S")

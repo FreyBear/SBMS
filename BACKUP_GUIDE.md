@@ -57,17 +57,20 @@
 - **Use case**: Manual backups, local testing, quick snapshots
 
 ### 2. Google Drive Backup (`backup_to_gdrive.sh`)
-- **Requires**: rclone installed and configured for Google Drive
-- **What it does**: Creates local backup + uploads to Google Drive
-- **Use case**: Off-site backup, automatic cloud storage
-- **Setup**: 
+- **Requires**: rclone installed and configured for Google Drive (`gdrive` remote)
+- **What it does**:
+  1. Creates a fresh local backup (`backup_sbms.sh`)
+  2. Uploads backup(s) to `gdrive:SBMS_Backups/`
+  3. Applies **GFS (Grandfather-Father-Son)** rotation on Google Drive:
+     - **Daily (Son)**: Keeps the last **7 daily** backups
+     - **Weekly (Father)**: Keeps the last **4 weekly** backups (Sundays)
+     - **Monthly (Grandfather)**: Keeps the last **12 monthly** backups (1st of month)
+  4. Cleans up local backups older than **7 days**
+- **Use case**: Off-site backup, automatic cloud storage with standard lifecycle management
+- **Setup**:
   ```bash
-  # Install rclone
-  curl https://rclone.org/install.sh | sudo bash
-  
-  # Configure Google Drive
-  rclone config
-  # Choose: New remote -> Google Drive -> Follow prompts
+  # Interactive setup helper
+  ./setup_gdrive.sh
   ```
 
 ### 3. Automated Backups (`setup_auto_backup.sh`)
