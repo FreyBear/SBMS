@@ -38,6 +38,11 @@
                     <dt>Contents:</dt>
                     <dd>{{ keg.contents }}</dd>
                     {% endif %}
+
+                    {% if keg.category_name %}
+                    <dt>Category:</dt>
+                    <dd>{{ keg.category_icon or '' }} {{ keg.category_name }}{% if keg.subcategory_name %} · {{ keg.subcategory_name }}{% endif %}</dd>
+                    {% endif %}
                     
                     <dt>Status:</dt>
                     <dd><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status }}</span></dd>

@@ -27,6 +27,33 @@
             </div>
 
             <div class="form-group">
+                <label for="category_id">{{ _('Category') }}:</label>
+                <div style="display: flex; gap: 6px;">
+                    <select id="category_id" name="category_id" onchange="onCategoryChange()" style="flex: 1;">
+                        <option value="">-- {{ _('Select category...') }} --</option>
+                        {% for cat in beverage_categories %}
+                        <option value="{{ cat.id }}" {% if keg.effective_category_id == cat.id %}selected{% endif %}>
+                            {{ cat.icon }} {{ cat.name }}
+                        </option>
+                        {% endfor %}
+                    </select>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="promptNewCategory()" title="{{ _('Add custom category') }}">+ {{ _('New') }}</button>
+                </div>
+                <small>{{ _('Main beverage category (e.g., Øl, Cider, Vin)') }}</small>
+            </div>
+
+            <div class="form-group">
+                <label for="subcategory_id">{{ _('Subcategory') }}:</label>
+                <div style="display: flex; gap: 6px;">
+                    <select id="subcategory_id" name="subcategory_id" style="flex: 1;">
+                        <option value="">-- {{ _('Select subcategory...') }} --</option>
+                    </select>
+                    <button type="button" class="btn btn-sm btn-secondary" onclick="promptNewSubcategory()" title="{{ _('Add custom subcategory') }}">+ {{ _('New') }}</button>
+                </div>
+                <small>{{ _('Style / subcategory (e.g., Pils, Blonde, IPA, Fruktcider)') }}</small>
+            </div>
+
+            <div class="form-group">
                 <label for="status">{{ _('Status') }}:</label>
                 <select id="status" name="status" required>
                     <option value="Full" {% if keg.status == 'Full' %}selected{% endif %}>{{ _('Full') }}</option>
@@ -196,7 +223,7 @@
                             </td>
                             <td>
                                 <button type="button" class="btn btn-sm btn-primary" 
-                                        onclick="selectBrew({{ brew.id }}, '{{ brew.name }}', '{{ brew.actual_abv or '' }}', {{ 'true' if brew.gluten_free else 'false' }})">
+                                        onclick="selectBrew({{ brew.id }}, {{ brew.name|tojson }}, '{{ brew.actual_abv or '' }}', {{ 'true' if brew.gluten_free else 'false' }}, '{{ brew.category_id or '' }}', '{{ brew.subcategory_id or '' }}')">
                                     {{ _('Select') }}
                                 </button>
                             </td>
@@ -210,6 +237,96 @@
 </div>
 
 <script>
+// Beverage categories tree for dynamic subcategory filtering
+const BEVERAGE_CATEGORIES = {{ beverage_categories|tojson }};
+let initialSubcategoryId = '{{ keg.effective_subcategory_id or "" }}';
+
+function onCategoryChange(selectedSubId) {
+    const catSelect = document.getElementById('category_id');
+    const subSelect = document.getElementById('subcategory_id');
+    const catId = parseInt(catSelect.value);
+
+    subSelect.innerHTML = '<option value="">-- {{ _("Select subcategory...") }} --</option>';
+    if (!catId) return;
+
+    const cat = BEVERAGE_CATEGORIES.find(c => c.id === catId);
+    if (cat && cat.subcategories) {
+        cat.subcategories.forEach(sub => {
+            const opt = document.createElement('option');
+            opt.value = sub.id;
+            opt.textContent = sub.name;
+            if (selectedSubId && String(sub.id) === String(selectedSubId)) {
+                opt.selected = true;
+            }
+            subSelect.appendChild(opt);
+        });
+    }
+}
+
+async function promptNewCategory() {
+    const name = prompt('{{ _("Enter new main category name (e.g., Øl, Cider, Vin, Brus):") }}');
+    if (!name || !name.trim()) return;
+    const icon = prompt('{{ _("Enter an emoji icon (optional):") }}', '🍺') || '🍺';
+
+    try {
+        const res = await fetch('/api/beverage-category', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name: name.trim(), icon: icon.trim()})
+        });
+        const data = await res.json();
+        if (data.success && data.category) {
+            BEVERAGE_CATEGORIES.push(data.category);
+            const catSelect = document.getElementById('category_id');
+            const opt = document.createElement('option');
+            opt.value = data.category.id;
+            opt.textContent = `${data.category.icon} ${data.category.name}`;
+            catSelect.appendChild(opt);
+            catSelect.value = data.category.id;
+            onCategoryChange();
+        } else {
+            alert(data.message || 'Could not create category');
+        }
+    } catch (e) {
+        alert('Error creating category: ' + e);
+    }
+}
+
+async function promptNewSubcategory() {
+    const catSelect = document.getElementById('category_id');
+    const catId = parseInt(catSelect.value);
+    if (!catId) {
+        alert('{{ _("Please select a main category first.") }}');
+        return;
+    }
+    const name = prompt('{{ _("Enter new subcategory name (e.g., Pils, Blonde, IPA, NEIPA, Juleøl):") }}');
+    if (!name || !name.trim()) return;
+
+    try {
+        const res = await fetch('/api/beverage-subcategory', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({category_id: catId, name: name.trim()})
+        });
+        const data = await res.json();
+        if (data.success && data.subcategory) {
+            const cat = BEVERAGE_CATEGORIES.find(c => c.id === catId);
+            if (cat) {
+                cat.subcategories.push(data.subcategory);
+            }
+            onCategoryChange(data.subcategory.id);
+        } else {
+            alert(data.message || 'Could not create subcategory');
+        }
+    } catch (e) {
+        alert('Error creating subcategory: ' + e);
+    }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+    onCategoryChange(initialSubcategoryId);
+});
+
 // Modal functions
 function openBrewModal() {
     document.getElementById('brewModal').style.display = 'flex';
@@ -222,7 +339,7 @@ function closeBrewModal() {
     filterBrews(); // Reset filter
 }
 
-function selectBrew(brewId, brewName, brewAbv, brewGlutenFree) {
+function selectBrew(brewId, brewName, brewAbv, brewGlutenFree, brewCatId, brewSubId) {
     // Set hidden field
     document.getElementById('brew_id').value = brewId;
     
@@ -234,6 +351,12 @@ function selectBrew(brewId, brewName, brewAbv, brewGlutenFree) {
     // Auto-fill Contents field with brew name
     document.getElementById('contents').value = brewName;
     
+    // Auto-fill Category & Subcategory if available on brew
+    if (brewCatId) {
+        document.getElementById('category_id').value = brewCatId;
+        onCategoryChange(brewSubId || '');
+    }
+
     // Auto-fill ABV if available
     if (brewAbv) {
         document.getElementById('abv').value = brewAbv;

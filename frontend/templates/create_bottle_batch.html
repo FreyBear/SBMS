@@ -12,10 +12,10 @@
         <form method="POST" action="{{ url_for('create_bottle_batch') }}">
             <div class="form-group">
                 <label for="brew_id">{{ _('Brew') }} *</label>
-                <select id="brew_id" name="brew_id" class="form-control" required>
+                <select id="brew_id" name="brew_id" class="form-control" required onchange="onCreateBottleBrewChange()">
                     <option value="">{{ _('Select brew...') }}</option>
                     {% for brew in brews %}
-                    <option value="{{ brew.id }}">
+                    <option value="{{ brew.id }}" data-category-id="{{ brew.category_id or '' }}" data-subcategory-id="{{ brew.subcategory_id or '' }}">
                         {{ brew.name }} 
                         {% if brew.style %}({{ brew.style }}){% endif %}
                         - {{ brew.date_brewed.strftime('%d-%m-%Y') }}
@@ -23,6 +23,31 @@
                     </option>
                     {% endfor %}
                 </select>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="category_id">{{ _('Category') }}</label>
+                    <div style="display: flex; gap: 6px;">
+                        <select id="category_id" name="category_id" class="form-control" onchange="onCreateBottleCategoryChange()" style="flex: 1;">
+                            <option value="">-- {{ _('Select category...') }} --</option>
+                            {% for cat in beverage_categories %}
+                            <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+                            {% endfor %}
+                        </select>
+                        <button type="button" class="btn btn-secondary" style="padding: 8px 12px;" onclick="promptNewCreateCategory()">+ {{ _('New') }}</button>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label for="subcategory_id">{{ _('Subcategory') }}</label>
+                    <div style="display: flex; gap: 6px;">
+                        <select id="subcategory_id" name="subcategory_id" class="form-control" style="flex: 1;">
+                            <option value="">-- {{ _('Select subcategory...') }} --</option>
+                        </select>
+                        <button type="button" class="btn btn-secondary" style="padding: 8px 12px;" onclick="promptNewCreateSubcategory()">+ {{ _('New') }}</button>
+                    </div>
+                </div>
             </div>
 
             <div class="form-row">
@@ -38,7 +63,7 @@
                     <small class="help-text">{{ _('Or enter custom size') }}: 
                         <input type="number" step="0.01" min="0.1" max="5" 
                                style="width: 80px; padding: 4px;" 
-                               onchange="document.getElementById('bottle_size_liters').value = this.value">
+                               oninput="setCustomCreateBottleSize(this.value)">
                     </small>
                 </div>
 
@@ -223,7 +248,97 @@
 </style>
 
 <script>
+const BEVERAGE_CATEGORIES = {{ beverage_categories|tojson }};
+
 // Set today's date as default
 document.getElementById('bottling_date').valueAsDate = new Date();
+
+function onCreateBottleBrewChange() {
+    const brewSelect = document.getElementById('brew_id');
+    const selectedOpt = brewSelect.options[brewSelect.selectedIndex];
+    if (!selectedOpt) return;
+    const catId = selectedOpt.getAttribute('data-category-id') || '';
+    const subId = selectedOpt.getAttribute('data-subcategory-id') || '';
+    if (catId) {
+        document.getElementById('category_id').value = catId;
+        onCreateBottleCategoryChange(subId);
+    }
+}
+
+function onCreateBottleCategoryChange(selectedSubId) {
+    const catId = parseInt(document.getElementById('category_id').value);
+    const subSelect = document.getElementById('subcategory_id');
+    subSelect.innerHTML = '<option value="">-- {{ _("Select subcategory...") }} --</option>';
+    if (!catId) return;
+    const cat = BEVERAGE_CATEGORIES.find(c => c.id === catId);
+    if (cat && cat.subcategories) {
+        cat.subcategories.forEach(s => {
+            const opt = document.createElement('option');
+            opt.value = s.id;
+            opt.textContent = s.name;
+            if (selectedSubId && String(s.id) === String(selectedSubId)) opt.selected = true;
+            subSelect.appendChild(opt);
+        });
+    }
+}
+
+async function promptNewCreateCategory() {
+    const name = prompt('{{ _("Enter new main category name (e.g., Øl, Cider, Vin):") }}');
+    if (!name || !name.trim()) return;
+    const icon = prompt('{{ _("Enter an emoji icon (optional):") }}', '🍺') || '🍺';
+    const res = await fetch('/api/beverage-category', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({name: name.trim(), icon: icon.trim()})
+    });
+    const data = await res.json();
+    if (data.success && data.category) {
+        BEVERAGE_CATEGORIES.push(data.category);
+        const catSelect = document.getElementById('category_id');
+        const opt = document.createElement('option');
+        opt.value = data.category.id;
+        opt.textContent = `${data.category.icon} ${data.category.name}`;
+        catSelect.appendChild(opt);
+        catSelect.value = data.category.id;
+        onCreateBottleCategoryChange();
+    }
+}
+
+async function promptNewCreateSubcategory() {
+    const catId = parseInt(document.getElementById('category_id').value);
+    if (!catId) {
+        alert('{{ _("Please select a main category first.") }}');
+        return;
+    }
+    const name = prompt('{{ _("Enter new subcategory name:") }}');
+    if (!name || !name.trim()) return;
+    const res = await fetch('/api/beverage-subcategory', {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({category_id: catId, name: name.trim()})
+    });
+    const data = await res.json();
+    if (data.success && data.subcategory) {
+        const cat = BEVERAGE_CATEGORIES.find(c => c.id === catId);
+        if (cat) cat.subcategories.push(data.subcategory);
+        onCreateBottleCategoryChange(data.subcategory.id);
+    }
+}
+
+function setCustomCreateBottleSize(val) {
+    const num = parseFloat(val);
+    if (!num || num <= 0) return;
+    const select = document.getElementById('bottle_size_liters');
+    const formatted = num.toFixed(2);
+    let opt = document.getElementById('custom_create_size_option');
+    if (!opt) {
+        opt = document.createElement('option');
+        opt.id = 'custom_create_size_option';
+        select.appendChild(opt);
+    }
+    opt.value = formatted;
+    opt.textContent = formatted + 'L ({{ _("Custom") }})';
+    select.value = formatted;
+}
 </script>
 {% endblock %}

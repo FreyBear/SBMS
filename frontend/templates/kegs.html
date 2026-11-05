@@ -49,6 +49,20 @@
             </div>
             
             <div style="border-left: 2px solid #ccc; height: 30px;"></div>
+
+            <div style="display: flex; gap: 8px; align-items: center; flex-wrap: wrap;">
+                <select id="filter-category" style="padding: 7px 10px; border-radius: 5px; border: 2px solid #333; font-weight: bold; background: #fff;">
+                    <option value="">{{ _('All Categories') }}</option>
+                    {% for cat in beverage_categories %}
+                    <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+                    {% endfor %}
+                </select>
+                <select id="filter-subcategory" style="padding: 7px 10px; border-radius: 5px; border: 2px solid #333; font-weight: bold; background: #fff;">
+                    <option value="">{{ _('All Subcategories') }}</option>
+                </select>
+            </div>
+            
+            <div style="border-left: 2px solid #ccc; height: 30px;"></div>
             
             <div style="display: flex; gap: 5px; flex-wrap: wrap;">
                 <button id="toggle-all" class="btn btn-sm btn-secondary">{{ _('Toggle All') }}</button>
@@ -112,7 +126,7 @@
         </thead>
         <tbody>
             {% for keg in kegs %}
-            <tr data-status="{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}" data-size="{{ keg.volume_liters }}">
+            <tr data-status="{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}" data-size="{{ keg.volume_liters }}" data-category-id="{{ keg.effective_category_id or '' }}" data-subcategory-id="{{ keg.effective_subcategory_id or '' }}">
                 <td>
                     <input type="checkbox" class="keg-checkbox" value="{{ keg.id }}" data-keg-number="{{ keg.keg_number }}">
                 </td>
@@ -125,6 +139,9 @@
                     {% endif %}
                     {% if keg.gluten_free %}
                         <span class="gluten-free-icon-small" title="{{ _('Gluten Free') }}">🌾</span>
+                    {% endif %}
+                    {% if keg.category_name %}
+                        <span class="keg-cat-chip">{{ keg.category_icon or '' }} {{ keg.category_name }}{% if keg.subcategory_name %} · {{ keg.subcategory_name }}{% endif %}</span>
                     {% endif %}
                 </td>
                 <td><span class="status-{{ keg.status|lower|replace(' ', '-')|replace('/', '-') }}">{{ keg.status|translate_status }}</span></td>
@@ -252,6 +269,24 @@
                             <option value="Bar">{{ _('Bar') }}</option>
                             <option value="Cleaning">{{ _('Cleaning') }}</option>
                         </select>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+                        <div class="form-group">
+                            <label for="batch-category">{{ _('Category') }} <small style="font-weight:normal;color:#666;">({{ _('optional') }})</small>:</label>
+                            <select id="batch-category" name="category_id" onchange="onBatchCategoryChange()">
+                                <option value="">— {{ _('Keep existing category') }} —</option>
+                                {% for cat in beverage_categories %}
+                                <option value="{{ cat.id }}">{{ cat.icon }} {{ cat.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label for="batch-subcategory">{{ _('Subcategory') }} <small style="font-weight:normal;color:#666;">({{ _('optional') }})</small>:</label>
+                            <select id="batch-subcategory" name="subcategory_id">
+                                <option value="">— {{ _('Keep existing subcategory') }} —</option>
+                            </select>
+                        </div>
                     </div>
 
                     <div class="form-group">
@@ -861,6 +896,10 @@ document.addEventListener('DOMContentLoaded', function() {
         // Size filters
         const showSize9 = document.getElementById('filter-size-9').checked;
         const showSize19 = document.getElementById('filter-size-19').checked;
+
+        // Category & Subcategory filters
+        const filterCatId = document.getElementById('filter-category') ? document.getElementById('filter-category').value : '';
+        const filterSubId = document.getElementById('filter-subcategory') ? document.getElementById('filter-subcategory').value : '';
         
         const rows = document.querySelectorAll('#kegsTable tbody tr');
         let visibleCount = 0;
@@ -869,10 +908,13 @@ document.addEventListener('DOMContentLoaded', function() {
         rows.forEach(row => {
             const rowStatus = row.getAttribute('data-status');  // 'full', 'started', 'available-cleaned', 'empty'
             const kegSize = parseFloat(row.getAttribute('data-size'));
+            const rowCatId = row.getAttribute('data-category-id') || '';
+            const rowSubId = row.getAttribute('data-subcategory-id') || '';
 
             if (rowStatus !== null) {
                 let showByStatus = false;
                 let showBySize = false;
+                let showByCat = true;
 
                 // Check status filter using data-status attribute (reliable across all browsers/locales)
                 if (rowStatus === 'full' && showFull) showByStatus = true;
@@ -885,8 +927,12 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (kegSize === 19 && showSize19) showBySize = true;
                 if (kegSize !== 9 && kegSize !== 19) showBySize = true;
 
-                // Show row only if BOTH filters match
-                const showRow = showByStatus && showBySize;
+                // Check category / subcategory filter
+                if (filterCatId && rowCatId !== filterCatId) showByCat = false;
+                if (filterSubId && rowSubId !== filterSubId) showByCat = false;
+
+                // Show row only if ALL filters match
+                const showRow = showByStatus && showBySize && showByCat;
 
                 // Use explicit 'table-row' instead of '' to avoid Safari/iOS display bug
                 row.style.display = showRow ? 'table-row' : 'none';
@@ -925,6 +971,48 @@ document.addEventListener('DOMContentLoaded', function() {
     // Add event listeners to size checkboxes
     document.getElementById('filter-size-9').addEventListener('change', updateKegFilters);
     document.getElementById('filter-size-19').addEventListener('change', updateKegFilters);
+
+    const kegCategoriesTree = {{ beverage_categories|tojson }};
+    const filterCatEl = document.getElementById('filter-category');
+    const filterSubEl = document.getElementById('filter-subcategory');
+    if (filterCatEl && filterSubEl) {
+        filterCatEl.addEventListener('change', function() {
+            const catId = parseInt(this.value);
+            filterSubEl.innerHTML = '<option value="">{{ _("All Subcategories") }}</option>';
+            if (catId) {
+                const cat = kegCategoriesTree.find(c => c.id === catId);
+                if (cat && cat.subcategories) {
+                    cat.subcategories.forEach(s => {
+                        const opt = document.createElement('option');
+                        opt.value = s.id;
+                        opt.textContent = s.name;
+                        filterSubEl.appendChild(opt);
+                    });
+                }
+            }
+            updateKegFilters();
+        });
+        filterSubEl.addEventListener('change', updateKegFilters);
+    }
+
+    window.onBatchCategoryChange = function() {
+        const batchCatEl = document.getElementById('batch-category');
+        const batchSubEl = document.getElementById('batch-subcategory');
+        if (!batchCatEl || !batchSubEl) return;
+        const catId = parseInt(batchCatEl.value);
+        batchSubEl.innerHTML = '<option value="">— {{ _("Keep existing subcategory") }} —</option>';
+        if (catId) {
+            const cat = kegCategoriesTree.find(c => c.id === catId);
+            if (cat && cat.subcategories) {
+                cat.subcategories.forEach(s => {
+                    const opt = document.createElement('option');
+                    opt.value = s.id;
+                    opt.textContent = s.name;
+                    batchSubEl.appendChild(opt);
+                });
+            }
+        }
+    };
     
     // Toggle all button - toggles both status and size filters
     document.getElementById('toggle-all').addEventListener('click', function() {
@@ -1024,6 +1112,18 @@ document.addEventListener('DOMContentLoaded', function() {
 .total-row {
     background-color: #f8f9fa;
     font-weight: bold;
+}
+
+.keg-cat-chip {
+    display: inline-block;
+    background: #eef6fc;
+    color: #2471a3 !important;
+    border: 1px solid #cce3f6;
+    border-radius: 12px !important;
+    padding: 2px 8px !important;
+    font-size: 11px !important;
+    font-weight: 600 !important;
+    margin-left: 6px;
 }
 
 /* Improve status badges in the table */

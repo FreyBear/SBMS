@@ -22,6 +22,11 @@
         <div class="detail-card">
             <h2>{{ _('Batch Information') }}</h2>
             <dl class="detail-list">
+                {% if batch.category_name %}
+                <dt>{{ _('Category') }}:</dt>
+                <dd><strong>{{ batch.category_icon or '' }} {{ batch.category_name }}{% if batch.subcategory_name %} · {{ batch.subcategory_name }}{% endif %}</strong></dd>
+                {% endif %}
+
                 <dt>{{ _('Bottle Size') }}:</dt>
                 <dd>{{ "%.2f"|format(batch.bottle_size_liters) }}L</dd>
 

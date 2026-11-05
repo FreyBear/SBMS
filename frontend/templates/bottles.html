@@ -36,7 +36,13 @@
                 <tr>
                     <td>
                         <strong>{{ batch.brew_name }}</strong>
-                        {% if batch.brew_style %}
+                        {% if batch.category_name %}
+                        <div>
+                            <span class="badge" style="background-color:#eef6fc;color:#2471a3;border:1px solid #cce3f6;margin-left:0;margin-top:3px;">
+                                {{ batch.category_icon or '' }} {{ batch.category_name }}{% if batch.subcategory_name %} · {{ batch.subcategory_name }}{% endif %}
+                            </span>
+                        </div>
+                        {% elif batch.brew_style %}
                         <div class="text-muted small">{{ batch.brew_style }}</div>
                         {% endif %}
                     </td>
@@ -45,6 +51,7 @@
                         <span class="bottle-count">
                             {{ batch.bottles_left }} / {{ batch.initial_quantity }}
                         </span>
+                        <span class="text-muted small">({{ "%.2f"|format(batch.bottles_left * batch.bottle_size_liters) }}L)</span>
                         {% if batch.bottles_left == 0 %}
                         <span class="badge badge-empty">{{ _('Empty') }}</span>
                         {% elif batch.bottles_left < batch.initial_quantity * 0.2 %}

@@ -172,12 +172,92 @@
         </div>
     </div>
 
-    <!-- Future Settings Sections -->
-    <div class="settings-placeholder">
-        <p style="color: #999; text-align: center; padding: 2rem;">
-            {{ _('Additional system settings will appear here') }}
-        </p>
+    <!-- Beverage Categories Management Section -->
+    <div class="settings-section">
+        <div class="section-header">
+            <h2>🍺 {{ _('Beverage Categories & Subcategories') }}</h2>
+            <p class="section-description">{{ _('Manage main beverage categories (e.g., Øl, Cider, Vin) and their subcategories/styles') }}</p>
+        </div>
+
+        <div style="display: flex; gap: 10px; margin-bottom: 1.5rem; flex-wrap: wrap;">
+            <input type="text" id="new_cat_icon" placeholder="🍺" value="🍺" style="width: 60px; padding: 8px; border: 1px solid #ddd; border-radius: 4px; text-align: center;">
+            <input type="text" id="new_cat_name" placeholder="{{ _('New main category (e.g., Brus, Kombucha)...') }}" style="flex: 1; min-width: 200px; padding: 8px 12px; border: 1px solid #ddd; border-radius: 4px;">
+            <button type="button" class="btn btn-primary" onclick="settingsAddCategory()">+ {{ _('Add Main Category') }}</button>
+        </div>
+
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 15px;">
+            {% for cat in beverage_categories %}
+            <div style="border: 1px solid #e0e0e0; border-radius: 6px; padding: 14px; background: #fafbfc;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px; padding-bottom: 8px; border-bottom: 1px solid #eee;">
+                    <strong style="font-size: 16px; color: #2c3e50;">{{ cat.icon }} {{ cat.name }}</strong>
+                    <button type="button" class="btn btn-sm" style="background:none;color:#c0392b;padding:2px 6px;border:none;cursor:pointer;" onclick="settingsDeleteCategory({{ cat.id }}, {{ cat.name|tojson }})" title="{{ _('Delete category') }}">🗑️</button>
+                </div>
+
+                <div style="display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px;">
+                    {% for sub in cat.subcategories %}
+                    <span style="display: inline-flex; align-items: center; gap: 5px; background: #eef6fc; color: #2471a3; border: 1px solid #cce3f6; border-radius: 14px; padding: 3px 10px; font-size: 12px; font-weight: 600;">
+                        {{ sub.name }}
+                        <button type="button" onclick="settingsDeleteSubcategory({{ sub.id }}, {{ sub.name|tojson }})" style="background:none;border:none;color:#7f8c8d;cursor:pointer;padding:0;font-size:13px;line-height:1;" title="{{ _('Delete') }}">×</button>
+                    </span>
+                    {% else %}
+                    <span style="color: #999; font-size: 12px;">{{ _('No subcategories yet') }}</span>
+                    {% endfor %}
+                </div>
+
+                <div style="display: flex; gap: 6px;">
+                    <input type="text" id="new_sub_for_{{ cat.id }}" placeholder="{{ _('New subcategory...') }}" style="flex: 1; padding: 6px 8px; border: 1px solid #ddd; border-radius: 4px; font-size: 13px;">
+                    <button type="button" class="btn btn-secondary" style="padding: 6px 10px; font-size: 12px;" onclick="settingsAddSubcategory({{ cat.id }})">+ {{ _('Add') }}</button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
     </div>
+
+    <script>
+    async function settingsAddCategory() {
+        const name = document.getElementById('new_cat_name').value.trim();
+        const icon = document.getElementById('new_cat_icon').value.trim() || '🍺';
+        if (!name) return;
+        const res = await fetch('/api/beverage-category', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, icon})
+        });
+        const data = await res.json();
+        if (data.success) location.reload();
+        else alert(data.message || 'Error');
+    }
+
+    async function settingsAddSubcategory(catId) {
+        const input = document.getElementById('new_sub_for_' + catId);
+        const name = input ? input.value.trim() : '';
+        if (!name) return;
+        const res = await fetch('/api/beverage-subcategory', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({category_id: catId, name})
+        });
+        const data = await res.json();
+        if (data.success) location.reload();
+        else alert(data.message || 'Error');
+    }
+
+    async function settingsDeleteCategory(catId, name) {
+        if (!confirm(`Slette hovedkategorien "${name}" og tilhørende underkategorier?`)) return;
+        const res = await fetch('/api/beverage-category/' + catId, {method: 'DELETE'});
+        const data = await res.json();
+        if (data.success) location.reload();
+        else alert(data.message || 'Error');
+    }
+
+    async function settingsDeleteSubcategory(subId, name) {
+        if (!confirm(`Slette underkategorien "${name}"?`)) return;
+        const res = await fetch('/api/beverage-subcategory/' + subId, {method: 'DELETE'});
+        const data = await res.json();
+        if (data.success) location.reload();
+        else alert(data.message || 'Error');
+    }
+    </script>
 </div>
 
 <style>

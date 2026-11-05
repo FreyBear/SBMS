@@ -120,7 +120,11 @@
                     <div class="batch-info">
                         <div class="batch-brew">
                             <strong>{{ batch.brew_name or _('Unknown Brew') }}</strong>
-                            {% if batch.brew_style %}<span class="brew-style">({{ batch.brew_style }})</span>{% endif %}
+                            {% if batch.category_name %}
+                            <span class="cat-chip">{{ batch.category_icon or '' }} {{ batch.category_name }}{% if batch.subcategory_name %} · {{ batch.subcategory_name }}{% endif %}</span>
+                            {% elif batch.brew_style %}
+                            <span class="brew-style">({{ batch.brew_style }})</span>
+                            {% endif %}
                             {% if batch.gluten_free %}
                             <span class="gluten-free-icon-small" title="{{ _('Gluten Free') }}">🌾</span>
                             {% endif %}
@@ -128,7 +132,7 @@
                         <div class="batch-details">
                             <span class="bottle-size">{{ "%.2f"|format(batch.bottle_size_liters) }}L</span>
                             <span class="bottle-count">
-                                {{ batch.bottles_left }}/{{ batch.initial_quantity }} {{ _('bottles') }}
+                                {{ batch.bottles_left }}/{{ batch.initial_quantity }} {{ _('bottles') }} ({{ "%.1f"|format(batch.bottles_left * batch.bottle_size_liters) }}L)
                             </span>
                             {% if batch.abv %}
                             <span class="abv">{{ "%.1f"|format(batch.abv) }}%</span>
@@ -169,6 +173,148 @@
             </div>
         </div>
     </div>
+
+    {% if beverage_stats %}
+    <div class="beverage-stats-section">
+        <h2>📊 {{ _('Beverage Inventory by Category') }}</h2>
+        <div class="beverage-category-grid">
+            {% for cat in beverage_stats %}
+            <div class="bev-cat-card">
+                <div class="bev-cat-header">
+                    <div class="bev-cat-title">
+                        <span class="bev-cat-icon">{{ cat.category_icon }}</span>
+                        <strong>{{ cat.category_name }}</strong>
+                    </div>
+                    <div class="bev-cat-totals">
+                        <span class="bev-total-badge">{{ "%.1f"|format(cat.total_liters) }}L {{ _('total') }}</span>
+                        <div class="bev-split-sub">
+                            {% if cat.keg_count > 0 %}<span>🛢️ {{ cat.keg_count }} {{ _('kegs') }} ({{ "%.1f"|format(cat.keg_liters) }}L)</span>{% endif %}
+                            {% if cat.bottle_count > 0 %}<span>🍾 {{ cat.bottle_count }} {{ _('bottles') }} ({{ "%.1f"|format(cat.bottle_liters) }}L)</span>{% endif %}
+                        </div>
+                    </div>
+                </div>
+                <table class="bev-sub-table">
+                    <thead>
+                        <tr>
+                            <th>{{ _('Subcategory') }}</th>
+                            <th style="text-align: right;">{{ _('Kegs') }}</th>
+                            <th style="text-align: right;">{{ _('Bottles') }}</th>
+                            <th style="text-align: right;">{{ _('Total') }}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for sub in cat.subcategories %}
+                        <tr>
+                            <td><strong>{{ sub.subcategory_name }}</strong></td>
+                            <td style="text-align: right;">
+                                {% if sub.keg_count > 0 %}
+                                    {{ "%.1f"|format(sub.keg_liters) }}L <small class="text-muted">({{ sub.keg_count }})</small>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td style="text-align: right;">
+                                {% if sub.bottle_count > 0 %}
+                                    {{ "%.1f"|format(sub.bottle_liters) }}L <small class="text-muted">({{ sub.bottle_count }})</small>
+                                {% else %}-{% endif %}
+                            </td>
+                            <td style="text-align: right;"><strong>{{ "%.1f"|format(sub.total_liters) }}L</strong></td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    <style>
+        .cat-chip {
+            display: inline-block;
+            background: #eef6fc;
+            color: #2471a3;
+            border: 1px solid #cce3f6;
+            border-radius: 12px;
+            padding: 1px 8px;
+            font-size: 12px;
+            font-weight: 600;
+            margin-left: 5px;
+        }
+        .beverage-stats-section {
+            margin: 25px 0;
+        }
+        .beverage-stats-section h2 {
+            margin-bottom: 15px;
+            color: #2c3e50;
+        }
+        .beverage-category-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+            gap: 20px;
+        }
+        .bev-cat-card {
+            background: #fff;
+            border-radius: 8px;
+            padding: 18px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border-top: 4px solid #3498db;
+        }
+        .bev-cat-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding-bottom: 12px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        .bev-cat-title {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 18px;
+            color: #2c3e50;
+        }
+        .bev-cat-icon {
+            font-size: 22px;
+        }
+        .bev-cat-totals {
+            text-align: right;
+        }
+        .bev-total-badge {
+            background: #2c3e50;
+            color: #fff;
+            padding: 3px 10px;
+            border-radius: 12px;
+            font-weight: 700;
+            font-size: 14px;
+        }
+        .bev-split-sub {
+            font-size: 12px;
+            color: #666;
+            margin-top: 4px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
+        .bev-sub-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 13px;
+        }
+        .bev-sub-table th {
+            color: #7f8c8d;
+            font-weight: 600;
+            padding: 6px 4px;
+            border-bottom: 1px solid #eee;
+            text-align: left;
+        }
+        .bev-sub-table td {
+            padding: 7px 4px;
+            border-bottom: 1px solid #f5f5f5;
+            color: #2c3e50;
+        }
+        .bev-sub-table tr:last-child td {
+            border-bottom: none;
+        }
+    </style>
+    {% endif %}
 
     <!-- Upcoming Brew Schedule Section -->
     {% if current_user.can_access('brews', 'view') and pending_brew_tasks %}

@@ -208,15 +208,40 @@ def save_expense_file(file, expense_id):
         }
     return None
 
-# Template context processor for Babel
+def get_beverage_categories_tree():
+    """Fetch all beverage categories with nested subcategories."""
+    conn = get_db_connection()
+    if not conn:
+        return []
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("SELECT id, name, icon, sort_order FROM beverage_category ORDER BY sort_order, name")
+            categories = [dict(row) for row in cur.fetchall()]
+            cur.execute("SELECT id, category_id, name, sort_order FROM beverage_subcategory ORDER BY sort_order, name")
+            subcategories = [dict(row) for row in cur.fetchall()]
+
+        sub_by_cat = {}
+        for sub in subcategories:
+            sub_by_cat.setdefault(sub['category_id'], []).append(sub)
+        for cat in categories:
+            cat['subcategories'] = sub_by_cat.get(cat['id'], [])
+        return categories
+    except Exception:
+        return []
+    finally:
+        conn.close()
+
+
+# Template context processor for Babel and global beverage categories
 @app.context_processor
 def inject_conf_vars():
-    """Make Babel functions available in templates"""
+    """Make Babel functions and beverage categories available in templates"""
     from flask_babel import get_locale, gettext as babel_gettext
     return dict(
         LANGUAGES=app.config['LANGUAGES'],
         get_locale=get_locale,
-        _=babel_gettext
+        _=babel_gettext,
+        beverage_categories=get_beverage_categories_tree()
     )
 
 @app.route('/login', methods=['GET', 'POST'])
@@ -353,13 +378,89 @@ def index():
                     bb.cap_type,
                     b.name as brew_name,
                     b.style as brew_style,
-                    COALESCE(b.actual_abv, b.estimated_abv) as abv
+                    b.gluten_free,
+                    COALESCE(b.actual_abv, b.estimated_abv) as abv,
+                    c.name as category_name,
+                    c.icon as category_icon,
+                    s.name as subcategory_name
                 FROM bottle_batch bb
                 LEFT JOIN brew b ON bb.brew_id = b.id
+                LEFT JOIN beverage_category c ON COALESCE(bb.category_id, b.category_id) = c.id
+                LEFT JOIN beverage_subcategory s ON COALESCE(bb.subcategory_id, b.subcategory_id) = s.id
                 WHERE bb.bottles_left > 0
                 ORDER BY bb.bottling_date DESC, bb.id DESC
             """)
             bottle_batches = cur.fetchall()
+
+            # Get beverage category & subcategory inventory statistics across active kegs and bottle batches
+            cur.execute("""
+                WITH inventory AS (
+                    SELECT
+                        COALESCE(k.category_id, b.category_id) AS cat_id,
+                        COALESCE(k.subcategory_id, b.subcategory_id) AS sub_id,
+                        COALESCE(k.amount_left_liters, 0)::numeric AS keg_liters,
+                        1 AS keg_count,
+                        0::numeric AS bottle_liters,
+                        0 AS bottle_count
+                    FROM keg k
+                    LEFT JOIN brew b ON k.brew_id = b.id
+                    WHERE k.historical = false
+                      AND k.status IN ('Full', 'Started')
+                      AND COALESCE(k.amount_left_liters, 0) > 0
+                    UNION ALL
+                    SELECT
+                        COALESCE(bb.category_id, b.category_id) AS cat_id,
+                        COALESCE(bb.subcategory_id, b.subcategory_id) AS sub_id,
+                        0::numeric AS keg_liters,
+                        0 AS keg_count,
+                        (bb.bottles_left * bb.bottle_size_liters)::numeric AS bottle_liters,
+                        bb.bottles_left AS bottle_count
+                    FROM bottle_batch bb
+                    LEFT JOIN brew b ON bb.brew_id = b.id
+                    WHERE bb.bottles_left > 0
+                )
+                SELECT
+                    COALESCE(c.name, 'Ukategorisert') AS category_name,
+                    COALESCE(c.icon, '🥤') AS category_icon,
+                    COALESCE(c.sort_order, 999) AS cat_sort,
+                    COALESCE(s.name, 'Uspesifisert') AS subcategory_name,
+                    COALESCE(s.sort_order, 999) AS sub_sort,
+                    ROUND(SUM(inv.keg_liters), 1) AS keg_liters,
+                    SUM(inv.keg_count) AS keg_count,
+                    ROUND(SUM(inv.bottle_liters), 2) AS bottle_liters,
+                    SUM(inv.bottle_count) AS bottle_count,
+                    ROUND(SUM(inv.keg_liters + inv.bottle_liters), 1) AS total_liters
+                FROM inventory inv
+                LEFT JOIN beverage_category c ON inv.cat_id = c.id
+                LEFT JOIN beverage_subcategory s ON inv.sub_id = s.id
+                GROUP BY c.name, c.icon, c.sort_order, s.name, s.sort_order
+                ORDER BY cat_sort, category_name, total_liters DESC, sub_sort, subcategory_name
+            """)
+            raw_bev_stats = cur.fetchall()
+
+            # Group beverage_stats by main category for structured rendering
+            beverage_stats_map = {}
+            for row in raw_bev_stats:
+                cat_key = row['category_name']
+                if cat_key not in beverage_stats_map:
+                    beverage_stats_map[cat_key] = {
+                        'category_name': row['category_name'],
+                        'category_icon': row['category_icon'],
+                        'keg_liters': 0.0,
+                        'keg_count': 0,
+                        'bottle_liters': 0.0,
+                        'bottle_count': 0,
+                        'total_liters': 0.0,
+                        'subcategories': []
+                    }
+                grp = beverage_stats_map[cat_key]
+                grp['keg_liters'] = round(grp['keg_liters'] + float(row['keg_liters'] or 0), 1)
+                grp['keg_count'] += int(row['keg_count'] or 0)
+                grp['bottle_liters'] = round(grp['bottle_liters'] + float(row['bottle_liters'] or 0), 2)
+                grp['bottle_count'] += int(row['bottle_count'] or 0)
+                grp['total_liters'] = round(grp['total_liters'] + float(row['total_liters'] or 0), 1)
+                grp['subcategories'].append(dict(row))
+            beverage_stats = list(beverage_stats_map.values())
             
             # Get recent kegs
             cur.execute("""
@@ -401,6 +502,7 @@ def index():
         flash(f'Database error: {e}', 'error')
         keg_stats = []
         bottle_batches = []
+        beverage_stats = []
         recent_kegs = []
         pending_expenses = []
         pending_brew_tasks = []
@@ -414,6 +516,7 @@ def index():
     return render_template('index.html', 
                          keg_stats=keg_stats,
                          bottle_batches=bottle_batches,
+                         beverage_stats=beverage_stats,
                          recent_kegs=recent_kegs, 
                          pending_expenses=pending_expenses,
                          pending_brew_tasks=pending_brew_tasks,
@@ -431,10 +534,19 @@ def kegs():
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT k.*, b.name as brew_name, r.name as recipe_name
+                SELECT k.*,
+                       b.name as brew_name,
+                       r.name as recipe_name,
+                       COALESCE(k.category_id, b.category_id) as effective_category_id,
+                       COALESCE(k.subcategory_id, b.subcategory_id) as effective_subcategory_id,
+                       c.name as category_name,
+                       c.icon as category_icon,
+                       s.name as subcategory_name
                 FROM keg k
                 LEFT JOIN brew b ON k.brew_id = b.id
                 LEFT JOIN recipe r ON b.recipe_id = r.id
+                LEFT JOIN beverage_category c ON COALESCE(k.category_id, b.category_id) = c.id
+                LEFT JOIN beverage_subcategory s ON COALESCE(k.subcategory_id, b.subcategory_id) = s.id
                 WHERE k.historical = false
                 ORDER BY k.keg_number::integer
             """)
@@ -537,10 +649,21 @@ def keg_detail(keg_number):
     try:
         with conn.cursor(cursor_factory=RealDictCursor) as cur:
             cur.execute("""
-                SELECT k.*, b.name as brew_name, b.date_brewed, r.name as recipe_name, r.style
+                SELECT k.*,
+                       b.name as brew_name,
+                       b.date_brewed,
+                       r.name as recipe_name,
+                       r.style,
+                       COALESCE(k.category_id, b.category_id) as effective_category_id,
+                       COALESCE(k.subcategory_id, b.subcategory_id) as effective_subcategory_id,
+                       c.name as category_name,
+                       c.icon as category_icon,
+                       s.name as subcategory_name
                 FROM keg k
                 LEFT JOIN brew b ON k.brew_id = b.id
                 LEFT JOIN recipe r ON b.recipe_id = r.id
+                LEFT JOIN beverage_category c ON COALESCE(k.category_id, b.category_id) = c.id
+                LEFT JOIN beverage_subcategory s ON COALESCE(k.subcategory_id, b.subcategory_id) = s.id
                 WHERE k.keg_number = %s
             """, (keg_number,))
             keg = cur.fetchone()
@@ -548,9 +671,15 @@ def keg_detail(keg_number):
             if keg:  # Only get history if keg exists
                 # Get keg history if available
                 cur.execute("""
-                    SELECT * FROM keg_history 
-                    WHERE keg_id = %s 
-                    ORDER BY recorded_date DESC, created_timestamp DESC
+                    SELECT kh.*,
+                           c.name as category_name,
+                           c.icon as category_icon,
+                           s.name as subcategory_name
+                    FROM keg_history kh
+                    LEFT JOIN beverage_category c ON kh.category_id = c.id
+                    LEFT JOIN beverage_subcategory s ON kh.subcategory_id = s.id
+                    WHERE kh.keg_id = %s 
+                    ORDER BY kh.recorded_date DESC, kh.created_timestamp DESC
                 """, (keg['id'],))
                 keg_history = cur.fetchall()
     except psycopg2.Error as e:
@@ -578,14 +707,30 @@ def update_keg(keg_number):
     if request.method == 'GET':
         try:
             with conn.cursor(cursor_factory=RealDictCursor) as cur:
-                cur.execute("SELECT * FROM keg WHERE keg_number = %s", (keg_number,))
+                cur.execute("""
+                    SELECT k.*,
+                           b.name as brew_name,
+                           COALESCE(k.category_id, b.category_id) as effective_category_id,
+                           COALESCE(k.subcategory_id, b.subcategory_id) as effective_subcategory_id
+                    FROM keg k
+                    LEFT JOIN brew b ON k.brew_id = b.id
+                    WHERE k.keg_number = %s
+                """, (keg_number,))
                 keg = cur.fetchone()
                 
                 # Get all brews for dropdown
                 cur.execute("""
-                    SELECT id, name, actual_abv, gluten_free 
-                    FROM brew 
-                    ORDER BY date_brewed DESC
+                    SELECT b.id, b.name, b.style, b.date_brewed,
+                           COALESCE(b.actual_abv, b.estimated_abv) as actual_abv,
+                           b.gluten_free,
+                           b.category_id,
+                           b.subcategory_id,
+                           c.name as category_name,
+                           s.name as subcategory_name
+                    FROM brew b
+                    LEFT JOIN beverage_category c ON b.category_id = c.id
+                    LEFT JOIN beverage_subcategory s ON b.subcategory_id = s.id
+                    ORDER BY b.date_brewed DESC
                 """)
                 brews = cur.fetchall()
                 
@@ -610,9 +755,28 @@ def update_keg(keg_number):
             # Parse the update date
             update_date = datetime.strptime(request.form['update_date'], '%Y-%m-%d').date()
             
-            # Get brew_id, abv, and gluten_free from form
+            # Get brew_id, category_id, subcategory_id, abv, and gluten_free from form
             brew_id = request.form.get('brew_id')
             brew_id = int(brew_id) if brew_id and brew_id != '' else None
+
+            cat_raw = request.form.get('category_id', '').strip()
+            category_id = int(cat_raw) if cat_raw else None
+            sub_raw = request.form.get('subcategory_id', '').strip()
+            subcategory_id = int(sub_raw) if sub_raw else None
+
+            # If a brew is linked and category wasn't explicitly set, inherit from brew
+            if brew_id and not category_id:
+                cur.execute("SELECT category_id, subcategory_id FROM brew WHERE id = %s", (brew_id,))
+                brew_cat = cur.fetchone()
+                if brew_cat:
+                    category_id = brew_cat[0]
+                    if not subcategory_id:
+                        subcategory_id = brew_cat[1]
+
+            # If status is Empty or Available/Cleaned, clear category on keg record
+            status_val = request.form['status']
+            keg_category_id = None if status_val in ('Empty', 'Available/Cleaned') else category_id
+            keg_subcategory_id = None if status_val in ('Empty', 'Available/Cleaned') else subcategory_id
             
             abv = request.form.get('abv')
             abv = float(abv) if abv and abv != '' else None
@@ -671,6 +835,8 @@ def update_keg(keg_number):
                     empty_weight_kg = %s,
                     location = %s,
                     brew_id = %s,
+                    category_id = %s,
+                    subcategory_id = %s,
                     abv = %s,
                     gluten_free = %s,
                     notes = %s,
@@ -684,6 +850,8 @@ def update_keg(keg_number):
                 empty_weight_kg_value,
                 request.form['location'],
                 brew_id,
+                keg_category_id,
+                keg_subcategory_id,
                 abv,
                 gluten_free,
                 request.form['notes'],
@@ -694,8 +862,8 @@ def update_keg(keg_number):
             # Create a history entry for this update
             cur.execute("""
                 INSERT INTO keg_history 
-                (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes, measurement_source)
-                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                (keg_id, recorded_date, contents, status, amount_left_liters, location, arrangement, notes, measurement_source, category_id, subcategory_id)
+                VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
             """, (
                 keg_id,
                 update_date,
@@ -705,7 +873,9 @@ def update_keg(keg_number):
                 request.form['location'],
                 request.form.get('arrangement', 'Normal operation'),
                 request.form['notes'],
-                measurement_source
+                measurement_source,
+                category_id,
+                subcategory_id
             ))
             
             conn.commit()
@@ -756,6 +926,8 @@ def bulk_mark_cleaned():
                         amount_left_liters = 0,
                         location = %s,
                         brew_id = NULL,
+                        category_id = NULL,
+                        subcategory_id = NULL,
                         abv = NULL,
                         gluten_free = false,
                         notes = %s,
@@ -831,6 +1003,8 @@ def bulk_mark_empty():
                         amount_left_liters = 0,
                         location = %s,
                         brew_id = NULL,
+                        category_id = NULL,
+                        subcategory_id = NULL,
                         abv = NULL,
                         gluten_free = false,
                         notes = %s,
@@ -880,6 +1054,10 @@ def batch_update_kegs():
         keg_ids_str = request.form.get('keg_ids', '')
         location = request.form.get('location', '').strip()
         notes = request.form.get('notes', '').strip()
+        batch_cat_raw = request.form.get('category_id', '').strip()
+        batch_category_id = int(batch_cat_raw) if batch_cat_raw else None
+        batch_sub_raw = request.form.get('subcategory_id', '').strip()
+        batch_subcategory_id = int(batch_sub_raw) if batch_sub_raw else None
 
         if not keg_ids_str:
             flash('No kegs selected', 'error')
@@ -895,10 +1073,10 @@ def batch_update_kegs():
 
         with conn.cursor() as cur:
             for keg_id in keg_ids:
-                # Fetch current keg data (status, contents, empty_weight_kg)
+                # Fetch current keg data (status, contents, empty_weight_kg, category_id, subcategory_id)
                 cur.execute("""
                     SELECT keg_number, status, contents, location AS cur_location,
-                           empty_weight_kg, amount_left_liters
+                           empty_weight_kg, amount_left_liters, category_id, subcategory_id
                     FROM keg WHERE id = %s
                 """, (keg_id,))
                 keg = cur.fetchone()
@@ -906,7 +1084,10 @@ def batch_update_kegs():
                     continue
 
                 (keg_number, status, contents, cur_location,
-                 empty_weight_kg, cur_amount) = keg
+                 empty_weight_kg, cur_amount, cur_cat_id, cur_sub_id) = keg
+
+                new_cat_id = batch_category_id if batch_category_id is not None else cur_cat_id
+                new_sub_id = batch_subcategory_id if batch_subcategory_id is not None else (None if batch_category_id is not None else cur_sub_id)
 
                 # Determine amount_left_liters for this keg
                 measurement_source = 'manual'
@@ -931,22 +1112,24 @@ def batch_update_kegs():
                 # Use provided location or keep existing
                 new_location = location if location else cur_location
 
-                # Update main keg record (status and contents unchanged)
+                # Update main keg record
                 cur.execute("""
                     UPDATE keg SET
                         amount_left_liters = %s,
                         location = %s,
+                        category_id = %s,
+                        subcategory_id = %s,
                         notes = %s,
                         last_measured = %s
                     WHERE id = %s
-                """, (amount_left_liters, new_location, notes, update_date, keg_id))
+                """, (amount_left_liters, new_location, new_cat_id, new_sub_id, notes, update_date, keg_id))
 
                 # Create history entry
                 cur.execute("""
                     INSERT INTO keg_history
                     (keg_id, recorded_date, contents, status, amount_left_liters,
-                     location, arrangement, notes, measurement_source)
-                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                     location, arrangement, notes, measurement_source, category_id, subcategory_id)
+                    VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
                     keg_id,
                     update_date,
@@ -956,7 +1139,9 @@ def batch_update_kegs():
                     new_location,
                     'Batch update',
                     notes,
-                    measurement_source
+                    measurement_source,
+                    new_cat_id,
+                    new_sub_id
                 ))
 
                 updated_count += 1
@@ -1184,9 +1369,16 @@ def bottles():
                        b.style as brew_style,
                        b.actual_abv,
                        b.estimated_abv,
-                       b.gluten_free
+                       b.gluten_free,
+                       COALESCE(bb.category_id, b.category_id) as effective_category_id,
+                       COALESCE(bb.subcategory_id, b.subcategory_id) as effective_subcategory_id,
+                       c.name as category_name,
+                       c.icon as category_icon,
+                       s.name as subcategory_name
                 FROM bottle_batch bb
                 LEFT JOIN brew b ON bb.brew_id = b.id
+                LEFT JOIN beverage_category c ON COALESCE(bb.category_id, b.category_id) = c.id
+                LEFT JOIN beverage_subcategory s ON COALESCE(bb.subcategory_id, b.subcategory_id) = s.id
                 ORDER BY bb.bottling_date DESC, bb.id DESC
             """)
             bottle_batches = cur.fetchall()
@@ -1210,13 +1402,29 @@ def create_bottle_batch():
         
         try:
             with conn.cursor() as cur:
+                brew_id = int(request.form['brew_id']) if request.form.get('brew_id') else None
+                cat_raw = request.form.get('category_id', '').strip()
+                category_id = int(cat_raw) if cat_raw else None
+                sub_raw = request.form.get('subcategory_id', '').strip()
+                subcategory_id = int(sub_raw) if sub_raw else None
+
+                if brew_id and not category_id:
+                    cur.execute("SELECT category_id, subcategory_id FROM brew WHERE id = %s", (brew_id,))
+                    brew_cat = cur.fetchone()
+                    if brew_cat:
+                        category_id = brew_cat[0]
+                        if not subcategory_id:
+                            subcategory_id = brew_cat[1]
+
                 cur.execute("""
                     INSERT INTO bottle_batch (
-                        brew_id, bottle_size_liters, initial_quantity, bottles_left,
+                        brew_id, category_id, subcategory_id, bottle_size_liters, initial_quantity, bottles_left,
                         bottling_date, cap_type, location, notes
-                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s)
+                    ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                 """, (
-                    request.form['brew_id'],
+                    brew_id,
+                    category_id,
+                    subcategory_id,
                     request.form['bottle_size_liters'],
                     request.form['initial_quantity'],
                     request.form['initial_quantity'],  # bottles_left = initial_quantity when created
@@ -1246,7 +1454,9 @@ def create_bottle_batch():
             # Get all brews for the dropdown
             cur.execute("""
                 SELECT b.id, b.name, b.style, b.date_brewed,
-                       COALESCE(b.actual_abv, b.estimated_abv) as abv
+                       COALESCE(b.actual_abv, b.estimated_abv) as abv,
+                       b.category_id,
+                       b.subcategory_id
                 FROM brew b
                 ORDER BY b.date_brewed DESC, b.name
             """)
@@ -1279,9 +1489,16 @@ def bottle_batch_detail(batch_id):
                        b.estimated_abv,
                        b.gluten_free,
                        b.actual_og,
-                       b.actual_fg
+                       b.actual_fg,
+                       COALESCE(bb.category_id, b.category_id) as effective_category_id,
+                       COALESCE(bb.subcategory_id, b.subcategory_id) as effective_subcategory_id,
+                       c.name as category_name,
+                       c.icon as category_icon,
+                       s.name as subcategory_name
                 FROM bottle_batch bb
                 LEFT JOIN brew b ON bb.brew_id = b.id
+                LEFT JOIN beverage_category c ON COALESCE(bb.category_id, b.category_id) = c.id
+                LEFT JOIN beverage_subcategory s ON COALESCE(bb.subcategory_id, b.subcategory_id) = s.id
                 WHERE bb.id = %s
             """, (batch_id,))
             batch = cur.fetchone()
@@ -1308,25 +1525,63 @@ def update_bottle_batch(batch_id):
     
     if request.method == 'POST':
         try:
-            with conn.cursor() as cur:
+            with conn.cursor(cursor_factory=RealDictCursor) as cur:
+                cur.execute("SELECT bottle_size_liters, initial_quantity, bottles_left, cap_type, category_id, subcategory_id FROM bottle_batch WHERE id = %s", (batch_id,))
+                existing = cur.fetchone()
+                if not existing:
+                    flash('Bottle batch not found', 'error')
+                    return redirect(url_for('bottles'))
+
+                bottle_size_liters = float(request.form.get('bottle_size_liters') or existing['bottle_size_liters'])
+                initial_quantity = int(request.form.get('initial_quantity') or existing['initial_quantity'])
+                bottles_left = int(request.form.get('bottles_left', existing['bottles_left']))
+                cap_type = request.form.get('cap_type') if 'cap_type' in request.form else existing['cap_type']
+
+                cat_raw = request.form.get('category_id', '').strip()
+                category_id = int(cat_raw) if cat_raw else (None if 'category_id' in request.form else existing['category_id'])
+                sub_raw = request.form.get('subcategory_id', '').strip()
+                subcategory_id = int(sub_raw) if sub_raw else (None if 'subcategory_id' in request.form else existing['subcategory_id'])
+
+                if bottle_size_liters <= 0:
+                    flash('Bottle size must be greater than 0.', 'error')
+                    return redirect(url_for('update_bottle_batch', batch_id=batch_id))
+
+                if initial_quantity < 1:
+                    initial_quantity = max(1, bottles_left)
+
+                if bottles_left < 0:
+                    bottles_left = 0
+                elif bottles_left > initial_quantity:
+                    initial_quantity = bottles_left
+
                 cur.execute("""
                     UPDATE bottle_batch SET
+                        bottle_size_liters = %s,
+                        initial_quantity = %s,
                         bottles_left = %s,
+                        cap_type = %s,
+                        category_id = %s,
+                        subcategory_id = %s,
                         location = %s,
                         notes = %s,
                         updated_at = CURRENT_TIMESTAMP
                     WHERE id = %s
                 """, (
-                    request.form['bottles_left'],
+                    bottle_size_liters,
+                    initial_quantity,
+                    bottles_left,
+                    cap_type,
+                    category_id,
+                    subcategory_id,
                     request.form.get('location'),
                     request.form.get('notes'),
                     batch_id
                 ))
                 conn.commit()
                 flash('Bottle batch updated successfully!', 'success')
-        except psycopg2.Error as e:
+        except (ValueError, psycopg2.Error) as e:
             conn.rollback()
-            flash(f'Database error: {e}', 'error')
+            flash(f'Error updating bottle batch: {e}', 'error')
         finally:
             conn.close()
         
@@ -1338,7 +1593,9 @@ def update_bottle_batch(batch_id):
             cur.execute("""
                 SELECT bb.*,
                        b.name as brew_name,
-                       b.style as brew_style
+                       b.style as brew_style,
+                       COALESCE(bb.category_id, b.category_id) as effective_category_id,
+                       COALESCE(bb.subcategory_id, b.subcategory_id) as effective_subcategory_id
                 FROM bottle_batch bb
                 LEFT JOIN brew b ON bb.brew_id = b.id
                 WHERE bb.id = %s
@@ -1427,18 +1684,42 @@ def create_brew():
                     if form.actual_og.data and form.actual_fg.data:
                         actual_abv = round((form.actual_og.data - form.actual_fg.data) * Decimal('131.25'), 1)
                     
+                    # Determine category_id and subcategory_id (from form or inherited from recipe/kit)
+                    cat_raw = request.form.get('category_id', '').strip()
+                    category_id = int(cat_raw) if cat_raw else None
+                    sub_raw = request.form.get('subcategory_id', '').strip()
+                    subcategory_id = int(sub_raw) if sub_raw else None
+
+                    if not category_id:
+                        if form.source_type.data == 'recipe' and form.recipe_id.data:
+                            cur.execute("SELECT category_id, subcategory_id FROM recipe WHERE id = %s", (form.recipe_id.data,))
+                            src_cat = cur.fetchone()
+                            if src_cat:
+                                category_id = src_cat['category_id']
+                                if not subcategory_id:
+                                    subcategory_id = src_cat['subcategory_id']
+                        elif form.source_type.data == 'kit' and form.kit_id.data:
+                            cur.execute("SELECT category_id, subcategory_id FROM kit WHERE id = %s", (form.kit_id.data,))
+                            src_cat = cur.fetchone()
+                            if src_cat:
+                                category_id = src_cat['category_id']
+                                if not subcategory_id:
+                                    subcategory_id = src_cat['subcategory_id']
+
                     # Insert brew
                     cur.execute("""
-                        INSERT INTO brew (name, date_brewed, recipe_id, kit_id, style, 
+                        INSERT INTO brew (name, date_brewed, recipe_id, kit_id, category_id, subcategory_id, style, 
                                         estimated_abv, expected_og, expected_fg, batch_size_liters,
                                         actual_og, actual_fg, actual_abv, gluten_free, notes)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
                         RETURNING id
                     """, (
                         form.name.data,
                         form.date_brewed.data,
                         form.recipe_id.data if form.source_type.data == 'recipe' else None,
                         form.kit_id.data if form.source_type.data == 'kit' else None,
+                        category_id,
+                        subcategory_id,
                         form.style.data,
                         form.estimated_abv.data,
                         form.expected_og.data,
@@ -4906,6 +5187,133 @@ def get_mqtt_status():
         'enabled': True,
         'weight': mqtt_handler.get_latest_weight()
     })
+
+
+# ============================================================================
+# BEVERAGE CATEGORY & SUBCATEGORY API ROUTES
+# ============================================================================
+
+@app.route('/api/beverage-categories', methods=['GET'])
+@login_required
+def api_get_beverage_categories():
+    """Return all beverage categories with nested subcategories."""
+    return jsonify({'success': True, 'categories': get_beverage_categories_tree()})
+
+
+@app.route('/api/beverage-category', methods=['POST'])
+@login_required
+def api_create_beverage_category():
+    """Create a new main beverage category."""
+    if not (current_user.can_access('kegs', 'edit') or current_user.can_access('brews', 'edit') or current_user.can_access('users', 'full')):
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
+
+    data = request.get_json(silent=True) or request.form
+    name = (data.get('name') or '').strip()
+    icon = (data.get('icon') or '🍺').strip() or '🍺'
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Category name is required'}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO beverage_category (name, icon, sort_order)
+                VALUES (%s, %s, COALESCE((SELECT MAX(sort_order) + 1 FROM beverage_category), 1))
+                ON CONFLICT (name) DO UPDATE SET icon = EXCLUDED.icon
+                RETURNING id, name, icon, sort_order
+            """, (name, icon))
+            cat = dict(cur.fetchone())
+            cat['subcategories'] = []
+            conn.commit()
+        return jsonify({'success': True, 'category': cat})
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/beverage-subcategory', methods=['POST'])
+@login_required
+def api_create_beverage_subcategory():
+    """Create a new beverage subcategory under a main category."""
+    if not (current_user.can_access('kegs', 'edit') or current_user.can_access('brews', 'edit') or current_user.can_access('users', 'full')):
+        return jsonify({'success': False, 'message': 'Permission denied'}), 403
+
+    data = request.get_json(silent=True) or request.form
+    cat_raw = str(data.get('category_id') or '').strip()
+    name = (data.get('name') or '').strip()
+
+    if not cat_raw or not name:
+        return jsonify({'success': False, 'message': 'Category and subcategory name are required'}), 400
+
+    try:
+        category_id = int(cat_raw)
+    except ValueError:
+        return jsonify({'success': False, 'message': 'Invalid category ID'}), 400
+
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+
+    try:
+        with conn.cursor(cursor_factory=RealDictCursor) as cur:
+            cur.execute("""
+                INSERT INTO beverage_subcategory (category_id, name, sort_order)
+                VALUES (%s, %s, COALESCE((SELECT MAX(sort_order) + 1 FROM beverage_subcategory WHERE category_id = %s), 1))
+                ON CONFLICT (category_id, name) DO UPDATE SET name = EXCLUDED.name
+                RETURNING id, category_id, name, sort_order
+            """, (category_id, name, category_id))
+            sub = dict(cur.fetchone())
+            conn.commit()
+        return jsonify({'success': True, 'subcategory': sub})
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/beverage-category/<int:cat_id>', methods=['DELETE'])
+@require_permission('users', 'full')
+def api_delete_beverage_category(cat_id):
+    """Delete a main beverage category (Admin only)."""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM beverage_category WHERE id = %s", (cat_id,))
+            conn.commit()
+        return jsonify({'success': True})
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
+
+
+@app.route('/api/beverage-subcategory/<int:sub_id>', methods=['DELETE'])
+@require_permission('users', 'full')
+def api_delete_beverage_subcategory(sub_id):
+    """Delete a beverage subcategory (Admin only)."""
+    conn = get_db_connection()
+    if not conn:
+        return jsonify({'success': False, 'message': 'Database connection error'}), 500
+    try:
+        with conn.cursor() as cur:
+            cur.execute("DELETE FROM beverage_subcategory WHERE id = %s", (sub_id,))
+            conn.commit()
+        return jsonify({'success': True})
+    except psycopg2.Error as e:
+        conn.rollback()
+        return jsonify({'success': False, 'message': str(e)}), 500
+    finally:
+        conn.close()
 
 
 # ============================================================================
