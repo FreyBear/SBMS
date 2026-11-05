@@ -537,13 +537,13 @@ function updateVolumePreview() {
         const recalcInitial = Math.max(1, Math.round(ORIG_INITIAL_VOL / size));
         const recalcLeft = Math.max(0, Math.min(recalcInitial, Math.round(ORIG_LEFT_VOL / size)));
 
-        btnRecalc.textContent = `🔄 Omregn antall flasker for å beholde ${ORIG_INITIAL_VOL.toFixed(2)}L (${recalcLeft} / ${recalcInitial} flasker)`;
+        btnRecalc.textContent = `🔄 {{ _('Recalculate bottle count to keep') }} ${ORIG_INITIAL_VOL.toFixed(2)}L (${recalcLeft} / ${recalcInitial} {{ _('bottles') }})`;
 
         if (initQty === ORIG_INITIAL_QTY) {
-            recalcHint.innerHTML = `Flaskestørrelse endret fra <strong>${ORIG_SIZE.toFixed(2)}L</strong> til <strong>${size.toFixed(2)}L</strong>. Antall flasker beholdes (${leftQty} / ${initQty}), så nytt volum blir <strong>${leftVol.toFixed(2)}L</strong> igjen.`;
+            recalcHint.innerHTML = `{{ _('Bottle size changed from') }} <strong>${ORIG_SIZE.toFixed(2)}L</strong> {{ _('to') }} <strong>${size.toFixed(2)}L</strong>. {{ _('Bottle count is kept') }} (${leftQty} / ${initQty}), {{ _('so new remaining volume is') }} <strong>${leftVol.toFixed(2)}L</strong>.`;
             btnRestore.style.display = 'none';
         } else {
-            recalcHint.innerHTML = `Flaskestørrelse endret til <strong>${size.toFixed(2)}L</strong> med <strong>${leftQty} / ${initQty}</strong> flasker (<strong>${leftVol.toFixed(2)}L</strong> igjen).`;
+            recalcHint.innerHTML = `{{ _('Bottle size changed to') }} <strong>${size.toFixed(2)}L</strong> {{ _('with') }} <strong>${leftQty} / ${initQty}</strong> {{ _('bottles') }} (<strong>${leftVol.toFixed(2)}L</strong> {{ _('left') }}).`;
             btnRestore.style.display = 'inline-block';
         }
     } else {

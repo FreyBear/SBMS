@@ -40,7 +40,7 @@
                     {% endif %}
 
                     {% if keg.category_name %}
-                    <dt>Category:</dt>
+                    <dt>{{ _('Category') }}:</dt>
                     <dd>{{ keg.category_icon or '' }} {{ keg.category_name }}{% if keg.subcategory_name %} · {{ keg.subcategory_name }}{% endif %}</dd>
                     {% endif %}
                     
