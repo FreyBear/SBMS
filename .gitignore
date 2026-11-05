@@ -51,6 +51,7 @@ Old_system/
 .cursorrules
 .clinerules
 .aidigest
+LOCAL_AI_CONTEXT.md
 
 # Python cache
 __pycache__/
