@@ -3312,6 +3312,36 @@ msgstr "Abonnerer på"
 msgid "Received"
 msgstr "Mottatt"
 
+msgid "Inventory History (Last 12 Months)"
+msgstr "Beholdningshistorikk (siste 12 mnd)"
+
+msgid "Total volume and volume per category in liters"
+msgstr "Totalt volum og volum per kategori i liter"
+
+msgid "All (Kegs + Bottles)"
+msgstr "Alt (Fat + Flasker)"
+
+msgid "Kegs Only"
+msgstr "Kun Fat"
+
+msgid "Bottles Only"
+msgstr "Kun Flasker"
+
+msgid "Monthly"
+msgstr "Månedlig"
+
+msgid "Bi-weekly"
+msgstr "Hver 14. dag"
+
+msgid "Hide Chart"
+msgstr "Skjul graf"
+
+msgid "Show Chart"
+msgstr "Vis graf"
+
+msgid "Liters (L)"
+msgstr "Liter (L)"
+
 #~ msgid "Are you sure you want to delete user"
 #~ msgstr "Er du sikker på at du vil slette brukeren"
 

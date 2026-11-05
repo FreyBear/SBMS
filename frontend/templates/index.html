@@ -224,6 +224,191 @@
             </div>
             {% endfor %}
         </div>
+
+        <!-- BEGIN INVENTORY HISTORY CHART (Safe to remove this block if retired later) -->
+        {% if inventory_history_chart and inventory_history_chart.monthly.labels %}
+        <div class="bev-history-chart-card" id="bevHistoryCard">
+            <div class="bev-history-header">
+                <div class="bev-history-title">
+                    <h3>📈 {{ _('Inventory History (Last 12 Months)') }}</h3>
+                    <span class="bev-history-sub">{{ _('Total volume and volume per category in liters') }}</span>
+                </div>
+                <div class="bev-history-controls">
+                    <div class="bev-btn-group" id="bevSourceToggle">
+                        <button type="button" class="bev-ctrl-btn active" data-source="total" onclick="setBevChartSource('total', this)">{{ _('All (Kegs + Bottles)') }}</button>
+                        <button type="button" class="bev-ctrl-btn" data-source="keg" onclick="setBevChartSource('keg', this)">🛢️ {{ _('Kegs Only') }}</button>
+                        <button type="button" class="bev-ctrl-btn" data-source="bottle" onclick="setBevChartSource('bottle', this)">🍾 {{ _('Bottles Only') }}</button>
+                    </div>
+                    <div class="bev-btn-group" id="bevIntervalToggle">
+                        <button type="button" class="bev-ctrl-btn active" data-interval="monthly" onclick="setBevChartInterval('monthly', this)">{{ _('Monthly') }}</button>
+                        <button type="button" class="bev-ctrl-btn" data-interval="biweekly" onclick="setBevChartInterval('biweekly', this)">{{ _('Bi-weekly') }}</button>
+                    </div>
+                    <button type="button" class="bev-ctrl-btn bev-collapse-btn" id="bevCollapseBtn" onclick="toggleBevChartCollapse()">
+                        {{ _('Hide Chart') }}
+                    </button>
+                </div>
+            </div>
+            <div class="bev-history-canvas-wrap" id="bevCanvasWrap">
+                <canvas id="bevInventoryHistoryChart" height="95"></canvas>
+            </div>
+        </div>
+        <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+        <script>
+        (function() {
+            const RAW_CHART_DATA = {{ inventory_history_chart|tojson }};
+            let currentSource = 'total';
+            let currentInterval = 'monthly';
+            let bevChartInstance = null;
+
+            const CATEGORY_COLORS = {
+                'Øl':    { border: '#e67e22', bg: 'rgba(230, 126, 34, 0.12)' },
+                'Cider': { border: '#27ae60', bg: 'rgba(39, 174, 96, 0.12)' },
+                'Vin':   { border: '#8e44ad', bg: 'rgba(142, 68, 173, 0.12)' },
+                'Mjød':  { border: '#f1c40f', bg: 'rgba(241, 196, 15, 0.12)' },
+                'Annet': { border: '#16a085', bg: 'rgba(22, 160, 133, 0.12)' }
+            };
+            const FALLBACK_COLORS = ['#2980b9', '#d35400', '#c0392b', '#1abc9c', '#7f8c8d'];
+
+            function buildDatasets(seriesObj, sourceKey) {
+                const datasets = [
+                    {
+                        label: '📈 {{ _("Total") }}',
+                        data: seriesObj.totals[sourceKey] || [],
+                        borderColor: '#2c3e50',
+                        backgroundColor: 'rgba(44, 62, 80, 0.06)',
+                        borderWidth: 3,
+                        borderDash: [6, 4],
+                        pointRadius: 4,
+                        pointHoverRadius: 6,
+                        tension: 0.25,
+                        fill: false
+                    }
+                ];
+
+                (seriesObj.categories || []).forEach((cat, idx) => {
+                    const palette = CATEGORY_COLORS[cat.name] || {
+                        border: FALLBACK_COLORS[idx % FALLBACK_COLORS.length],
+                        bg: 'rgba(52, 152, 219, 0.10)'
+                    };
+                    datasets.push({
+                        label: `${cat.icon || ''} ${cat.name}`.trim(),
+                        data: cat[sourceKey] || [],
+                        borderColor: palette.border,
+                        backgroundColor: palette.bg,
+                        borderWidth: 2.5,
+                        pointRadius: 3.5,
+                        pointHoverRadius: 6,
+                        tension: 0.3,
+                        fill: true
+                    });
+                });
+
+                return datasets;
+            }
+
+            function renderBevChart() {
+                const canvas = document.getElementById('bevInventoryHistoryChart');
+                if (!canvas || typeof Chart === 'undefined') return;
+                const seriesObj = RAW_CHART_DATA[currentInterval] || RAW_CHART_DATA.monthly;
+                const datasets = buildDatasets(seriesObj, currentSource);
+
+                if (bevChartInstance) {
+                    bevChartInstance.data.labels = seriesObj.labels;
+                    bevChartInstance.data.datasets = datasets;
+                    bevChartInstance.update();
+                    return;
+                }
+
+                bevChartInstance = new Chart(canvas.getContext('2d'), {
+                    type: 'line',
+                    data: {
+                        labels: seriesObj.labels,
+                        datasets: datasets
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: true,
+                        interaction: {
+                            mode: 'index',
+                            intersect: false
+                        },
+                        plugins: {
+                            legend: {
+                                position: 'top',
+                                labels: {
+                                    usePointStyle: true,
+                                    padding: 18,
+                                    font: { size: 13, weight: '600' }
+                                }
+                            },
+                            tooltip: {
+                                callbacks: {
+                                    label: function(ctx) {
+                                        return ` ${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} L`;
+                                    }
+                                }
+                            }
+                        },
+                        scales: {
+                            y: {
+                                beginAtZero: true,
+                                title: {
+                                    display: true,
+                                    text: '{{ _("Liters (L)") }}'
+                                },
+                                ticks: {
+                                    callback: function(val) { return val + ' L'; }
+                                }
+                            },
+                            x: {
+                                grid: { display: false }
+                            }
+                        }
+                    }
+                });
+            }
+
+            window.setBevChartSource = function(sourceKey, btn) {
+                currentSource = sourceKey;
+                document.querySelectorAll('#bevSourceToggle .bev-ctrl-btn').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
+                renderBevChart();
+            };
+
+            window.setBevChartInterval = function(intervalKey, btn) {
+                currentInterval = intervalKey;
+                document.querySelectorAll('#bevIntervalToggle .bev-ctrl-btn').forEach(b => b.classList.remove('active'));
+                if (btn) btn.classList.add('active');
+                renderBevChart();
+            };
+
+            window.toggleBevChartCollapse = function() {
+                const wrap = document.getElementById('bevCanvasWrap');
+                const btn = document.getElementById('bevCollapseBtn');
+                if (!wrap || !btn) return;
+                const isHidden = wrap.style.display === 'none';
+                wrap.style.display = isHidden ? 'block' : 'none';
+                btn.textContent = isHidden ? '{{ _("Hide Chart") }}' : '{{ _("Show Chart") }}';
+                localStorage.setItem('sbms_hide_bev_chart', isHidden ? '0' : '1');
+                if (isHidden && !bevChartInstance) renderBevChart();
+            };
+
+            document.addEventListener('DOMContentLoaded', function() {
+                if (localStorage.getItem('sbms_hide_bev_chart') === '1') {
+                    const wrap = document.getElementById('bevCanvasWrap');
+                    const btn = document.getElementById('bevCollapseBtn');
+                    if (wrap && btn) {
+                        wrap.style.display = 'none';
+                        btn.textContent = '{{ _("Show Chart") }}';
+                        return;
+                    }
+                }
+                renderBevChart();
+            });
+        })();
+        </script>
+        {% endif %}
+        <!-- END INVENTORY HISTORY CHART -->
     </div>
     <style>
         .cat-chip {
@@ -312,6 +497,83 @@
         }
         .bev-sub-table tr:last-child td {
             border-bottom: none;
+        }
+        /* Inventory History Chart Styles */
+        .bev-history-chart-card {
+            margin-top: 22px;
+            background: #fff;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.08);
+            border-top: 4px solid #2c3e50;
+        }
+        .bev-history-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 12px;
+            margin-bottom: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #ecf0f1;
+        }
+        .bev-history-title h3 {
+            margin: 0;
+            color: #2c3e50;
+            font-size: 18px;
+        }
+        .bev-history-sub {
+            font-size: 12px;
+            color: #7f8c8d;
+        }
+        .bev-history-controls {
+            display: flex;
+            align-items: center;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .bev-btn-group {
+            display: inline-flex;
+            background: #e9eef3;
+            border: 1px solid #d0dae3;
+            border-radius: 6px;
+            padding: 3px;
+            gap: 3px;
+        }
+        button.bev-ctrl-btn {
+            border: none !important;
+            background: transparent !important;
+            color: #2c3e50 !important;
+            margin: 0 !important;
+            padding: 6px 12px !important;
+            border-radius: 5px !important;
+            font-size: 12px !important;
+            font-weight: 600 !important;
+            box-shadow: none !important;
+            cursor: pointer;
+            transition: all 0.15s ease;
+        }
+        button.bev-ctrl-btn:hover {
+            color: #1a252f !important;
+            background: rgba(255,255,255,0.75) !important;
+            transform: none !important;
+        }
+        button.bev-ctrl-btn.active {
+            background: #2c3e50 !important;
+            color: #ffffff !important;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.18) !important;
+        }
+        button.bev-collapse-btn {
+            background: #ecf0f1 !important;
+            color: #2c3e50 !important;
+            border: 1px solid #bdc3c7 !important;
+        }
+        button.bev-collapse-btn:hover {
+            background: #dfe6e9 !important;
+        }
+        .bev-history-canvas-wrap {
+            position: relative;
+            width: 100%;
         }
     </style>
     {% endif %}

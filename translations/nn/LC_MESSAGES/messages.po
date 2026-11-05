@@ -3320,6 +3320,36 @@ msgstr "Abonnerer på"
 msgid "Received"
 msgstr "Motteke"
 
+msgid "Inventory History (Last 12 Months)"
+msgstr "Beholdningshistorikk (siste 12 mnd)"
+
+msgid "Total volume and volume per category in liters"
+msgstr "Totalt volum og volum per kategori i liter"
+
+msgid "All (Kegs + Bottles)"
+msgstr "Alt (Fat + Flasker)"
+
+msgid "Kegs Only"
+msgstr "Berre Fat"
+
+msgid "Bottles Only"
+msgstr "Berre Flasker"
+
+msgid "Monthly"
+msgstr "Månadleg"
+
+msgid "Bi-weekly"
+msgstr "Kvar 14. dag"
+
+msgid "Hide Chart"
+msgstr "Skjul graf"
+
+msgid "Show Chart"
+msgstr "Vis graf"
+
+msgid "Liters (L)"
+msgstr "Liter (L)"
+
 #~ msgid "Paid"
 #~ msgstr "Betalt"
 

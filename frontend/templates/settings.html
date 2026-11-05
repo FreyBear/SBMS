@@ -197,7 +197,7 @@
                     {% for sub in cat.subcategories %}
                     <span style="display: inline-flex; align-items: center; gap: 5px; background: #eef6fc; color: #2471a3; border: 1px solid #cce3f6; border-radius: 14px; padding: 3px 10px; font-size: 12px; font-weight: 600;">
                         {{ sub.name }}
-                        <button type="button" onclick="settingsDeleteSubcategory({{ sub.id }}, {{ sub.name|tojson }})" style="background:none;border:none;color:#7f8c8d;cursor:pointer;padding:0;font-size:13px;line-height:1;" title="{{ _('Delete') }}">×</button>
+                        <button type="button" onclick="settingsDeleteSubcategory({{ sub.id }}, {{ sub.name|tojson }})" style="background:none !important;border:none !important;color:#c0392b !important;box-shadow:none !important;margin:0 !important;cursor:pointer;padding:0 2px !important;font-size:14px !important;font-weight:700 !important;line-height:1;" title="{{ _('Delete') }}">×</button>
                     </span>
                     {% else %}
                     <span style="color: #999; font-size: 12px;">{{ _('No subcategories yet') }}</span>

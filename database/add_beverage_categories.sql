@@ -236,3 +236,101 @@ SET category_id = (SELECT id FROM beverage_category WHERE name = 'Cider'),
     subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Cider' AND s.name = 'Fruktcider')
 WHERE category_id IS NULL AND (contents ILIKE '%Jungle juice%' OR contents ILIKE '%Cider%');
 
+-- 7. Backfill keg_history category_id and subcategory_id based on contents
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Cider'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Cider' AND s.name = 'Pærecider')
+WHERE category_id IS NULL AND (contents ILIKE '%Perry%' OR contents ILIKE '%pære%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Cider'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Cider' AND s.name = 'Rosécider')
+WHERE category_id IS NULL AND contents ILIKE '%rosé%';
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Cider'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Cider' AND s.name = 'Eplecider')
+WHERE category_id IS NULL AND (contents ILIKE '%Eplecider%' OR contents ILIKE '%Apple cider%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Cider'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Cider' AND s.name = 'Fruktcider')
+WHERE category_id IS NULL AND (
+    contents ILIKE '%cider%' OR contents ILIKE '%eple%' OR contents ILIKE '%jungle%'
+    OR contents ILIKE '%mango%' OR contents ILIKE '%elderflower%' OR contents ILIKE '%hylleblomst%'
+    OR contents ILIKE '%fersken%' OR contents ILIKE '%raspberry%' OR contents ILIKE '%pasjon%'
+);
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Vin')
+WHERE category_id IS NULL AND (contents ILIKE '%vin%' OR contents ILIKE '%wine%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Øl'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Øl' AND s.name = 'IPA')
+WHERE category_id IS NULL AND (contents ILIKE '%IPA%' OR contents ILIKE '%Ink%' OR contents ILIKE '%I&D%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Øl'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Øl' AND s.name = 'Pils')
+WHERE category_id IS NULL AND (contents ILIKE '%Budish%' OR contents ILIKE '%Buddish%' OR contents ILIKE '%Buddis%' OR contents ILIKE '%Pils%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Øl'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Øl' AND s.name = 'Blonde')
+WHERE category_id IS NULL AND (contents ILIKE '%Blonde%' OR contents ILIKE '%Småtøs%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Øl'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Øl' AND s.name = 'Stout / Porter')
+WHERE category_id IS NULL AND (contents ILIKE '%Stout%' OR contents ILIKE '%Porter%' OR contents ILIKE '%Black Velvet%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Øl'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Øl' AND s.name = 'Juleøl')
+WHERE category_id IS NULL AND (contents ILIKE '%Jul%' OR contents ILIKE '%Bokk%');
+
+UPDATE keg_history
+SET category_id = (SELECT id FROM beverage_category WHERE name = 'Øl'),
+    subcategory_id = (SELECT s.id FROM beverage_subcategory s JOIN beverage_category c ON s.category_id = c.id WHERE c.name = 'Øl' AND s.name = 'Ingefærøl')
+WHERE category_id IS NULL AND contents ILIKE '%Ingefærøl%';
+
+-- Fallback for remaining Full/Started keg_history rows: default to keg's category or Øl
+UPDATE keg_history kh
+SET category_id = COALESCE(k.category_id, (SELECT id FROM beverage_category WHERE name = 'Øl')),
+    subcategory_id = COALESCE(kh.subcategory_id, k.subcategory_id)
+FROM keg k
+WHERE kh.keg_id = k.id
+  AND kh.category_id IS NULL
+  AND kh.status IN ('Full', 'Started');
+
+-- 8. Bottle history table for tracking bottle inventory over time
+CREATE TABLE IF NOT EXISTS bottle_history (
+    id SERIAL PRIMARY KEY,
+    batch_id INTEGER NOT NULL REFERENCES bottle_batch(id) ON DELETE CASCADE,
+    bottles_left INTEGER NOT NULL,
+    bottle_size_liters NUMERIC(5,3) NOT NULL,
+    recorded_date DATE NOT NULL DEFAULT CURRENT_DATE,
+    notes TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+CREATE INDEX IF NOT EXISTS idx_bottle_history_batch_id ON bottle_history(batch_id);
+CREATE INDEX IF NOT EXISTS idx_bottle_history_date ON bottle_history(recorded_date);
+
+-- Seed bottle_history from existing bottle_batch rows if empty
+INSERT INTO bottle_history (batch_id, bottles_left, bottle_size_liters, recorded_date, notes)
+SELECT bb.id, bb.initial_quantity, bb.bottle_size_liters, bb.bottling_date, 'Initial bottling'
+FROM bottle_batch bb
+WHERE NOT EXISTS (SELECT 1 FROM bottle_history bh WHERE bh.batch_id = bb.id);
+
+INSERT INTO bottle_history (batch_id, bottles_left, bottle_size_liters, recorded_date, notes)
+SELECT bb.id, bb.bottles_left, bb.bottle_size_liters, COALESCE(bb.updated_at::date, CURRENT_DATE), 'Current inventory'
+FROM bottle_batch bb
+WHERE bb.bottles_left != bb.initial_quantity
+  AND NOT EXISTS (
+      SELECT 1 FROM bottle_history bh
+      WHERE bh.batch_id = bb.id AND bh.bottles_left = bb.bottles_left
+  );
+
+

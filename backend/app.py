@@ -344,6 +344,129 @@ def debug_locale():
     """
     return html
 
+def get_inventory_history_chart(cur):
+    """Build 12-month (monthly & bi-weekly) beverage inventory time-series per category and total."""
+    def fetch_series(interval_sql):
+        cur.execute(f"""
+            WITH sample_points AS (
+                {interval_sql}
+            ),
+            keg_snap AS (
+                SELECT DISTINCT ON (sp.as_of_date, kh.keg_id)
+                    sp.as_of_date,
+                    kh.keg_id,
+                    COALESCE(kh.category_id, k.category_id, b.category_id) AS cat_id,
+                    CASE WHEN kh.status IN ('Full', 'Started') THEN COALESCE(kh.amount_left_liters, 0) ELSE 0 END AS liters
+                FROM sample_points sp
+                JOIN keg_history kh ON kh.recorded_date <= sp.as_of_date
+                JOIN keg k ON kh.keg_id = k.id
+                LEFT JOIN brew b ON k.brew_id = b.id
+                WHERE k.historical = false OR sp.as_of_date < CURRENT_DATE
+                ORDER BY sp.as_of_date, kh.keg_id, kh.recorded_date DESC, kh.id DESC
+            ),
+            bottle_snap AS (
+                SELECT DISTINCT ON (sp.as_of_date, bh.batch_id)
+                    sp.as_of_date,
+                    bh.batch_id,
+                    COALESCE(bb.category_id, b.category_id) AS cat_id,
+                    (COALESCE(bh.bottles_left, 0) * COALESCE(bh.bottle_size_liters, bb.bottle_size_liters, 0))::numeric AS liters
+                FROM sample_points sp
+                JOIN bottle_history bh ON bh.recorded_date <= sp.as_of_date
+                JOIN bottle_batch bb ON bh.batch_id = bb.id
+                LEFT JOIN brew b ON bb.brew_id = b.id
+                ORDER BY sp.as_of_date, bh.batch_id, bh.recorded_date DESC, bh.id DESC
+            ),
+            combined AS (
+                SELECT as_of_date, cat_id, liters AS keg_liters, 0::numeric AS bottle_liters FROM keg_snap WHERE liters > 0
+                UNION ALL
+                SELECT as_of_date, cat_id, 0::numeric AS keg_liters, liters AS bottle_liters FROM bottle_snap WHERE liters > 0
+            )
+            SELECT
+                sp.as_of_date,
+                sp.label,
+                c.id AS category_id,
+                c.name AS category_name,
+                COALESCE(c.icon, '🍺') AS category_icon,
+                c.sort_order,
+                ROUND(COALESCE(SUM(comb.keg_liters), 0), 1) AS keg_liters,
+                ROUND(COALESCE(SUM(comb.bottle_liters), 0), 1) AS bottle_liters,
+                ROUND(COALESCE(SUM(comb.keg_liters + comb.bottle_liters), 0), 1) AS total_liters
+            FROM sample_points sp
+            CROSS JOIN beverage_category c
+            LEFT JOIN combined comb ON comb.as_of_date = sp.as_of_date AND comb.cat_id = c.id
+            GROUP BY sp.as_of_date, sp.label, c.id, c.name, c.icon, c.sort_order
+            ORDER BY sp.as_of_date, c.sort_order, c.name
+        """)
+        rows = cur.fetchall()
+        dates = []
+        labels = []
+        date_seen = set()
+        cat_meta = {}
+
+        for r in rows:
+            d_str = str(r['as_of_date'])
+            if d_str not in date_seen:
+                date_seen.add(d_str)
+                dates.append(d_str)
+                labels.append(r['label'])
+            cid = r['category_id']
+            if cid not in cat_meta:
+                cat_meta[cid] = {
+                    'id': cid,
+                    'name': r['category_name'],
+                    'icon': r['category_icon'],
+                    'keg': [],
+                    'bottle': [],
+                    'total': []
+                }
+            cat_meta[cid]['keg'].append(float(r['keg_liters'] or 0))
+            cat_meta[cid]['bottle'].append(float(r['bottle_liters'] or 0))
+            cat_meta[cid]['total'].append(float(r['total_liters'] or 0))
+
+        active_categories = [
+            c for c in cat_meta.values()
+            if max(c['total'] or [0]) > 0 or c['name'] in ('Øl', 'Cider', 'Vin')
+        ]
+
+        n_points = len(labels)
+        totals = {
+            'keg': [round(sum(c['keg'][i] for c in active_categories), 1) for i in range(n_points)],
+            'bottle': [round(sum(c['bottle'][i] for c in active_categories), 1) for i in range(n_points)],
+            'total': [round(sum(c['total'][i] for c in active_categories), 1) for i in range(n_points)],
+        }
+        return {
+            'labels': labels,
+            'dates': dates,
+            'categories': active_categories,
+            'totals': totals
+        }
+
+    monthly_sql = """
+        SELECT
+            to_char(month_start, 'Mon YYYY') AS label,
+            LEAST((month_start + interval '1 month - 1 day')::date, CURRENT_DATE) AS as_of_date
+        FROM generate_series(
+            date_trunc('month', CURRENT_DATE) - interval '11 months',
+            date_trunc('month', CURRENT_DATE),
+            interval '1 month'
+        ) AS month_start
+    """
+    weekly_sql = """
+        SELECT
+            to_char(week_end, 'DD.MM') AS label,
+            LEAST(week_end::date, CURRENT_DATE) AS as_of_date
+        FROM generate_series(
+            CURRENT_DATE - interval '50 weeks',
+            CURRENT_DATE,
+            interval '2 weeks'
+        ) AS week_end
+    """
+    return {
+        'monthly': fetch_series(monthly_sql),
+        'biweekly': fetch_series(weekly_sql)
+    }
+
+
 @app.route('/')
 @require_auth
 def index():
@@ -461,6 +584,9 @@ def index():
                 grp['total_liters'] = round(grp['total_liters'] + float(row['total_liters'] or 0), 1)
                 grp['subcategories'].append(dict(row))
             beverage_stats = list(beverage_stats_map.values())
+
+            # 12-month beverage inventory history chart data (can be removed if chart is retired)
+            inventory_history_chart = get_inventory_history_chart(cur)
             
             # Get recent kegs
             cur.execute("""
@@ -503,6 +629,7 @@ def index():
         keg_stats = []
         bottle_batches = []
         beverage_stats = []
+        inventory_history_chart = {'monthly': {'labels': [], 'dates': [], 'categories': [], 'totals': {'keg': [], 'bottle': [], 'total': []}}, 'biweekly': {'labels': [], 'dates': [], 'categories': [], 'totals': {'keg': [], 'bottle': [], 'total': []}}}
         recent_kegs = []
         pending_expenses = []
         pending_brew_tasks = []
@@ -517,6 +644,7 @@ def index():
                          keg_stats=keg_stats,
                          bottle_batches=bottle_batches,
                          beverage_stats=beverage_stats,
+                         inventory_history_chart=inventory_history_chart,
                          recent_kegs=recent_kegs, 
                          pending_expenses=pending_expenses,
                          pending_brew_tasks=pending_brew_tasks,
@@ -1421,6 +1549,7 @@ def create_bottle_batch():
                         brew_id, category_id, subcategory_id, bottle_size_liters, initial_quantity, bottles_left,
                         bottling_date, cap_type, location, notes
                     ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                    RETURNING id
                 """, (
                     brew_id,
                     category_id,
@@ -1432,6 +1561,17 @@ def create_bottle_batch():
                     request.form.get('cap_type'),
                     request.form.get('location'),
                     request.form.get('notes')
+                ))
+                new_batch_id = cur.fetchone()[0]
+                cur.execute("""
+                    INSERT INTO bottle_history (batch_id, bottles_left, bottle_size_liters, recorded_date, notes)
+                    VALUES (%s, %s, %s, %s, %s)
+                """, (
+                    new_batch_id,
+                    request.form['initial_quantity'],
+                    request.form['bottle_size_liters'],
+                    request.form['bottling_date'],
+                    'Initial bottling'
                 ))
                 conn.commit()
                 flash('Bottle batch registered successfully!', 'success')
@@ -1577,6 +1717,16 @@ def update_bottle_batch(batch_id):
                     request.form.get('notes'),
                     batch_id
                 ))
+                if bottles_left != existing['bottles_left'] or float(bottle_size_liters) != float(existing['bottle_size_liters']):
+                    cur.execute("""
+                        INSERT INTO bottle_history (batch_id, bottles_left, bottle_size_liters, recorded_date, notes)
+                        VALUES (%s, %s, %s, CURRENT_DATE, %s)
+                    """, (
+                        batch_id,
+                        bottles_left,
+                        bottle_size_liters,
+                        request.form.get('notes') or 'Updated bottle inventory'
+                    ))
                 conn.commit()
                 flash('Bottle batch updated successfully!', 'success')
         except (ValueError, psycopg2.Error) as e:
